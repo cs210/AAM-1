@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "convex": {
+      "command": "npx -y convex@latest mcp start",
+      "env": {},
+      "args": []
+    }
+  }
+}
