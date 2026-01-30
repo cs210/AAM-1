@@ -3,6 +3,10 @@
     "globalDependencies": [
         "**/.env.*local"
     ],
+    "globalEnv": [
+        "CONVEX_URL",
+        "CONVEX_SITE_URL"
+    ],
     "ui": "tui",
     "tasks": {
         "build": {
@@ -19,8 +23,30 @@
             "cache": false,
             "persistent": true
         },
-        "lint": {},
-        "typecheck": {},
+        "lint": {
+            "dependsOn": [
+                "^lint"
+            ],
+            "inputs": [
+                "**/*.js",
+                "**/*.jsx",
+                "**/*.ts",
+                "**/*.tsx",
+                "**/*.mjs",
+                "**/*.cjs",
+                "eslint.config.*"
+            ]
+        },
+        "typecheck": {
+            "dependsOn": [
+                "^typecheck"
+            ],
+            "inputs": [
+                "**/*.ts",
+                "**/*.tsx",
+                "tsconfig.json"
+            ]
+        },
         "clean": {
             "cache": false
         }
