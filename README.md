@@ -1,6 +1,6 @@
 # YAMI
 
-Welcome to the main repository for the Youth Art Museum Initiative!
+Welcome to the main repository for the Youth Art Museum Initiative! For more information, visit our [wiki](https://github.com/cs210/AAM-1/wiki).
 
 ## Basics
 
