@@ -1,50 +1,28 @@
-import "@/global.css";
+import '@/global.css';
 
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { PortalHost } from "@rn-primitives/portal";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
-import { useColorScheme } from "react-native";
-import "react-native-reanimated";
-import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Uniwind } from "uniwind";
+import { NAV_THEME } from '@/lib/theme';
+import ConvexClientProvider from '@/providers/ConvexClientProvider';
+import { ThemeProvider } from '@react-navigation/native';
+import { PortalHost } from '@rn-primitives/portal';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useUniwind } from 'uniwind';
 
-import ConvexClientProvider from "@/providers/ConvexClientProvider";
-
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
-
-function SafeAreaInsetsUpdater() {
-  const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    Uniwind.updateInsets(insets);
-  }, [insets]);
-
-  return null;
-}
+export {
+  // Catch any errors thrown by the Layout component.
+  ErrorBoundary,
+} from 'expo-router';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const { theme } = useUniwind();
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <SafeAreaInsetsUpdater />
-        <ConvexClientProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "Modal" }}
-            />
-          </Stack>
-          <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-        </ConvexClientProvider>
+    <ConvexClientProvider>
+      <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+        <Stack />
         <PortalHost />
       </ThemeProvider>
-    </SafeAreaProvider>
+    </ConvexClientProvider>
   );
 }
