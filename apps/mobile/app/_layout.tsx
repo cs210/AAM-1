@@ -1,27 +1,28 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import '@/global.css';
+
+import { NAV_THEME } from '@/lib/theme';
+import ConvexClientProvider from '@/providers/ConvexClientProvider';
+import { ThemeProvider } from '@react-navigation/native';
+import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { useUniwind } from 'uniwind';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import ConvexClientProvider from '@/providers/ConvexClientProvider';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+export {
+  // Catch any errors thrown by the Layout component.
+  ErrorBoundary,
+} from 'expo-router';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const { theme } = useUniwind();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <ConvexClientProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ConvexClientProvider>
-    </ThemeProvider>
+    <ConvexClientProvider>
+      <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+        <Stack />
+        <PortalHost />
+      </ThemeProvider>
+    </ConvexClientProvider>
   );
 }
