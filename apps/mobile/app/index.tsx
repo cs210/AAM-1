@@ -1,5 +1,22 @@
 import WrappedScreen from './WrappedScreen';
-export default WrappedScreen;
+import { useFonts } from 'expo-font';
+import { View, ActivityIndicator } from 'react-native';
+
+export default function App() {
+	const [fontsLoaded] = useFonts({
+		PublicSans: require('../assets/fonts/PublicSans-VariableFont_wght.ttf'),
+		PublicSansItalic: require('../assets/fonts/PublicSans-Italic-VariableFont_wght.ttf'),
+	});
+
+	if (!fontsLoaded) {
+		return (
+			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+				<ActivityIndicator size="large" />
+			</View>
+		);
+	}
+	return <WrappedScreen />;
+}
 
 // import { Button } from '@/components/ui/button';
 // import { Icon } from '@/components/ui/icon';
