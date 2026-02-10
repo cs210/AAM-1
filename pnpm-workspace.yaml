@@ -5,6 +5,8 @@ packages:
 nodeLinker: hoisted
 
 onlyBuiltDependencies:
+  - '@clerk/shared'
   - esbuild
+  - msw
   - sharp
   - unrs-resolver
