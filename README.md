@@ -31,6 +31,9 @@ NEXT_PUBLIC_CONVEX_SITE_URL=https://wooden-hummingbird-900.convex.site
 CONVEX_DEPLOYMENT=dev:wooden-hummingbird-900 # team: yami, project: yami
 
 EXPO_PUBLIC_CONVEX_URL=https://wooden-hummingbird-900.convex.cloud
+
+# Required for Better Auth (same value as web’s NEXT_PUBLIC_CONVEX_SITE_URL)
+EXPO_PUBLIC_CONVEX_SITE_URL=https://wooden-hummingbird-900.convex.site
 ```
 
 ### Backend

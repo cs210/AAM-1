@@ -8,6 +8,10 @@ It was initialized using the following command:
 npx @react-native-reusables/cli@latest init -t mobile
 ```
 
+## Environment
+
+Create a `.env.local` in this directory (or use the root `.env.local`). In addition to `EXPO_PUBLIC_CONVEX_URL`, set `EXPO_PUBLIC_CONVEX_SITE_URL` for Better Auth (same value as the web app’s `NEXT_PUBLIC_CONVEX_SITE_URL`, e.g. `https://your-deployment.convex.site`).
+
 ## Getting Started
 
 To run the development server:
