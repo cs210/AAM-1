@@ -41,3 +41,12 @@ CONVEX_DEPLOYMENT=dev:wooden-hummingbird-900 # team: yami, project: yami
 CONVEX_URL=https://wooden-hummingbird-900.convex.cloud
 CONVEX_SITE_URL=https://wooden-hummingbird-900.convex.site
 ```
+
+Add the secret key and site URL to the backend environment variables.
+
+```bash
+npx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+npx convex env set SITE_URL http://localhost:3000
+```
+
+This secret does not live on your machine, it is managed by Convex.
