@@ -5,22 +5,30 @@ import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
 import { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
+import { expo } from "@better-auth/expo";
 
 const siteUrl = process.env.SITE_URL;
+
+if (!siteUrl) {
+  throw new Error("Missing SITE_URL environment variable");
+}
 
 export const authComponent = createClient(components.betterAuth);
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
   return {
     baseURL: siteUrl,
+    trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"],
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
+      requireEmailVerification: false,
     },
     plugins: [
       convex({
         authConfig,
       }),
+      expo(),
     ],
   } satisfies BetterAuthOptions;
 };

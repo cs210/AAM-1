@@ -17,6 +17,11 @@ importers:
   apps/mobile:
     specifiers:
       '@babel/core': ^7.26.0
+      '@better-auth/core': 1.4.9
+      '@better-auth/expo': 1.4.9
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.21
+      '@convex-dev/better-auth': ^0.10.10
       '@react-navigation/native': ^7.0.0
       '@rn-primitives/accordion': ^1.2.0
       '@rn-primitives/alert-dialog': ^1.2.0
@@ -43,19 +48,27 @@ importers:
       '@rn-primitives/toggle-group': ^1.2.0
       '@rn-primitives/tooltip': ^1.2.0
       '@types/react': ~19.1.10
+      better-auth: 1.4.9
+      better-call: 1.1.7
       class-variance-authority: ^0.7.1
       clsx: ^2.1.1
-      convex: ^1.31.7
+      convex: ^1.32.0
       expo: ~54.0.33
       expo-constants: ~18.0.12
       expo-haptics: ~15.0.8
       expo-linking: ~8.0.10
+      expo-network: ~8.0.8
       expo-router: ~6.0.23
+      expo-secure-store: ~15.0.8
       expo-splash-screen: ~31.0.12
       expo-status-bar: ~3.0.9
       expo-system-ui: ~6.0.9
       expo-updates: ~29.0.15
+      expo-web-browser: ~15.0.10
+      jose: ^6.1.0
+      kysely: ^0.28.5
       lucide-react-native: ^0.545.0
+      nanostores: ^1.0.1
       prettier: ^3.6.2
       prettier-plugin-tailwindcss: ^0.6.14
       react: 19.1.0
@@ -76,6 +89,11 @@ importers:
       typescript: ~5.9.2
       uniwind: ^1.2.2
     dependencies:
+      '@better-auth/core': 1.4.9_5e3wcafbpa756klqdja3youzny
+      '@better-auth/expo': 1.4.9_plcltgoftgukmqoeypbkqr3cvy
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.21
+      '@convex-dev/better-auth': 0.10.10_32cvxykljcayou77m47bxs3gai
       '@react-navigation/native': 7.1.28_k6evhlf74odk2oi5umdutyoonu
       '@rn-primitives/accordion': 1.2.0_4ghnopxbwnowgk3ulql2lxidpi
       '@rn-primitives/alert-dialog': 1.2.0_scs6ujfwhbtnxu6rq5qr4jzkrq
@@ -101,6 +119,8 @@ importers:
       '@rn-primitives/toggle': 1.2.0_4ghnopxbwnowgk3ulql2lxidpi
       '@rn-primitives/toggle-group': 1.2.0_4ghnopxbwnowgk3ulql2lxidpi
       '@rn-primitives/tooltip': 1.2.0_scs6ujfwhbtnxu6rq5qr4jzkrq
+      better-auth: 1.4.9_j6k6oay3ugsr56slyfvma2drry
+      better-call: 1.1.7
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       convex: 1.32.0_react@19.1.0
@@ -108,12 +128,18 @@ importers:
       expo-constants: 18.0.13_olzmqlmghj7zmghiiqip7j6gle
       expo-haptics: 15.0.8_expo@54.0.33
       expo-linking: 8.0.11_vxbro5row7nl3mqpro2n3klvaq
+      expo-network: 8.0.8_expo@54.0.33+react@19.1.0
       expo-router: 6.0.23_iayujtvb5w2x5izbmark4l43fy
+      expo-secure-store: 15.0.8_expo@54.0.33
       expo-splash-screen: 31.0.13_expo@54.0.33
       expo-status-bar: 3.0.9_k6evhlf74odk2oi5umdutyoonu
       expo-system-ui: 6.0.9_5mu5g75auwkid333xmqqatijh4
       expo-updates: 29.0.16_vxbro5row7nl3mqpro2n3klvaq
+      expo-web-browser: 15.0.10_olzmqlmghj7zmghiiqip7j6gle
+      jose: 6.1.3
+      kysely: 0.28.11
       lucide-react-native: 0.545.0_tl247ttr2d27svdw6ihze7a7ui
+      nanostores: 1.1.0
       react: 19.1.0
       react-dom: 19.1.0_react@19.1.0
       react-native: 0.81.5_nwkn2q4roe7mct2zxj2ruuaoxy
@@ -207,6 +233,7 @@ importers:
   packages/backend:
     specifiers:
       '@better-auth/core': 1.4.9
+      '@better-auth/expo': 1.4.9
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@convex-dev/better-auth': latest
@@ -221,6 +248,7 @@ importers:
       typescript: ^5
     dependencies:
       '@better-auth/core': 1.4.9_5e3wcafbpa756klqdja3youzny
+      '@better-auth/expo': 1.4.9_zlza6wkzlr4utesk5oq73dpiii
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@convex-dev/better-auth': 0.10.10_32cvxykljcayou77m47bxs3gai
@@ -1338,6 +1366,62 @@ packages:
       jose: 6.1.3
       kysely: 0.28.11
       nanostores: 1.1.0
+      zod: 4.3.6
+    dev: false
+
+  /@better-auth/expo/1.4.9_plcltgoftgukmqoeypbkqr3cvy:
+    resolution: {integrity: sha512-BgiL4KbDGGyy3nPNRxcE2pClp6myAJ+W991l7xwkcZAmH9l6lLkeAKO+SR5R8HGlTY8vKichdgVVy9FRu9bpUQ==}
+    peerDependencies:
+      '@better-auth/core': 1.4.9
+      better-auth: 1.4.9
+      expo-constants: '>=17.0.0'
+      expo-linking: '>=7.0.0'
+      expo-network: ^8.0.7
+      expo-web-browser: '>=14.0.0'
+    peerDependenciesMeta:
+      expo-constants:
+        optional: true
+      expo-linking:
+        optional: true
+      expo-network:
+        optional: true
+      expo-web-browser:
+        optional: true
+    dependencies:
+      '@better-auth/core': 1.4.9_5e3wcafbpa756klqdja3youzny
+      '@better-fetch/fetch': 1.1.21
+      better-auth: 1.4.9_j6k6oay3ugsr56slyfvma2drry
+      better-call: 1.1.7_zod@4.3.6
+      expo-constants: 18.0.13_olzmqlmghj7zmghiiqip7j6gle
+      expo-linking: 8.0.11_vxbro5row7nl3mqpro2n3klvaq
+      expo-network: 8.0.8_expo@54.0.33+react@19.1.0
+      expo-web-browser: 15.0.10_olzmqlmghj7zmghiiqip7j6gle
+      zod: 4.3.6
+    dev: false
+
+  /@better-auth/expo/1.4.9_zlza6wkzlr4utesk5oq73dpiii:
+    resolution: {integrity: sha512-BgiL4KbDGGyy3nPNRxcE2pClp6myAJ+W991l7xwkcZAmH9l6lLkeAKO+SR5R8HGlTY8vKichdgVVy9FRu9bpUQ==}
+    peerDependencies:
+      '@better-auth/core': 1.4.9
+      better-auth: 1.4.9
+      expo-constants: '>=17.0.0'
+      expo-linking: '>=7.0.0'
+      expo-network: ^8.0.7
+      expo-web-browser: '>=14.0.0'
+    peerDependenciesMeta:
+      expo-constants:
+        optional: true
+      expo-linking:
+        optional: true
+      expo-network:
+        optional: true
+      expo-web-browser:
+        optional: true
+    dependencies:
+      '@better-auth/core': 1.4.9_5e3wcafbpa756klqdja3youzny
+      '@better-fetch/fetch': 1.1.21
+      better-auth: 1.4.9_j6k6oay3ugsr56slyfvma2drry
+      better-call: 1.1.7_zod@4.3.6
       zod: 4.3.6
     dev: false
 
@@ -8004,6 +8088,16 @@ packages:
       react-native: 0.81.5_nwkn2q4roe7mct2zxj2ruuaoxy
     dev: false
 
+  /expo-network/8.0.8_expo@54.0.33+react@19.1.0:
+    resolution: {integrity: sha512-dgrL8UHAmWofqeY4UEjWskCl/RoQAM0DG6PZR8xz2WZt+6aQEboQgFRXowCfhbKZ71d16sNuKXtwBEsp2DtdNw==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+    dependencies:
+      expo: 54.0.33_sew2x7gd47stk2tzjwmr4p3gxa
+      react: 19.1.0
+    dev: false
+
   /expo-router/6.0.23_iayujtvb5w2x5izbmark4l43fy:
     resolution: {integrity: sha512-qCxVAiCrCyu0npky6azEZ6dJDMt77OmCzEbpF6RbUTlfkaCA417LvY14SBkk0xyGruSxy/7pvJOI6tuThaUVCA==}
     peerDependencies:
@@ -8076,6 +8170,14 @@ packages:
       - '@types/react'
       - '@types/react-dom'
       - supports-color
+    dev: false
+
+  /expo-secure-store/15.0.8_expo@54.0.33:
+    resolution: {integrity: sha512-lHnzvRajBu4u+P99+0GEMijQMFCOYpWRO4dWsXSuMt77+THPIGjzNvVKrGSl6mMrLsfVaKL8BpwYZLGlgA+zAw==}
+    peerDependencies:
+      expo: '*'
+    dependencies:
+      expo: 54.0.33_sew2x7gd47stk2tzjwmr4p3gxa
     dev: false
 
   /expo-server/1.0.5:
@@ -8163,6 +8265,16 @@ packages:
       resolve-from: 5.0.0
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /expo-web-browser/15.0.10_olzmqlmghj7zmghiiqip7j6gle:
+    resolution: {integrity: sha512-fvDhW4bhmXAeWFNFiInmsGCK83PAqAcQaFyp/3pE/jbdKmFKoRCWr46uZGIfN4msLK/OODhaQ/+US7GSJNDHJg==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+    dependencies:
+      expo: 54.0.33_sew2x7gd47stk2tzjwmr4p3gxa
+      react-native: 0.81.5_nwkn2q4roe7mct2zxj2ruuaoxy
     dev: false
 
   /expo/54.0.33_sew2x7gd47stk2tzjwmr4p3gxa:
