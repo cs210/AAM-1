@@ -1,9 +1,13 @@
+import { GeospatialIndex } from "@convex-dev/geospatial";
+import { components } from "./_generated/api";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+const geospatial = new GeospatialIndex(components.geospatial);
 // Add an event
 export const addEvent = mutation({
   args: {
+    point: v.object({ latitude: v.number(), longitude: v.number() }),
     title: v.string(),
     description: v.optional(v.string()),
     category: v.string(),
@@ -18,8 +22,9 @@ export const addEvent = mutation({
     imageUrl: v.optional(v.string()),
     registrationUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("events", args);
+  handler: async (ctx, { point, ...args}) => {
+    const id = await ctx.db.insert("events", args);
+    await geospatial.insert(ctx, id, point, { category: args.category });
   },
 });
 

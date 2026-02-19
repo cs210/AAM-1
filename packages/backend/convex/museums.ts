@@ -1,13 +1,13 @@
-import { GeospatialIndex, point, rectangle } from "@convex-dev/geospatial";
-import { Id } from "./_generated/dataModel";
+import { GeospatialIndex } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+const geospatial = new GeospatialIndex(components.geospatial);
 // Add a museum
 export const addMuseum = mutation({
   args: {
-    point,
+    point: v.object({ latitude: v.number(), longitude: v.number() }),
     name: v.string(),
     description: v.optional(v.string()),
     category: v.string(),
@@ -20,9 +20,9 @@ export const addMuseum = mutation({
     website: v.optional(v.string()),
     phone: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const {point, ...withoutPoint} = args;
-    return await ctx.db.insert("museums", withoutPoint);
+  handler: async (ctx, { point, ...args}) => {
+    const id = await ctx.db.insert("museums", args);
+    await geospatial.insert(ctx, id, point, { category: args.category });
   },
 });
 
