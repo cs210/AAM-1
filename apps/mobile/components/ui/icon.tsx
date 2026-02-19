@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { LucideIcon, LucideProps } from 'lucide-react-native';
-import { cssInterop } from 'nativewind';
+import { withUniwind } from 'uniwind'
 
 type IconProps = LucideProps & {
   as: LucideIcon;
@@ -10,7 +10,7 @@ function IconImpl({ as: IconComponent, ...props }: IconProps) {
   return <IconComponent {...props} />;
 }
 
-cssInterop(IconImpl, {
+withUniwind(IconImpl, {
   className: {
     target: 'style',
     nativeStyleToProp: {
