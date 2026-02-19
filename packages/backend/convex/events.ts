@@ -9,11 +9,9 @@ export const addEvent = mutation({
     category: v.string(),
     museumId: v.optional(v.id("museums")),
     location: v.optional(v.object({
-      city: v.string(),
-      state: v.string(),
-      zipCode: v.string(),
-      latitude: v.float64(),
-      longitude: v.float64(),
+      address: v.optional(v.string()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string())
     })),
     startDate: v.number(),
     endDate: v.number(),
