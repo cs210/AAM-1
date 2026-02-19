@@ -82,7 +82,7 @@ export default function SignInScreen() {
               <UiText className="text-muted-foreground text-sm">Don't have an account? </UiText>
               <UiText
                 className="text-primary font-medium text-sm"
-                onPress={() => router.push("/(auth)/sign-up")}
+                onPress={() => router.push("/sign-up")}
               >
                 Sign up
               </UiText>

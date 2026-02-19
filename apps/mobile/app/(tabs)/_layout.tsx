@@ -1,14 +1,22 @@
 import { api } from '@packages/backend/convex/_generated/api';
+import { Text as UiText } from '@/components/ui/text';
 import { useQuery } from 'convex/react';
 import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function TabLayout() {
   const user = useQuery(api.auth.getCurrentUser);
 
-  if (user === undefined) return <View className="flex-1 bg-background" />;
-  if (!user) return <Redirect href="/(auth)/sign-in" />;
+  if (user === undefined) {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-background">
+        <ActivityIndicator />
+        <UiText className="text-muted-foreground">Loading your session...</UiText>
+      </View>
+    );
+  }
+  if (!user) return <Redirect href="/sign-in" />;
 
   return (
     <NativeTabs>

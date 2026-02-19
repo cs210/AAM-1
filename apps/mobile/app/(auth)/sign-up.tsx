@@ -96,7 +96,7 @@ export default function SignUpScreen() {
               <UiText className="text-muted-foreground text-sm">Already have an account? </UiText>
               <UiText
                 className="text-primary font-medium text-sm"
-                onPress={() => router.push("/(auth)/sign-in")}
+                onPress={() => router.push("/sign-in")}
               >
                 Sign in
               </UiText>
