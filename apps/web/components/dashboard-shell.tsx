@@ -217,24 +217,25 @@ export function DashboardShell() {
                 />
               </form>
             </CardContent>
-            <CardFooter className="flex-wrap justify-between gap-2">
-              <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" render={<Link href="/" />}>
+            <CardFooter className="flex-col gap-3">
+              <Button className="w-full" type="submit" form="museum-access-request-form" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting request..." : "Request museum access"}
+              </Button>
+              <div className="flex w-full items-center justify-center gap-1 text-sm">
+                <span className="text-muted-foreground">Not museum staff?</span>
+                <Button variant="link" className="h-auto p-0" render={<a href={consumerAppUrl} target="_blank" rel="noreferrer" />}>
+                  Open visitor app
+                </Button>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Button variant="link" className="text-muted-foreground h-auto p-0" render={<Link href="/" />}>
                   Back to landing
                 </Button>
-                <Button variant="outline" onClick={signOutToLanding}>
+                <span className="text-muted-foreground/40">·</span>
+                <Button variant="link" className="text-muted-foreground h-auto p-0" onClick={signOutToLanding}>
                   Log out
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                render={<a href={consumerAppUrl} target="_blank" rel="noreferrer" />}
-              >
-                Open visitor app
-              </Button>
-              <Button type="submit" form="museum-access-request-form" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting request..." : "Request museum access"}
-              </Button>
             </CardFooter>
           </Card>
         </main>
@@ -257,21 +258,19 @@ export function DashboardShell() {
                 you are not museum staff, use the visitor app instead.
               </CardDescription>
             </CardHeader>
-            <CardFooter className="flex-wrap justify-between gap-2">
-              <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" render={<Link href="/" />}>
+            <CardFooter className="flex-col gap-3">
+              <Button className="w-full" variant="outline" render={<a href={consumerAppUrl} target="_blank" rel="noreferrer" />}>
+                Open visitor app while you wait
+              </Button>
+              <div className="flex items-center gap-3 text-sm">
+                <Button variant="link" className="text-muted-foreground h-auto p-0" render={<Link href="/" />}>
                   Back to landing
                 </Button>
-                <Button variant="outline" onClick={signOutToLanding}>
+                <span className="text-muted-foreground/40">·</span>
+                <Button variant="link" className="text-muted-foreground h-auto p-0" onClick={signOutToLanding}>
                   Log out
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                render={<a href={consumerAppUrl} target="_blank" rel="noreferrer" />}
-              >
-                Open visitor app
-              </Button>
             </CardFooter>
           </Card>
         </main>
