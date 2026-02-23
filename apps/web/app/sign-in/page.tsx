@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackURL = searchParams.get("callbackURL") ?? "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,14 +32,14 @@ export default function SignInPage() {
     const { data, error: err } = await authClient.signIn.email({
       email,
       password,
-      callbackURL: "/dashboard",
+      callbackURL,
     });
     setIsLoading(false);
     if (err) {
       setError(err.message ?? "Sign in failed");
       return;
     }
-    if (data) router.push("/dashboard");
+    if (data) router.push(callbackURL);
   }
 
   return (

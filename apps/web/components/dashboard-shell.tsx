@@ -6,7 +6,15 @@ import { useRouter } from "next/navigation"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 
-import { dashboardTabs, type DashboardTabId } from "@/components/dashboard/constants"
+import {
+  adminDashboardTabs,
+  dashboardTabs,
+  type AllDashboardTabId,
+} from "@/components/dashboard/constants"
+import { AdminInvitations } from "./dashboard/admin-invitations"
+import { AdminOrgRequests } from "./dashboard/admin-org-requests"
+import { AdminUsers } from "./dashboard/admin-users"
+import { DashboardOrganizations } from "./dashboard/dashboard-organizations"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
 import { Button } from "@/components/ui/button"
@@ -29,7 +37,8 @@ function slugify(name: string) {
 export function DashboardShell() {
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
-  const [activeTab, setActiveTab] = React.useState<DashboardTabId>("museum-details")
+  const [activeTab, setActiveTab] = React.useState<AllDashboardTabId>("museum-details")
+  const [isAdminMode, setIsAdminMode] = React.useState(false)
   const [museumName, setMuseumName] = React.useState("")
   const [city, setCity] = React.useState("")
   const [state, setState] = React.useState("")
@@ -37,8 +46,11 @@ export function DashboardShell() {
   const [staffRole, setStaffRole] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const activeTabInfo = dashboardTabs.find((tab) => tab.id === activeTab)
   const user = useQuery(api.auth.getCurrentUser)
+  const isAdmin = (user as { role?: string } | null)?.role === "admin"
+  const activeTabInfo =
+    dashboardTabs.find((tab) => tab.id === activeTab) ??
+    adminDashboardTabs.find((tab) => tab.id === activeTab)
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
   const submitRequest = useMutation(api.organizationRequests.submitRequest)
@@ -274,7 +286,13 @@ export function DashboardShell() {
     <div className="bg-background min-h-screen">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
       <div className="flex min-h-screen w-full">
-        <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <DashboardSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          isAdmin={isAdmin}
+          isAdminMode={isAdminMode}
+          onAdminModeToggle={() => setIsAdminMode((prev) => !prev)}
+        />
 
         <main className="flex-1 space-y-4 p-4 md:ml-76 md:p-6">
           <section className="rounded-2xl border bg-card p-2 md:hidden">
@@ -296,13 +314,34 @@ export function DashboardShell() {
                   </Button>
                 )
               })}
+              {isAdmin && isAdminMode &&
+                adminDashboardTabs.map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = activeTab === tab.id
+
+                  return (
+                    <Button
+                      key={tab.id}
+                      type="button"
+                      variant={isActive ? "secondary" : "ghost"}
+                      className="shrink-0 gap-2 rounded-xl"
+                      onClick={() => setActiveTab(tab.id)}
+                    >
+                      <Icon className="size-4" />
+                      {tab.label}
+                    </Button>
+                  )
+                })}
             </div>
           </section>
 
           <section className="overflow-hidden rounded-2xl border bg-linear-to-br from-primary/14 via-primary/6 to-background p-6">
             <div className="text-muted-foreground inline-flex items-center gap-2 rounded-lg border bg-background/70 px-2.5 py-1 text-xs">
               <Building2Icon className="size-3.5" />
-              Workspace: {activeOrganization?.name ?? pendingRequest?.museumName ?? "Personal Workspace"}
+              Workspace:{" "}
+              {activeOrganization
+                ? `${activeOrganization.name}${activeOrganization.id ? ` (${activeOrganization.id})` : ""}`
+                : pendingRequest?.museumName ?? "Personal Workspace"}
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>
             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">
@@ -313,6 +352,14 @@ export function DashboardShell() {
 
           {activeTab === "museum-details" ? (
             <MuseumDetailsForm />
+          ) : activeTab === "organizations" ? (
+            <DashboardOrganizations />
+          ) : activeTab === "org-requests" ? (
+            <AdminOrgRequests />
+          ) : activeTab === "users" ? (
+            <AdminUsers />
+          ) : activeTab === "invitations" ? (
+            <AdminInvitations />
           ) : (
             <Card>
               <CardHeader>

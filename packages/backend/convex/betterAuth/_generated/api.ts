@@ -11,6 +11,8 @@
 import type * as adapter from "../adapter.js";
 import type * as auth from "../auth.js";
 import type * as getOrganization from "../getOrganization.js";
+import type * as getUser from "../getUser.js";
+import type * as invitations from "../invitations.js";
 
 import type {
   ApiFromModules,
@@ -23,6 +25,8 @@ const fullApi: ApiFromModules<{
   adapter: typeof adapter;
   auth: typeof auth;
   getOrganization: typeof getOrganization;
+  getUser: typeof getUser;
+  invitations: typeof invitations;
 }> = anyApi as any;
 
 /**

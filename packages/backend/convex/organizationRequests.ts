@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { components } from "./_generated/api";
 
 /** Id of an organization in the Better Auth component. Resolve via resolveOrganization or component getOrganization. */
@@ -87,13 +88,28 @@ export const resolveOrganization = query({
   },
 });
 
+/** Shared helper: list all org requests (use from admin or internal query). */
+export async function listAllRequestsHelper(ctx: QueryCtx) {
+  return await ctx.db.query("organizationRequests").collect();
+}
+
 /** Internal only: list all org requests. Not callable from client; use from admin actions or HTTP. */
 export const listAllRequests = internalQuery({
   args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("organizationRequests").collect();
-  },
+  handler: async (ctx) => listAllRequestsHelper(ctx),
 });
+
+/** Shared helper: set request status (use from admin or internal mutation). */
+export async function updateRequestStatusHelper(
+  ctx: MutationCtx,
+  requestId: Id<"organizationRequests">,
+  status: "approved" | "rejected"
+) {
+  await ctx.db.patch("organizationRequests", requestId, {
+    status,
+    reviewedAt: Date.now(),
+  });
+}
 
 /** Internal only: approve or reject a request. Not callable from client; use from admin actions or HTTP. */
 export const updateRequestStatus = internalMutation({
@@ -101,10 +117,6 @@ export const updateRequestStatus = internalMutation({
     requestId: v.id("organizationRequests"),
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.requestId, {
-      status: args.status,
-      reviewedAt: Date.now(),
-    });
-  },
+  handler: async (ctx, args) =>
+    updateRequestStatusHelper(ctx, args.requestId, args.status),
 });

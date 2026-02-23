@@ -52,7 +52,11 @@ export function SidebarUserDetails() {
         </p>
         <div className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm">
           <Building2Icon className="size-4" />
-          <span className="truncate">{activeOrganization?.name ?? pendingRequest?.museumName ?? "No workspace"}</span>
+          <span className="truncate">
+            {activeOrganization
+              ? `${activeOrganization.name}${activeOrganization.id ? ` (${activeOrganization.id})` : ""}`
+              : pendingRequest?.museumName ?? "No workspace"}
+          </span>
         </div>
         {pendingRequest?.status === "pending" ? (
           <p className="text-muted-foreground mt-1 px-2 text-xs">

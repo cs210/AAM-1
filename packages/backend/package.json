@@ -23,8 +23,9 @@
         "kysely": "^0.28.5",
         "nanostores": "^1.0.1",
         "react": "19.2.3",
-        "react-dom": "19.2.3"
-    },
+"react-dom": "19.2.3",
+    "resend": "^4.0.0"
+},
     "devDependencies": {
         "typescript": "^5"
     }
