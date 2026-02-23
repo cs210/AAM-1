@@ -12,15 +12,7 @@ import { Button } from "@/components/ui/button"
 export function SidebarUserDetails() {
   const user = useQuery(api.auth.getCurrentUser)
   const router = useRouter()
-  const { data: activeOrganization } = authClient.useActiveOrganization()
-  const activationStatus = (() => {
-    const metadata = activeOrganization?.metadata
-    if (metadata && typeof metadata === "object" && "activationStatus" in metadata) {
-      const status = (metadata as { activationStatus?: string }).activationStatus
-      return typeof status === "string" ? status : null
-    }
-    return null
-  })()
+  const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
 
   if (user === undefined) {
     return <div className="h-20 animate-pulse rounded-xl border bg-muted/50" />
@@ -59,11 +51,11 @@ export function SidebarUserDetails() {
         </p>
         <div className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm">
           <Building2Icon className="size-4" />
-          <span className="truncate">{activeOrganization?.name ?? "No workspace"}</span>
+          <span className="truncate">{pendingRequest?.museumName ?? "No workspace"}</span>
         </div>
-        {activationStatus === "pending" ? (
+        {pendingRequest?.status === "pending" ? (
           <p className="text-muted-foreground mt-1 px-2 text-xs">
-            Pending activation. Org actions are locked.
+            Pending activation
           </p>
         ) : null}
       </div>

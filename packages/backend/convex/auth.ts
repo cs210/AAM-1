@@ -3,7 +3,7 @@ import { query } from "./_generated/server";
 import { createClient, GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
-import { organization } from "better-auth/plugins";
+
 import { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
 import { expo } from "@better-auth/expo";
@@ -29,7 +29,6 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       convex({
         authConfig,
       }),
-      organization(),
       expo(),
     ],
   } satisfies BetterAuthOptions;

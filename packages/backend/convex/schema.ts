@@ -70,6 +70,26 @@ export default defineSchema({
     .index("by_content", ["contentType", "contentId"])
     .index("by_user_and_content", ["userId", "contentType", "contentId"]),
 
+  // Organization access requests (museum workspace requests)
+  organizationRequests: defineTable({
+    userId: v.string(),
+    museumName: v.string(),
+    city: v.string(),
+    state: v.string(),
+    website: v.optional(v.string()),
+    staffRole: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    betterAuthOrgId: v.optional(v.string()),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"]),
+
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
 });

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useQuery } from "convex/react"
+import { useQuery, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 
 import { dashboardTabs, type DashboardTabId } from "@/components/dashboard/constants"
@@ -22,15 +22,6 @@ import { authClient } from "@/lib/auth-client"
 import { Building2Icon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
-function slugifyWorkspaceName(name: string) {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48)
-}
-
 export function DashboardShell() {
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
@@ -44,15 +35,8 @@ export function DashboardShell() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const activeTabInfo = dashboardTabs.find((tab) => tab.id === activeTab)
   const user = useQuery(api.auth.getCurrentUser)
-  const { data: activeOrganization } = authClient.useActiveOrganization()
-  const activationStatus = (() => {
-    const metadata = activeOrganization?.metadata
-    if (metadata && typeof metadata === "object" && "activationStatus" in metadata) {
-      const status = (metadata as { activationStatus?: string }).activationStatus
-      return typeof status === "string" ? status : null
-    }
-    return null
-  })()
+  const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
+  const submitRequest = useMutation(api.organizationRequests.submitRequest)
 
   const createWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,53 +44,32 @@ export function DashboardShell() {
     const name = museumName.trim()
     const locationCity = city.trim()
     const locationState = state.trim()
-    const orgSlug = slugifyWorkspaceName(name)
 
-    if (!name || !locationCity || !locationState || !orgSlug) {
+    if (!name || !locationCity || !locationState) {
       setError("Please complete all required museum details.")
       return
     }
 
     setIsSubmitting(true)
-    const { data, error: createError } = await authClient.organization.create({
-      name,
-      slug: orgSlug,
-      metadata: {
-        activationStatus: "pending",
+    try {
+      await submitRequest({
         museumName: name,
         city: locationCity,
         state: locationState,
-        website: website.trim() || null,
-        staffRole: staffRole.trim() || null,
-      },
-    })
+        website: website.trim() || undefined,
+        staffRole: staffRole.trim() || undefined,
+      })
 
-    if (createError) {
+      setMuseumName("")
+      setCity("")
+      setState("")
+      setWebsite("")
+      setStaffRole("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.")
+    } finally {
       setIsSubmitting(false)
-      setError(createError.message ?? "Unable to create workspace.")
-      return
     }
-
-    if (!data?.id) {
-      setIsSubmitting(false)
-      setError("Workspace was created but could not be activated.")
-      return
-    }
-
-    const { error: activateError } = await authClient.organization.setActive({
-      organizationId: data.id,
-    })
-    setIsSubmitting(false)
-    if (activateError) {
-      setError(activateError.message ?? "Workspace created but activation failed.")
-      return
-    }
-
-    setMuseumName("")
-    setCity("")
-    setState("")
-    setWebsite("")
-    setStaffRole("")
   }
 
   const signOutToLanding = async () => {
@@ -151,7 +114,7 @@ export function DashboardShell() {
     )
   }
 
-  if (!activeOrganization) {
+  if (!pendingRequest || pendingRequest.status === "rejected") {
     return (
       <div className="bg-background min-h-screen">
         <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
@@ -243,7 +206,8 @@ export function DashboardShell() {
     )
   }
 
-  if (activationStatus === "pending") {
+  if (pendingRequest.status === "pending") {
+    const requestName = pendingRequest.museumName
     return (
       <div className="bg-background min-h-screen">
         <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
@@ -252,7 +216,7 @@ export function DashboardShell() {
             <CardHeader>
               <CardTitle>Workspace pending activation</CardTitle>
               <CardDescription>
-                Your request for <span className="font-medium">{activeOrganization.name}</span> has
+                Your request for <span className="font-medium">{requestName}</span> has
                 been submitted. This dashboard is only for museum staff and remains locked until
                 your workspace is activated or you are invited to an active museum workspace. If
                 you are not museum staff, use the visitor app instead.
@@ -310,7 +274,7 @@ export function DashboardShell() {
           <section className="overflow-hidden rounded-2xl border bg-linear-to-br from-primary/14 via-primary/6 to-background p-6">
             <div className="text-muted-foreground inline-flex items-center gap-2 rounded-lg border bg-background/70 px-2.5 py-1 text-xs">
               <Building2Icon className="size-3.5" />
-              Workspace: {activeOrganization?.name ?? "Personal Workspace"}
+              Workspace: {pendingRequest.museumName}
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>
             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">

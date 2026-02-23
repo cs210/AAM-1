@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
+import type * as organizationRequests from "../organizationRequests.js";
 import type * as ratings from "../ratings.js";
 
 import type {
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   http: typeof http;
   museums: typeof museums;
+  organizationRequests: typeof organizationRequests;
   ratings: typeof ratings;
 }>;
 
