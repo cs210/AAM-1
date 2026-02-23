@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQuery } from "convex/react"
-import { LogOutIcon, UserIcon } from "lucide-react"
+import { Building2Icon, LogOutIcon, UserIcon } from "lucide-react"
 
 import { api } from "@packages/backend/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
@@ -12,6 +12,15 @@ import { Button } from "@/components/ui/button"
 export function SidebarUserDetails() {
   const user = useQuery(api.auth.getCurrentUser)
   const router = useRouter()
+  const { data: activeOrganization } = authClient.useActiveOrganization()
+  const activationStatus = (() => {
+    const metadata = activeOrganization?.metadata
+    if (metadata && typeof metadata === "object" && "activationStatus" in metadata) {
+      const status = (metadata as { activationStatus?: string }).activationStatus
+      return typeof status === "string" ? status : null
+    }
+    return null
+  })()
 
   if (user === undefined) {
     return <div className="h-20 animate-pulse rounded-xl border bg-muted/50" />
@@ -43,6 +52,20 @@ export function SidebarUserDetails() {
           <p className="truncate text-sm font-medium">{user.name ?? "Museum Team"}</p>
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
         </div>
+      </div>
+      <div className="rounded-lg border bg-muted/30 p-2">
+        <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+          Workspace
+        </p>
+        <div className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm">
+          <Building2Icon className="size-4" />
+          <span className="truncate">{activeOrganization?.name ?? "No workspace"}</span>
+        </div>
+        {activationStatus === "pending" ? (
+          <p className="text-muted-foreground mt-1 px-2 text-xs">
+            Pending activation. Org actions are locked.
+          </p>
+        ) : null}
       </div>
       <Button
         variant="outline"

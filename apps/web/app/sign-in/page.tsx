@@ -30,14 +30,14 @@ export default function SignInPage() {
     const { data, error: err } = await authClient.signIn.email({
       email,
       password,
-      callbackURL: "/",
+      callbackURL: "/dashboard",
     });
     setIsLoading(false);
     if (err) {
       setError(err.message ?? "Sign in failed");
       return;
     }
-    if (data) router.push("/");
+    if (data) router.push("/dashboard");
   }
 
   return (
