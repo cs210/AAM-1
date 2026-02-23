@@ -3,23 +3,27 @@ import { query } from "./_generated/server";
 import { createClient, GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth, type BetterAuthOptions } from "better-auth/minimal";
+import { organization } from "better-auth/plugins";
 
 import { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
+import authSchema from "./betterAuth/schema";
 import { expo } from "@better-auth/expo";
 
-const siteUrl = process.env.SITE_URL;
-
-if (!siteUrl) {
-  throw new Error("Missing SITE_URL environment variable");
-}
-
-export const authComponent = createClient<DataModel>(components.betterAuth);
+export const authComponent = createClient<DataModel, typeof authSchema>(
+  components.betterAuth,
+  {
+    local: {
+      schema: authSchema,
+    },
+  },
+);
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
+  const siteUrl = process.env.SITE_URL ?? "";
   return {
     baseURL: siteUrl,
-    trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"],
+    trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"].filter(Boolean),
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
@@ -29,6 +33,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       convex({
         authConfig,
       }),
+      organization(),
       expo(),
     ],
   } satisfies BetterAuthOptions;

@@ -22,6 +22,10 @@ import { authClient } from "@/lib/auth-client"
 import { Building2Icon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
+function slugify(name: string) {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48)
+}
+
 export function DashboardShell() {
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
@@ -35,6 +39,7 @@ export function DashboardShell() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const activeTabInfo = dashboardTabs.find((tab) => tab.id === activeTab)
   const user = useQuery(api.auth.getCurrentUser)
+  const { data: activeOrganization } = authClient.useActiveOrganization()
   const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
   const submitRequest = useMutation(api.organizationRequests.submitRequest)
 
@@ -44,21 +49,44 @@ export function DashboardShell() {
     const name = museumName.trim()
     const locationCity = city.trim()
     const locationState = state.trim()
+    const orgSlug = slugify(name)
 
-    if (!name || !locationCity || !locationState) {
+    if (!name || !locationCity || !locationState || !orgSlug) {
       setError("Please complete all required museum details.")
       return
     }
 
     setIsSubmitting(true)
     try {
+      const { data, error: orgError } = await authClient.organization.create({
+        name,
+        slug: orgSlug,
+        metadata: {
+          activationStatus: "pending",
+          city: locationCity,
+          state: locationState,
+          website: website.trim() || null,
+          staffRole: staffRole.trim() || null,
+        },
+      })
+
+      if (orgError) {
+        setError(orgError.message ?? "Unable to create workspace.")
+        return
+      }
+
       await submitRequest({
         museumName: name,
         city: locationCity,
         state: locationState,
         website: website.trim() || undefined,
         staffRole: staffRole.trim() || undefined,
+        betterAuthOrgId: data?.id ?? undefined,
       })
+
+      if (data?.id) {
+        await authClient.organization.setActive({ organizationId: data.id })
+      }
 
       setMuseumName("")
       setCity("")
@@ -274,7 +302,7 @@ export function DashboardShell() {
           <section className="overflow-hidden rounded-2xl border bg-linear-to-br from-primary/14 via-primary/6 to-background p-6">
             <div className="text-muted-foreground inline-flex items-center gap-2 rounded-lg border bg-background/70 px-2.5 py-1 text-xs">
               <Building2Icon className="size-3.5" />
-              Workspace: {pendingRequest.museumName}
+              Workspace: {activeOrganization?.name ?? pendingRequest?.museumName ?? "Personal Workspace"}
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>
             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">
