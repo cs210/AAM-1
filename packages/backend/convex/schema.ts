@@ -70,7 +70,8 @@ export default defineSchema({
     .index("by_content", ["contentType", "contentId"])
     .index("by_user_and_content", ["userId", "contentType", "contentId"]),
 
-  // Organization access requests (museum workspace requests)
+  // Organization access requests (museum workspace requests).
+  // betterAuthOrgId = reference to Better Auth component organization (resolve via organizationRequests.resolveOrganization).
   organizationRequests: defineTable({
     userId: v.string(),
     museumName: v.string(),
@@ -83,12 +84,13 @@ export default defineSchema({
       v.literal("approved"),
       v.literal("rejected"),
     ),
-    betterAuthOrgId: v.optional(v.string()),
+    betterAuthOrgId: v.optional(v.string()), // BetterAuthOrgId — resolve via organizationRequests.resolveOrganization
     createdAt: v.number(),
     reviewedAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_betterAuthOrgId", ["betterAuthOrgId"]),
 
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
