@@ -35,15 +35,13 @@ EXPO_PUBLIC_CONVEX_URL=https://wooden-hummingbird-900.convex.cloud
 
 ### Backend
 
+Ensure that these environment variables are set based on your convex deployment.
 ```bash
 CONVEX_DEPLOYMENT=dev:wooden-hummingbird-900 # team: yami, project: yami
-
 CONVEX_URL=https://wooden-hummingbird-900.convex.cloud
 CONVEX_SITE_URL=https://wooden-hummingbird-900.convex.site
 ```
-
-Add the secret key and site URL to the backend environment variables.
-
+Add the secret key and site URL to the backend environment variables within `./packages/backend/`:
 ```bash
 npx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 npx convex env set SITE_URL http://localhost:3000
