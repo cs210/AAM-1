@@ -1,87 +1,94 @@
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import React, { useState } from 'react';
+import { View, Pressable } from 'react-native';
+import { HomeIcon, SearchIcon, UserIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
-import { Link, Stack } from 'expo-router';
-import { MoonStarIcon, StarIcon, SunIcon } from 'lucide-react-native';
-import * as React from 'react';
-import { Image, type ImageStyle, View } from 'react-native';
-import { Uniwind, useUniwind } from 'uniwind';
+import { useUniwind } from 'uniwind';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const LOGO = {
-  light: require('@/assets/images/react-native-reusables-light.png'),
-  dark: require('@/assets/images/react-native-reusables-dark.png'),
-};
+// Import tab screens
+import HomeScreen from './(tabs)';
+import SearchScreen from './(tabs)/explore';
+import WrappedScreen from './(tabs)/profile';
 
-const SCREEN_OPTIONS = {
-  title: 'React Native Reusables',
-  headerTransparent: true,
-  headerRight: () => <ThemeToggle />,
-};
+type Screen = 'home' | 'search' | 'profile';
 
-const IMAGE_STYLE: ImageStyle = {
-  height: 76,
-  width: 76,
-};
+const NAV_ITEMS = [
+  { id: 'home' as const, label: 'Home', icon: HomeIcon },
+  { id: 'search' as const, label: 'Search', icon: SearchIcon },
+  { id: 'profile' as const, label: 'Profile', icon: UserIcon },
+];
 
-export default function Screen() {
+export default function Index() {
+  const [screen, setScreen] = useState<Screen>('home');
   const { theme } = useUniwind();
+  const isLight = theme === 'light';
+  const activeColor = '#007AFF';
+  const inactiveColor = isLight ? '#8E8E93' : '#A0A0A0';
+  const bgColor = isLight ? '#FFFFFF' : '#1C1C1E';
+  const borderColor = isLight ? '#E5E5EA' : '#3C3C3D';
+
+  const renderScreen = () => {
+    switch (screen) {
+      case 'home':
+        return <HomeScreen />;
+      case 'search':
+        return <SearchScreen />;
+      case 'profile':
+        return <WrappedScreen />;
+    }
+  };
 
   return (
-    <>
-      <Stack.Screen options={SCREEN_OPTIONS} />
-      <View className="flex-1 items-center justify-center gap-8 p-4">
-        <Image source={LOGO[theme ?? 'light']} style={IMAGE_STYLE} resizeMode="contain" />
-        <View className="gap-2 p-4">
-          <Text className="ios:text-foreground text-muted-foreground font-mono text-sm">
-            1. Edit <Text variant="code">app/index.tsx</Text> to get started.
-          </Text>
-          <Text className="ios:text-foreground text-muted-foreground font-mono text-sm">
-            2. Save to see your changes instantly.
-          </Text>
-        </View>
-        <View className="flex-row flex-wrap justify-center gap-2">
-          <Link href="/intake" asChild>
-            <Button size="lg">
-              <Text>Museum interest survey</Text>
-            </Button>
-          </Link>
-          <Link href="https://reactnativereusables.com" asChild>
-            <Button variant="outline">
-              <Text>Browse the Docs</Text>
-            </Button>
-          </Link>
-          <Link href="/sign-in" asChild>
-            <Button variant="ghost">
-              <Text>Sign in</Text>
-              <Icon as={StarIcon} />
-            </Button>
-          </Link>
+    <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+      <View style={{ flex: 1 }}>
+        {renderScreen()}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderTopColor: borderColor,
+            borderTopWidth: 1,
+            backgroundColor: bgColor,
+          }}
+        >
+          {NAV_ITEMS.map((item) => {
+            const isActive = screen === item.id;
+            const Icon = item.icon;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => setScreen(item.id)}
+                style={{
+                  alignItems: 'center',
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  flex: 1,
+                }}
+              >
+                <Icon
+                  size={24}
+                  color={isActive ? activeColor : inactiveColor}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                <Text
+                  style={{
+                    fontSize: 11,
+                    marginTop: 4,
+                    color: isActive ? activeColor : inactiveColor,
+                    fontWeight: isActive ? '600' : '400',
+                    fontFamily: 'PublicSans',
+                  }}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
-    </>
-  );
-}
-
-const THEME_ICONS = {
-  light: SunIcon,
-  dark: MoonStarIcon,
-};
-
-function ThemeToggle() {
-  const { theme } = useUniwind();
-
-  function toggleTheme() {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    Uniwind.setTheme(newTheme);
-  }
-
-  return (
-    <Button
-      onPressIn={toggleTheme}
-      size="icon"
-      variant="ghost"
-      className="ios:size-9 web:mx-4 rounded-full">
-      <Icon as={THEME_ICONS[theme ?? 'light']} className="size-5" />
-    </Button>
+    </SafeAreaView>
   );
 }
