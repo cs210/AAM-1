@@ -82,7 +82,7 @@ export const resolveOrganization = query({
   args: { betterAuthOrgId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     if (!args.betterAuthOrgId) return null;
-    return await ctx.runQuery(components.betterAuth.getOrganization.getOrganization, {
+    return await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
       id: args.betterAuthOrgId,
     });
   },

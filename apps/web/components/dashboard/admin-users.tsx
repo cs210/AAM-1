@@ -89,7 +89,7 @@ export function AdminUsers() {
     const res = await authClient.admin.createUser({
       email: createEmail.trim(),
       password: createPassword.trim(),
-      name: createName.trim() || undefined,
+      name: createName.trim() || "",
       role: "user",
     })
     setCreating(false)
@@ -104,7 +104,7 @@ export function AdminUsers() {
     }
   }
 
-  const handleSetRole = async (userId: string, role: string) => {
+  const handleSetRole = async (userId: string, role: "user" | "admin") => {
     const res = await authClient.admin.setRole({ userId, role })
     if (res.error) setError(res.error.message ?? "Failed to set role")
     else loadUsers()

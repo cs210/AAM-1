@@ -28,19 +28,20 @@ function AcceptInvitationContent() {
       return;
     }
 
+    const id = invitationId;
     let cancelled = false;
 
     async function accept() {
       setStatus("loading");
       const { data, error } = await authClient.organization.acceptInvitation({
-        invitationId,
+        invitationId: id,
       });
 
       if (cancelled) return;
 
       if (error) {
         if (error.status === 401 || error.message?.toLowerCase().includes("sign in")) {
-          const callbackUrl = `/accept-invitation?invitationId=${encodeURIComponent(invitationId)}`;
+          const callbackUrl = `/accept-invitation?invitationId=${encodeURIComponent(id)}`;
           router.push(`/sign-in?callbackURL=${encodeURIComponent(callbackUrl)}`);
           return;
         }
@@ -69,8 +70,8 @@ function AcceptInvitationContent() {
             <CardDescription>This invitation link is invalid or missing an ID.</CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/">Go home</Link>
+            <Button variant="outline" className="w-full" render={<Link href="/" />}>
+              Go home
             </Button>
           </CardFooter>
         </Card>
@@ -91,8 +92,8 @@ function AcceptInvitationContent() {
         </CardHeader>
         {(status === "error" || status === "success") && (
           <CardFooter>
-            <Button asChild className="w-full" variant={status === "success" ? "default" : "outline"}>
-              <Link href="/dashboard">Go to dashboard</Link>
+            <Button className="w-full" variant={status === "success" ? "default" : "outline"} render={<Link href="/dashboard" />}>
+              Go to dashboard
             </Button>
           </CardFooter>
         )}

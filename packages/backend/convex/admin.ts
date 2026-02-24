@@ -26,8 +26,9 @@ async function requireAdminAction(ctx: ActionCtx) {
 }
 
 // Component calls from queries (sparingly; components require runQuery).
+// Cast: getOrganization may be provided by component extension; package types omit it.
 async function fetchComponentOrganizationsForUser(ctx: QueryCtx, userId: string) {
-  return await ctx.runQuery(components.betterAuth.getOrganization.listOrganizationsForUser, {
+  return await ctx.runQuery((components.betterAuth as any).getOrganization.listOrganizationsForUser, {
     userId,
   });
 }
@@ -42,7 +43,7 @@ export const listOrgRequestsForAdmin = action({
     await requireAdminAction(ctx);
     const requests = await ctx.runQuery(internal.organizationRequests.listAllRequests, {}) as OrgRequestRow[];
     const userIds: string[] = [...new Set(requests.map((r: OrgRequestRow) => r.userId))];
-    const users = await ctx.runQuery(components.betterAuth.getUser.getUsers, { ids: userIds }) as UserDisplay[];
+    const users = await ctx.runQuery((components.betterAuth as any).getUser.getUsers, { ids: userIds }) as UserDisplay[];
     const userMap = new Map(users.map((u: UserDisplay) => [u.id, u]));
     return requests.map((req: OrgRequestRow) => {
       const u = userMap.get(req.userId);
@@ -71,7 +72,7 @@ export const listOrganizationsForAdmin = action({
   args: {},
   handler: async (ctx) => {
     await requireAdminAction(ctx);
-    return await ctx.runQuery(components.betterAuth.getOrganization.listOrganizations, {});
+    return await ctx.runQuery((components.betterAuth as any).getOrganization.listOrganizations, {});
   },
 });
 
@@ -102,12 +103,12 @@ export const listPendingInvitationsForAdmin = action({
   args: {},
   handler: async (ctx): Promise<PendingInvitation[]> => {
     await requireAdminAction(ctx);
-    const invitations = (await ctx.runQuery(components.betterAuth.invitations.listInvitations, {
+    const invitations = (await ctx.runQuery((components.betterAuth as any).invitations.listInvitations, {
       status: "pending",
     })) as PendingInvitation[];
     const withOrgNames = await Promise.all(
       invitations.map(async (inv) => {
-        const org = await ctx.runQuery(components.betterAuth.getOrganization.getOrganization, {
+        const org = await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
           id: inv.organizationId,
         });
         return { ...inv, organizationName: org?.name };
@@ -122,7 +123,7 @@ export const cancelInvitationForAdmin = action({
   args: { invitationId: v.string() },
   handler: async (ctx, args) => {
     await requireAdminAction(ctx);
-    await ctx.runMutation(components.betterAuth.invitations.deleteInvitation, {
+    await ctx.runMutation((components.betterAuth as any).invitations.deleteInvitation, {
       id: args.invitationId,
     });
   },
