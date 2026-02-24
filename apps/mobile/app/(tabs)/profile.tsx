@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     backgroundColor: '#f8fafc',
+    marginTop: -40,
   },
   iconContainer: {
     backgroundColor: '#e0e7ef',
