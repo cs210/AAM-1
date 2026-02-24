@@ -13,6 +13,8 @@ import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as ratings from "../ratings.js";
+import type * as recsys from "../recsys.js";
+import type * as seed from "../seed.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +28,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   museums: typeof museums;
   ratings: typeof ratings;
+  recsys: typeof recsys;
+  seed: typeof seed;
 }>;
 
 /**
