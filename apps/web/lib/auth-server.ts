@@ -1,10 +1,12 @@
 import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
 
-// On Vercel, derive site URL from VERCEL_URL when NEXT_PUBLIC_CONVEX_SITE_URL is unset or not substituted
+// Derive Convex site URL from Convex deployment URL (.convex.cloud → .convex.site) when not set
 function getConvexSiteUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
   if (fromEnv && !fromEnv.includes("$")) return fromEnv;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (convexUrl?.includes(".convex.cloud"))
+    return convexUrl.replace(".convex.cloud", ".convex.site");
   return fromEnv ?? "";
 }
 
