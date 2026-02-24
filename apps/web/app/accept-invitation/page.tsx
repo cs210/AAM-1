@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const invitationId = searchParams.get("invitationId");
@@ -98,5 +98,24 @@ export default function AcceptInvitationPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle>Organization invitation</CardTitle>
+              <CardDescription>Loading…</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      }
+    >
+      <AcceptInvitationContent />
+    </Suspense>
   );
 }

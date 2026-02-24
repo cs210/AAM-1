@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -16,7 +16,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackURL = searchParams.get("callbackURL") ?? "/dashboard";
@@ -104,5 +104,24 @@ export default function SignInPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle>Sign in</CardTitle>
+              <CardDescription>Loading…</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      }
+    >
+      <SignInContent />
+    </Suspense>
   );
 }
