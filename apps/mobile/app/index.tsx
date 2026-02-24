@@ -3,7 +3,6 @@ import { View, Pressable } from 'react-native';
 import { HomeIcon, SearchIcon, UserIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { useUniwind } from 'uniwind';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import tab screens
 import HomeScreen from './(tabs)';
@@ -39,21 +38,20 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
-      <View style={{ flex: 1 }}>
-        {renderScreen()}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-            alignItems: 'center',
-            paddingVertical: 12,
-            paddingHorizontal: 16,
-            borderTopColor: borderColor,
-            borderTopWidth: 1,
-            backgroundColor: bgColor,
-          }}
-        >
+    <View style={{ flex: 1, backgroundColor: bgColor }}>
+      {renderScreen()}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          borderTopColor: borderColor,
+          borderTopWidth: 1,
+          backgroundColor: bgColor,
+        }}
+      >
           {NAV_ITEMS.map((item) => {
             const isActive = screen === item.id;
             const Icon = item.icon;
@@ -89,6 +87,5 @@ export default function Index() {
           })}
         </View>
       </View>
-    </SafeAreaView>
   );
 }
