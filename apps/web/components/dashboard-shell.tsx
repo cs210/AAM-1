@@ -314,7 +314,8 @@ export function DashboardShell() {
                   </Button>
                 )
               })}
-              {isAdmin && isAdminMode &&
+              {isAdmin &&
+                isAdminMode &&
                 adminDashboardTabs.map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id

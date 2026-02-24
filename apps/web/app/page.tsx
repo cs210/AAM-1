@@ -16,7 +16,6 @@ import {
   RefreshCwIcon,
   SparklesIcon,
   SearchIcon,
-  FeatherIcon,
   ShieldCheckIcon,
   BabyIcon,
 } from "lucide-react"

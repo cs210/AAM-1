@@ -16,6 +16,7 @@ import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as organizationRequests from "../organizationRequests.js";
 import type * as ratings from "../ratings.js";
+import type * as recsys from "../recsys.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   museums: typeof museums;
   organizationRequests: typeof organizationRequests;
   ratings: typeof ratings;
+  recsys: typeof recsys;
 }>;
 
 /**
@@ -61,5 +63,6 @@ export declare const internal: FilterApi<
 >;
 
 export declare const components: {
-  betterAuth: import("../betterAuth/_generated/component.js").ComponentApi<"betterAuth">;
+  betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+  geospatial: import("@convex-dev/geospatial/_generated/component.js").ComponentApi<"geospatial">;
 };
