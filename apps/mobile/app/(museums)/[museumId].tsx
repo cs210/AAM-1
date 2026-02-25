@@ -9,21 +9,21 @@ import { ArrowLeftIcon, MapPinIcon, HeartIcon } from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
 
 export default function MuseumDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { museumId } = useLocalSearchParams<{ museumId: string }>();
   
   // Fetch museum from Convex
   const museum = useQuery(api.museums.getMuseum, 
-    id ? { id: id as Id<"museums"> } : "skip"
+    museumId ? { id: museumId as Id<"museums"> } : "skip"
   );
   
   // Fetch events for this museum
   const events = useQuery(api.events.getEventsByMuseum, 
-    id ? { museumId: id as Id<"museums"> } : "skip"
+    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
   );
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
-    id ? { museumId: id as Id<"museums"> } : "skip"
+    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
   );
   
   // Follow/unfollow mutations
@@ -31,12 +31,12 @@ export default function MuseumDetailScreen() {
   const unfollowMuseum = useMutation(api.follows.unfollowMuseum);
 
   const handleFollowPress = async () => {
-    if (!id) return;
+    if (!museumId) return;
     try {
       if (isFollowing) {
-        await unfollowMuseum({ museumId: id as Id<"museums"> });
+        await unfollowMuseum({ museumId: museumId as Id<"museums"> });
       } else {
-        await followMuseum({ museumId: id as Id<"museums"> });
+        await followMuseum({ museumId: museumId as Id<"museums"> });
       }
     } catch (error) {
       console.error('Follow action failed:', error);
@@ -135,7 +135,7 @@ export default function MuseumDetailScreen() {
             events.map((event) => (
               <EventCard
                 key={event._id}
-                event={{ ...event, museumId: id } as EventCardData}
+                event={{ ...event, museumId } as EventCardData}
                 showMuseum={false}
                 compactDate={false}
               />
