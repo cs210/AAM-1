@@ -1,25 +1,52 @@
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { Link } from 'expo-router';
-import { View } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const PlaceholderCard = () => (
+  <View style={styles.placeholder} />
+);
 
 export default function HomeScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center p-6">
-        <Text className="mb-2 text-center text-3xl font-bold text-foreground">
-          Welcome
-        </Text>
-        <Text className="mb-8 text-center text-lg text-muted-foreground">
-          Tell us a bit about your museum interests so we can personalize your experience.
-        </Text>
-        <Link href="/intake" asChild>
-          <Button size="lg" className="rounded-xl px-8">
-            <Text>Start quick survey</Text>
-          </Button>
-        </Link>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Home</Text>
       </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {[...Array(6)].map((_, i) => (
+          <PlaceholderCard key={i} />
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9F9F9',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#222',
+    fontFamily: 'PublicSans',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  placeholder: {
+    backgroundColor: '#E5E5EA',
+    borderRadius: 12,
+    height: 120,
+    marginBottom: 12,
+  },
+});
