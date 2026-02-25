@@ -11,8 +11,8 @@ import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState('');
   
-  // Fetch museums from Convex
-  const museums = useQuery(api.museums.listMuseums);
+  // Fetch museums with stats (average rating, rating count) from Convex
+  const museums = useQuery(api.museums.listMuseumsWithStats);
 
   // Filter museums based on search text
   const filteredMuseums = useMemo(() => {

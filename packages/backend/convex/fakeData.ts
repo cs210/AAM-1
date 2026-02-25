@@ -120,3 +120,59 @@ export const populateFakeEvents = mutation({
     return { inserted: insertedCount };
   },
 });
+
+// Populate fake ratings for museums
+export const populateFakeRatings = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const museums = await ctx.db.query("museums").collect();
+    if (museums.length === 0) {
+      return { error: "No museums found. Run populateFakeMuseums first." };
+    }
+
+    // Use fake user IDs to simulate different users rating museums
+    const fakeUserIds = [
+      "fake_user_1",
+      "fake_user_2", 
+      "fake_user_3",
+      "fake_user_4",
+      "fake_user_5",
+    ];
+
+    const now = Date.now();
+    let insertedCount = 0;
+
+    for (const museum of museums) {
+      // Each museum gets 2-5 random ratings
+      const numRatings = 2 + Math.floor(Math.random() * 4);
+      const usersToRate = fakeUserIds.slice(0, numRatings);
+
+      for (const userId of usersToRate) {
+        // Check if rating already exists
+        const existing = await ctx.db
+          .query("userRatings")
+          .withIndex("by_user_and_content", (q) =>
+            q.eq("userId", userId).eq("contentType", "museum").eq("contentId", museum._id)
+          )
+          .first();
+
+        if (!existing) {
+          // Random rating between 3.0 and 5.0 (museums tend to be rated well)
+          const rating = 3 + Math.floor(Math.random() * 3);
+          
+          await ctx.db.insert("userRatings", {
+            userId,
+            contentType: "museum",
+            contentId: museum._id,
+            rating,
+            createdAt: now,
+            updatedAt: now,
+          });
+          insertedCount++;
+        }
+      }
+    }
+
+    return { inserted: insertedCount };
+  },
+});

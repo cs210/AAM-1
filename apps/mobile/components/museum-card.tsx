@@ -3,7 +3,10 @@ import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { Doc } from '@packages/backend/convex/_generated/dataModel';
 
-export type MuseumCardData = Doc<"museums">;
+export type MuseumCardData = Doc<"museums"> & {
+  averageRating?: number | null;
+  ratingCount?: number;
+};
 
 type Props = {
   museum: MuseumCardData;
@@ -11,6 +14,13 @@ type Props = {
 };
 
 export function MuseumCard({ museum, style }: Props) {
+  const displayRating = museum.averageRating 
+    ? museum.averageRating.toFixed(1) 
+    : '—';
+  const ratingLabel = museum.ratingCount && museum.ratingCount > 0
+    ? `★ ${displayRating} (${museum.ratingCount})`
+    : 'No ratings yet';
+
   return (
     <Pressable 
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed, style]}
@@ -26,8 +36,7 @@ export function MuseumCard({ museum, style }: Props) {
         {museum.location?.city || 'Unknown'}, {museum.location?.state || ''}
       </Text>
       <View style={styles.detailsContainer}>
-        <Text style={styles.detailText}>★ 4.5 Rating</Text>
-        <Text style={styles.detailText}>📸 245 Photos</Text>
+        <Text style={styles.detailText}>{ratingLabel}</Text>
       </View>
     </Pressable>
   );
