@@ -2,19 +2,15 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Museums
   museums: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
 
-    // Location (required for radius filtering)
+    // Location (NOT geospatial)
     location: v.object({
       address: v.optional(v.string()),
-      city: v.string(),
-      state: v.string(),
-      zipCode: v.string(),
-      latitude: v.float64(),
-      longitude: v.float64(),
+      city: v.optional(v.string()),
+      state: v.optional(v.string())
     }),
 
     // Category for recommendation
@@ -35,12 +31,10 @@ export default defineSchema({
     // Location (use museum location or independent location)
     museumId: v.optional(v.id("museums")), // If at a museum
     location: v.optional(v.object({
-      city: v.string(),
-      state: v.string(),
-      zipCode: v.string(),
-      latitude: v.float64(),
-      longitude: v.float64(),
-    })), // If independent event
+      address: v.optional(v.string()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string())
+    })),
 
     // Category for recommendation
     category: v.string(), // e.g., "workshop", "exhibition", "performance", "family"
