@@ -17,7 +17,6 @@ const stats = [
   { title: 'Badges earned', value: '2 badges', icon: '🏅' },
 ];
 
-
 const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -29,7 +28,7 @@ const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
     }).start();
   }, [fadeAnim]);
   return (
-    <Animated.View style={[styles.pane, { opacity: fadeAnim }]}> 
+    <Animated.View style={[styles.pane, { opacity: fadeAnim }]}>
       <View style={styles.iconContainer}>
         <Text style={styles.icon}>{item.icon}</Text>
       </View>
@@ -68,8 +67,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#f8fafc', // Match container background
-    // Removed borderRadius and shadow for seamless transition
+    backgroundColor: '#f8fafc',
+    marginTop: -40,
   },
   iconContainer: {
     backgroundColor: '#e0e7ef',
