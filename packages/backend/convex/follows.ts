@@ -86,3 +86,4 @@ export const getFollowedMuseums = query({
     return museums.filter(Boolean);
   },
 });
+
