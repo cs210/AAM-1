@@ -52,10 +52,38 @@ export default defineSchema({
     // Optional metadata
     imageUrl: v.optional(v.string()),
     registrationUrl: v.optional(v.string()),
+
+    // External source metadata
+    source: v.optional(v.string()),
+    sourceId: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    sourceUpdatedAt: v.optional(v.number()),
+    sourceFetchedAt: v.optional(v.number()),
   })
     .index("by_museum", ["museumId"])
     .index("by_category", ["category"])
-    .index("by_dates", ["startDate", "endDate"]),
+    .index("by_dates", ["startDate", "endDate"])
+    .index("by_source", ["source", "sourceId"]),
+
+  // External source configs for museums
+  museumSources: defineTable({
+    museumId: v.id("museums"),
+    provider: v.string(),
+    enabled: v.boolean(),
+    providerConfig: v.optional(v.string()), // JSON blob for provider-specific params
+    externalMuseumId: v.optional(v.string()),
+    syncCursor: v.optional(v.string()),
+    lastSyncedAt: v.optional(v.number()),
+    nextSyncAt: v.optional(v.number()),
+    syncIntervalMinutes: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_museum", ["museumId"])
+    .index("by_provider", ["provider"])
+    .index("by_museum_provider", ["museumId", "provider"])
+    .index("by_enabled", ["enabled"]),
 
   // User Ratings (user-specific)
   userRatings: defineTable({

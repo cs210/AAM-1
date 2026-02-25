@@ -36,6 +36,19 @@ export const listUpcomingEvents = query({
   },
 });
 
+// List events that are currently ongoing
+export const listOngoingEvents = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    return await ctx.db
+      .query("events")
+      .withIndex("by_dates", (q) => q.lte("startDate", now))
+      .filter((q) => q.gte(q.field("endDate"), now))
+      .take(100);
+  },
+});
+
 // Get event by ID
 export const getEvent = query({
   args: { id: v.id("events") },

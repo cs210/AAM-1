@@ -11,8 +11,13 @@
 import type * as auth from "../auth.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
+import type * as museumSources from "../museumSources.js";
 import type * as museums from "../museums.js";
+import type * as providers_harvard from "../providers/harvard.js";
+import type * as providers_index from "../providers/index.js";
+import type * as providers_types from "../providers/types.js";
 import type * as ratings from "../ratings.js";
+import type * as sync from "../sync.js";
 
 import type {
   ApiFromModules,
@@ -24,8 +29,13 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   events: typeof events;
   http: typeof http;
+  museumSources: typeof museumSources;
   museums: typeof museums;
+  "providers/harvard": typeof providers_harvard;
+  "providers/index": typeof providers_index;
+  "providers/types": typeof providers_types;
   ratings: typeof ratings;
+  sync: typeof sync;
 }>;
 
 /**

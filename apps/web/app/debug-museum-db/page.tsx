@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@packages/backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,20 +43,37 @@ const defaultEvent = {
   registrationUrl: "",
 };
 
+const defaultSource = {
+  museumId: null as string | null,
+  provider: "harvard",
+  enabled: true,
+  providerConfig: JSON.stringify({ resource: "exhibition", params: { size: "100" } }, null, 2),
+  externalMuseumId: "",
+  syncIntervalMinutes: "360",
+};
+
 export default function DebugSeedPage() {
   const museums = useQuery(api.museums.listMuseums);
   const addMuseum = useMutation(api.museums.addMuseum);
   const addEvent = useMutation(api.events.addEvent);
+  const upsertMuseumSource = useMutation(api.museumSources.upsertMuseumSource);
+  const syncAllSources = useAction(api.sync.syncAllSources);
 
   const [museumForm, setMuseumForm] = useState(defaultMuseum);
   const [eventForm, setEventForm] = useState(defaultEvent);
+  const [sourceForm, setSourceForm] = useState(defaultSource);
   const [museumStatus, setMuseumStatus] = useState<Status>({ type: "idle" });
   const [eventStatus, setEventStatus] = useState<Status>({ type: "idle" });
+  const [sourceStatus, setSourceStatus] = useState<Status>({ type: "idle" });
 
   const museumList = useMemo(() => museums ?? [], [museums]);
   const selectedMuseum = useMemo(
     () => museumList.find((museum) => museum._id === eventForm.museumId) ?? null,
     [museumList, eventForm.museumId]
+  );
+  const selectedSourceMuseum = useMemo(
+    () => museumList.find((museum) => museum._id === sourceForm.museumId) ?? null,
+    [museumList, sourceForm.museumId]
   );
 
   const resetMuseum = () => {
@@ -67,6 +84,11 @@ export default function DebugSeedPage() {
   const resetEvent = () => {
     setEventForm(defaultEvent);
     setEventStatus({ type: "idle" });
+  };
+
+  const resetSource = () => {
+    setSourceForm(defaultSource);
+    setSourceStatus({ type: "idle" });
   };
 
   const submitMuseum = async () => {
@@ -176,6 +198,55 @@ export default function DebugSeedPage() {
       setEventForm({ ...defaultEvent, museumId: eventForm.museumId });
     } catch (error) {
       setEventStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to save event." });
+    }
+  };
+
+  const submitSource = async () => {
+    setSourceStatus({ type: "working", message: "Saving source..." });
+    if (!sourceForm.museumId) {
+      setSourceStatus({ type: "error", message: "Select a museum for this source." });
+      return;
+    }
+
+    const intervalValue = sourceForm.syncIntervalMinutes.trim();
+    const syncIntervalMinutes = intervalValue ? Number(intervalValue) : undefined;
+    if (intervalValue && Number.isNaN(syncIntervalMinutes)) {
+      setSourceStatus({ type: "error", message: "Sync interval must be a number." });
+      return;
+    }
+
+    const providerConfig = sourceForm.providerConfig.trim();
+    if (providerConfig) {
+      try {
+        JSON.parse(providerConfig);
+      } catch (error) {
+        setSourceStatus({ type: "error", message: "Provider config must be valid JSON." });
+        return;
+      }
+    }
+
+    try {
+      await upsertMuseumSource({
+        museumId: sourceForm.museumId as typeof museumList[number]["_id"],
+        provider: sourceForm.provider,
+        enabled: sourceForm.enabled,
+        providerConfig: providerConfig || undefined,
+        externalMuseumId: sourceForm.externalMuseumId.trim() || undefined,
+        syncIntervalMinutes,
+      });
+      setSourceStatus({ type: "success", message: "Source saved. You can sync now." });
+    } catch (error) {
+      setSourceStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to save source." });
+    }
+  };
+
+  const runSync = async () => {
+    setSourceStatus({ type: "working", message: "Running sync..." });
+    try {
+      await syncAllSources({});
+      setSourceStatus({ type: "success", message: "Sync complete. Refresh museums page to see new events." });
+    } catch (error) {
+      setSourceStatus({ type: "error", message: error instanceof Error ? error.message : "Sync failed." });
     }
   };
 
@@ -506,6 +577,125 @@ export default function DebugSeedPage() {
                     className={`text-xs font-medium ${eventStatus.type === "error" ? "text-destructive" : "text-muted-foreground"}`}
                   >
                     {eventStatus.message}
+                  </span>
+                )}
+              </CardFooter>
+            </Card>
+
+            <Card className="border border-border/60 bg-background/80 shadow-[0_20px_40px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
+              <CardHeader>
+                <CardTitle>External Source Sync</CardTitle>
+                <CardDescription>Configure auto-fetching for a museum (Harvard example).</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label>Museum</Label>
+                  <Select
+                    value={sourceForm.museumId ?? ""}
+                    onValueChange={(value) => setSourceForm((prev) => ({ ...prev, museumId: value || null }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a museum">
+                        {selectedSourceMuseum?.name ?? "Select a museum"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {museumList.map((museum) => (
+                        <SelectItem key={museum._id} value={museum._id}>
+                          {museum.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label>Provider</Label>
+                    <Select
+                      value={sourceForm.provider}
+                      onValueChange={(value) => setSourceForm((prev) => ({ ...prev, provider: value }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select provider">
+                          {sourceForm.provider === "harvard" ? "Harvard Art Museums" : sourceForm.provider}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="harvard">Harvard Art Museums</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Enabled</Label>
+                    <Select
+                      value={sourceForm.enabled ? "enabled" : "disabled"}
+                      onValueChange={(value) => setSourceForm((prev) => ({ ...prev, enabled: value === "enabled" }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="source-sync-interval">Sync interval (minutes)</Label>
+                    <Input
+                      id="source-sync-interval"
+                      type="number"
+                      min="15"
+                      value={sourceForm.syncIntervalMinutes}
+                      onChange={(event) =>
+                        setSourceForm((prev) => ({ ...prev, syncIntervalMinutes: event.target.value }))
+                      }
+                      placeholder="360"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="source-external-id">External museum ID (optional)</Label>
+                    <Input
+                      id="source-external-id"
+                      value={sourceForm.externalMuseumId}
+                      onChange={(event) =>
+                        setSourceForm((prev) => ({ ...prev, externalMuseumId: event.target.value }))
+                      }
+                      placeholder="Harvard museum id"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="source-provider-config">Provider config (JSON)</Label>
+                  <Textarea
+                    id="source-provider-config"
+                    value={sourceForm.providerConfig}
+                    onChange={(event) => setSourceForm((prev) => ({ ...prev, providerConfig: event.target.value }))}
+                    rows={6}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Harvard provider expects `HARVARD_API_KEY` in Convex env. Example config uses the exhibitions
+                    endpoint.
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-wrap gap-3">
+                <Button onClick={submitSource} disabled={sourceStatus.type === "working"}>
+                  {sourceStatus.type === "working" ? "Saving..." : "Save source"}
+                </Button>
+                <Button variant="secondary" onClick={runSync} disabled={sourceStatus.type === "working"}>
+                  Run sync now
+                </Button>
+                <Button variant="ghost" onClick={resetSource}>
+                  Reset
+                </Button>
+                {sourceStatus.message && (
+                  <span
+                    className={`text-xs font-medium ${sourceStatus.type === "error" ? "text-destructive" : "text-muted-foreground"}`}
+                  >
+                    {sourceStatus.message}
                   </span>
                 )}
               </CardFooter>
