@@ -29,6 +29,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const token = await getToken();
+  const isSignedIn = Boolean(token);
   return (
     <html lang="en" className={publicSans.variable} suppressHydrationWarning>
       <body
@@ -37,8 +38,8 @@ export default async function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ConvexClientProvider initialToken={token}>
-            <AppToolbar />
-            <main className="pt-20">{children}</main>
+            {!isSignedIn && <AppToolbar />}
+            <main className={isSignedIn ? "pt-0" : "pt-20"}>{children}</main>
           </ConvexClientProvider>
         </ThemeProvider>
       </body>
