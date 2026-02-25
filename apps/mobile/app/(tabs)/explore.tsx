@@ -1,37 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Dimensions, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchIcon } from 'lucide-react-native';
-import { router } from 'expo-router';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { Doc } from '@packages/backend/convex/_generated/dataModel';
+import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 
-const { width } = Dimensions.get('window');
-const CARD_HEIGHT = 150;
 
-type Museum = Doc<"museums">;
-
-const MuseumCard = ({ item }: { item: Museum }) => (
-  <Pressable 
-    style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-    onPress={() => router.push(`/${item._id}`)}
-  >
-    <View style={styles.cardHeader}>
-      <Text style={styles.museumName} numberOfLines={2}>{item.name}</Text>
-      <View style={styles.categoryBadge}>
-        <Text style={styles.categoryText}>{item.category}</Text>
-      </View>
-    </View>
-    <Text style={styles.museumLocation}>
-      {item.location?.city || 'Unknown'}, {item.location?.state || ''}
-    </Text>
-    <View style={styles.detailsContainer}>
-      <Text style={styles.detailText}>★ 4.5 Rating</Text>
-      <Text style={styles.detailText}>📸 245 Photos</Text>
-    </View>
-  </Pressable>
-);
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState('');
@@ -101,7 +76,7 @@ export default function SearchScreen() {
 
       <FlatList
         data={filteredMuseums}
-        renderItem={({ item }) => <MuseumCard item={item} />}
+        renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
         keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
@@ -155,59 +130,6 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  cardPressed: {
-    backgroundColor: '#F5F5F5',
-    transform: [{ scale: 0.98 }],
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
-  categoryBadge: {
-    backgroundColor: '#007AFF15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  categoryText: {
-    fontSize: 11,
-    color: '#007AFF',
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  museumName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#222',
-    fontFamily: 'PublicSans',
-    flex: 1,
-  },
-  museumLocation: {
-    fontSize: 14,
-    color: '#8E8E93',
-    fontFamily: 'PublicSans',
-    marginBottom: 12,
-  },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailText: {
-    fontSize: 12,
-    color: '#555',
-    fontFamily: 'PublicSans',
   },
   loadingContainer: {
     flex: 1,

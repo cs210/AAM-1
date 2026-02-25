@@ -6,14 +6,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ArrowLeftIcon, MapPinIcon, HeartIcon } from 'lucide-react-native';
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+import { EventCard, EventCardData } from '../../components/event-card';
 
 export default function MuseumDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -140,15 +133,12 @@ export default function MuseumDetailScreen() {
           
           {events && events.length > 0 ? (
             events.map((event) => (
-              <View key={event._id} style={styles.eventCard}>
-                <View style={styles.eventBadge}>
-                  <Text style={styles.eventBadgeText}>{event.category}</Text>
-                </View>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventDate}>
-                  {formatDate(event.startDate)} - {formatDate(event.endDate)}
-                </Text>
-              </View>
+              <EventCard
+                key={event._id}
+                event={{ ...event, museumId: id } as EventCardData}
+                showMuseum={false}
+                compactDate={false}
+              />
             ))
           ) : (
             <View style={styles.emptyEvents}>
@@ -284,38 +274,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#222',
     marginBottom: 12,
-  },
-  eventCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    marginBottom: 10,
-  },
-  eventBadge: {
-    backgroundColor: '#34C75915',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  eventBadgeText: {
-    fontSize: 11,
-    color: '#34C759',
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  eventTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 4,
-  },
-  eventDate: {
-    fontSize: 13,
-    color: '#8E8E93',
   },
   emptyEvents: {
     backgroundColor: '#FFF',

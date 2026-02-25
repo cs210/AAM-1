@@ -61,7 +61,7 @@ export const getEventsByMuseum = query({
   },
 });
 
-// Get events from followed museums
+// Get events from followed museums (one random event per museum)
 export const getEventsFromFollowedMuseums = query({
   args: {},
   handler: async (ctx) => {
@@ -87,12 +87,17 @@ export const getEventsFromFollowedMuseums = query({
       )
     );
 
-    // Flatten and sort by start date
-    const events = eventsArrays.flat().sort((a, b) => a.startDate - b.startDate);
+    // Randomly select one event per museum (if museum has events)
+    const randomEvents = eventsArrays
+      .filter((events) => events.length > 0)
+      .map((events) => {
+        const randomIndex = Math.floor(Math.random() * events.length);
+        return events[randomIndex];
+      });
 
     // Attach museum info to each event
     const eventsWithMuseum = await Promise.all(
-      events.map(async (event) => {
+      randomEvents.map(async (event) => {
         const museum = event.museumId ? await ctx.db.get(event.museumId) : null;
         return {
           ...event,
