@@ -17,7 +17,7 @@ import type * as providers_harvard from "../providers/harvard.js";
 import type * as providers_index from "../providers/index.js";
 import type * as providers_types from "../providers/types.js";
 import type * as ratings from "../ratings.js";
-import type * as sync from "../sync.js";
+import type * as recsys from "../recsys.js";
 
 import type {
   ApiFromModules,
@@ -35,7 +35,7 @@ declare const fullApi: ApiFromModules<{
   "providers/index": typeof providers_index;
   "providers/types": typeof providers_types;
   ratings: typeof ratings;
-  sync: typeof sync;
+  recsys: typeof recsys;
 }>;
 
 /**
@@ -66,4 +66,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+  geospatial: import("@convex-dev/geospatial/_generated/component.js").ComponentApi<"geospatial">;
 };

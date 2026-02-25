@@ -39,14 +39,9 @@ export default function Screen() {
             2. Save to see your changes instantly.
           </Text>
         </View>
-        <View className="flex-row flex-wrap justify-center gap-2">
-          <Link href="/intake" asChild>
-            <Button size="lg">
-              <Text>Museum interest survey</Text>
-            </Button>
-          </Link>
+        <View className="flex-row gap-2">
           <Link href="https://reactnativereusables.com" asChild>
-            <Button variant="outline">
+            <Button>
               <Text>Browse the Docs</Text>
             </Button>
           </Link>
