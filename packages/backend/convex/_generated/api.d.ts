@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as museumSources from "../museumSources.js";
@@ -18,6 +19,7 @@ import type * as providers_index from "../providers/index.js";
 import type * as providers_types from "../providers/types.js";
 import type * as ratings from "../ratings.js";
 import type * as recsys from "../recsys.js";
+import type * as sync from "../sync.js";
 
 import type {
   ApiFromModules,
@@ -27,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  crons: typeof crons;
   events: typeof events;
   http: typeof http;
   museumSources: typeof museumSources;
@@ -36,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   "providers/types": typeof providers_types;
   ratings: typeof ratings;
   recsys: typeof recsys;
+  sync: typeof sync;
 }>;
 
 /**

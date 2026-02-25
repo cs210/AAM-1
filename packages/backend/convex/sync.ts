@@ -1,10 +1,12 @@
+import { GeospatialIndex } from "@convex-dev/geospatial";
 import { v } from "convex/values";
 import { action, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { providers } from "./providers";
 import type { ExternalEvent, MuseumSourceConfig } from "./providers/types";
 
 const DEFAULT_SYNC_INTERVAL_MINUTES = 6 * 60;
+const geospatial = new GeospatialIndex(components.geospatial);
 
 const getApiKey = (provider: string): string | null => {
   if (provider === "harvard") {
@@ -107,6 +109,11 @@ export const upsertExternalEvents = internalMutation({
     ),
   },
   handler: async (ctx, args) => {
+    const museumGeo = await geospatial.get(ctx, args.museumId);
+    if (!museumGeo) {
+      throw new Error(`Missing geospatial point for museum ${args.museumId}`);
+    }
+
     for (const event of args.events) {
       const existing = await ctx.db
         .query("events")
@@ -131,10 +138,18 @@ export const upsertExternalEvents = internalMutation({
         sourceFetchedAt: event.sourceFetchedAt ?? args.fetchedAt,
       };
 
+      let eventId = existing?._id;
       if (existing) {
         await ctx.db.patch(existing._id, payload);
       } else {
-        await ctx.db.insert("events", payload);
+        eventId = await ctx.db.insert("events", payload);
+      }
+
+      if (eventId) {
+        await geospatial.remove(ctx, eventId);
+        await geospatial.insert(ctx, eventId, museumGeo.coordinates, {
+          category: payload.category,
+        });
       }
     }
   },

@@ -1,3 +1,5 @@
+import type { Id } from "../_generated/dataModel";
+
 export type ExternalEvent = {
   sourceId: string;
   title: string;
@@ -12,8 +14,8 @@ export type ExternalEvent = {
 };
 
 export type MuseumSourceConfig = {
-  _id: string;
-  museumId: string;
+  _id: Id<"museumSources">;
+  museumId: Id<"museums">;
   provider: string;
   enabled: boolean;
   providerConfig?: string;

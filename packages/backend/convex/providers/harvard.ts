@@ -7,6 +7,7 @@ type HarvardProviderConfig = {
 
 const DEFAULT_RESOURCE = "exhibition";
 const DEFAULT_SIZE = "100";
+const DEFAULT_VENUE = "HAM";
 
 const parseProviderConfig = (raw?: string): HarvardProviderConfig => {
   if (!raw) return {};
@@ -16,6 +17,12 @@ const parseProviderConfig = (raw?: string): HarvardProviderConfig => {
   } catch {
     return {};
   }
+};
+
+type HarvardVenue = {
+  ishamvenue?: number;
+  begindate?: string;
+  enddate?: string;
 };
 
 const toTimestamp = (value: unknown): number | null => {
@@ -46,6 +53,20 @@ const pickFirst = (record: Record<string, unknown>, keys: string[]): unknown => 
   return undefined;
 };
 
+const pickVenue = (record: Record<string, unknown>): HarvardVenue | null => {
+  const venues = record["venues"];
+  if (!Array.isArray(venues)) return null;
+
+  const hamVenue = venues.find((venue) => {
+    if (!venue || typeof venue !== "object") return false;
+    return Number((venue as Record<string, unknown>).ishamvenue) === 1;
+  });
+
+  const candidate = hamVenue ?? venues[0];
+  if (!candidate || typeof candidate !== "object") return null;
+  return candidate as HarvardVenue;
+};
+
 const toStringValue = (value: unknown): string | undefined => {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -63,21 +84,33 @@ const mapRecord = (record: Record<string, unknown>): ExternalEvent | null => {
     "Untitled exhibition";
 
   const description = toStringValue(
-    pickFirst(record, ["description", "shortdescription", "text", "labeltext", "overview"])
+    pickFirst(record, ["shortdescription", "description", "text", "labeltext", "overview"])
   );
+
+  const poster = record["poster"];
+  const images = record["images"];
+  const posterUrl =
+    poster && typeof poster === "object" ? toStringValue((poster as Record<string, unknown>).imageurl) : undefined;
+  const imagesUrl =
+    Array.isArray(images) && images[0] && typeof images[0] === "object"
+      ? toStringValue((images[0] as Record<string, unknown>).baseimageurl)
+      : undefined;
 
   const imageUrl = toStringValue(
     pickFirst(record, ["primaryimageurl", "baseimageurl", "imageUrl", "imageurl"])
-  );
+  ) ?? posterUrl ?? imagesUrl;
 
   const sourceUrl = toStringValue(pickFirst(record, ["url", "website", "link", "uri"]));
 
+  const venue = pickVenue(record);
   const startDate = toTimestamp(
-    pickFirst(record, ["begindate", "beginDate", "startdate", "startDate", "datebegin"])
+    venue?.begindate ??
+      pickFirst(record, ["begindate", "beginDate", "startdate", "startDate", "datebegin"])
   );
 
   const endDate = toTimestamp(
-    pickFirst(record, ["enddate", "endDate", "dateend"])
+    venue?.enddate ??
+      pickFirst(record, ["enddate", "endDate", "dateend"])
   );
 
   if (!startDate && !endDate) return null;
@@ -106,13 +139,22 @@ export const fetchHarvardExhibitions: ProviderFetch = async ({ source, apiKey, n
   const config = parseProviderConfig(source.providerConfig);
   const resource = config.resource ?? DEFAULT_RESOURCE;
   const params = config.params ?? {};
+  const todayLabel = new Date(now).toISOString().slice(0, 10);
 
   const url = new URL(`https://api.harvardartmuseums.org/${resource}`);
   url.searchParams.set("apikey", apiKey);
   url.searchParams.set("size", params.size ?? DEFAULT_SIZE);
+  if (!params.venue) {
+    url.searchParams.set("venue", DEFAULT_VENUE);
+  }
+  if (!params.after) {
+    url.searchParams.set("after", `enddate:${todayLabel}`);
+  }
 
   Object.entries(params).forEach(([key, value]) => {
     if (key === "size") return;
+    if (key === "venue" && !value) return;
+    if (key === "after" && !value) return;
     if (value === undefined || value === null || value === "") return;
     url.searchParams.set(key, value);
   });
@@ -125,9 +167,5 @@ export const fetchHarvardExhibitions: ProviderFetch = async ({ source, apiKey, n
   const payload = (await response.json()) as { records?: Record<string, unknown>[] };
   const records = Array.isArray(payload?.records) ? payload.records : [];
   const events = records.map(mapRecord).filter((event): event is ExternalEvent => Boolean(event));
-
-  const maxAgeMs = 1000 * 60 * 60 * 24 * 14;
-  const minEndDate = now - maxAgeMs;
-
-  return events.filter((event) => event.endDate >= minEndDate);
+  return events.filter((event) => event.endDate >= now || event.startDate >= now);
 };

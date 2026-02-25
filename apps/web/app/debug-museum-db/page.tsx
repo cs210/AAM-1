@@ -19,7 +19,6 @@ const defaultMuseum = {
   address: "",
   city: "",
   state: "",
-  zipCode: "",
   latitude: "42.3549",
   longitude: "-71.0493",
   imageUrl: "",
@@ -32,9 +31,9 @@ const defaultEvent = {
   description: "",
   category: "exhibition",
   museumId: null as string | null,
+  address: "",
   city: "",
   state: "",
-  zipCode: "",
   latitude: "",
   longitude: "",
   startDate: "",
@@ -45,9 +44,9 @@ const defaultEvent = {
 
 const defaultSource = {
   museumId: null as string | null,
-  provider: "harvard",
+  provider: "harvard" as string | null,
   enabled: true,
-  providerConfig: JSON.stringify({ resource: "exhibition", params: { size: "100" } }, null, 2),
+  providerConfig: JSON.stringify({ resource: "exhibition", params: { size: "100", venue: "HAM" } }, null, 2),
   externalMuseumId: "",
   syncIntervalMinutes: "360",
 };
@@ -97,11 +96,6 @@ export default function DebugSeedPage() {
       setMuseumStatus({ type: "error", message: "Museum name is required." });
       return;
     }
-    if (!museumForm.city.trim() || !museumForm.state.trim() || !museumForm.zipCode.trim()) {
-      setMuseumStatus({ type: "error", message: "City, state, and zip code are required." });
-      return;
-    }
-
     const latitude = Number(museumForm.latitude);
     const longitude = Number(museumForm.longitude);
     if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
@@ -114,20 +108,18 @@ export default function DebugSeedPage() {
         name: museumForm.name.trim(),
         description: museumForm.description.trim() || undefined,
         category: museumForm.category.trim(),
+        point: { latitude, longitude },
         location: {
           address: museumForm.address.trim() || undefined,
-          city: museumForm.city.trim(),
-          state: museumForm.state.trim(),
-          zipCode: museumForm.zipCode.trim(),
-          latitude,
-          longitude,
+          city: museumForm.city.trim() || undefined,
+          state: museumForm.state.trim() || undefined,
         },
         imageUrl: museumForm.imageUrl.trim() || undefined,
         website: museumForm.website.trim() || undefined,
         phone: museumForm.phone.trim() || undefined,
       });
       setMuseumStatus({ type: "success", message: "Museum saved. Add another or switch to events." });
-      setMuseumForm({ ...defaultMuseum, city: museumForm.city, state: museumForm.state, zipCode: museumForm.zipCode });
+      setMuseumForm({ ...defaultMuseum, city: museumForm.city, state: museumForm.state });
     } catch (error) {
       setMuseumStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to save museum." });
     }
@@ -152,43 +144,31 @@ export default function DebugSeedPage() {
     }
 
     const hasMuseum = Boolean(eventForm.museumId);
-    if (!hasMuseum) {
-      if (!eventForm.city.trim() || !eventForm.state.trim() || !eventForm.zipCode.trim()) {
-        setEventStatus({ type: "error", message: "Location is required when no museum is selected." });
-        return;
-      }
+    if (!eventForm.latitude.trim() || !eventForm.longitude.trim()) {
+      setEventStatus({ type: "error", message: "Latitude and longitude are required." });
+      return;
     }
-
-    let latitude: number | undefined;
-    let longitude: number | undefined;
-    if (!hasMuseum) {
-      if (!eventForm.latitude.trim() || !eventForm.longitude.trim()) {
-        setEventStatus({ type: "error", message: "Latitude and longitude are required when no museum is selected." });
-        return;
-      }
-      latitude = Number(eventForm.latitude);
-      longitude = Number(eventForm.longitude);
-      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-        setEventStatus({ type: "error", message: "Latitude and longitude must be valid numbers." });
-        return;
-      }
+    const latitude = Number(eventForm.latitude);
+    const longitude = Number(eventForm.longitude);
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      setEventStatus({ type: "error", message: "Latitude and longitude must be valid numbers." });
+      return;
     }
 
     try {
       await addEvent({
+        point: { latitude, longitude },
         title: eventForm.title.trim(),
         description: eventForm.description.trim() || undefined,
         category: eventForm.category.trim(),
         museumId: hasMuseum ? (eventForm.museumId as typeof museumList[number]["_id"]) : undefined,
-        location: hasMuseum
-          ? undefined
-          : {
-              city: eventForm.city.trim(),
-              state: eventForm.state.trim(),
-              zipCode: eventForm.zipCode.trim(),
-              latitude: latitude ?? 0,
-              longitude: longitude ?? 0,
-            },
+        location: eventForm.address.trim() || eventForm.city.trim() || eventForm.state.trim()
+          ? {
+              address: eventForm.address.trim() || undefined,
+              city: eventForm.city.trim() || undefined,
+              state: eventForm.state.trim() || undefined,
+            }
+          : undefined,
         startDate,
         endDate,
         imageUrl: eventForm.imageUrl.trim() || undefined,
@@ -228,7 +208,7 @@ export default function DebugSeedPage() {
     try {
       await upsertMuseumSource({
         museumId: sourceForm.museumId as typeof museumList[number]["_id"],
-        provider: sourceForm.provider,
+        provider: sourceForm.provider || "harvard",
         enabled: sourceForm.enabled,
         providerConfig: providerConfig || undefined,
         externalMuseumId: sourceForm.externalMuseumId.trim() || undefined,
@@ -315,35 +295,26 @@ export default function DebugSeedPage() {
                       placeholder="100 Seaport Ave"
                     />
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="museum-city">City</Label>
-                      <Input
-                        id="museum-city"
-                        value={museumForm.city}
-                        onChange={(event) => setMuseumForm((prev) => ({ ...prev, city: event.target.value }))}
-                        placeholder="Boston"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="museum-state">State</Label>
-                      <Input
-                        id="museum-state"
-                        value={museumForm.state}
-                        onChange={(event) => setMuseumForm((prev) => ({ ...prev, state: event.target.value }))}
-                        placeholder="MA"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="museum-zip">Zip</Label>
-                      <Input
-                        id="museum-zip"
-                        value={museumForm.zipCode}
-                        onChange={(event) => setMuseumForm((prev) => ({ ...prev, zipCode: event.target.value }))}
-                        placeholder="02110"
-                      />
-                    </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="museum-city">City</Label>
+                    <Input
+                      id="museum-city"
+                      value={museumForm.city}
+                      onChange={(event) => setMuseumForm((prev) => ({ ...prev, city: event.target.value }))}
+                      placeholder="Boston"
+                    />
                   </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="museum-state">State</Label>
+                    <Input
+                      id="museum-state"
+                      value={museumForm.state}
+                      onChange={(event) => setMuseumForm((prev) => ({ ...prev, state: event.target.value }))}
+                      placeholder="MA"
+                    />
+                  </div>
+                </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label htmlFor="museum-lat">Latitude</Label>
@@ -467,14 +438,23 @@ export default function DebugSeedPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    If no museum is selected, you must provide a location below.
+                    Event points are always required for geospatial indexing.
                   </p>
                 </div>
                 <div className="grid gap-3 rounded-xl border border-border/60 bg-muted/50 p-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Event Location (when no museum)
+                    Event Location (optional)
                   </span>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="event-address">Address</Label>
+                    <Input
+                      id="event-address"
+                      value={eventForm.address}
+                      onChange={(event) => setEventForm((prev) => ({ ...prev, address: event.target.value }))}
+                      placeholder="200 Market St"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label htmlFor="event-city">City</Label>
                       <Input
@@ -493,35 +473,26 @@ export default function DebugSeedPage() {
                         placeholder="CO"
                       />
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="event-zip">Zip</Label>
-                      <Input
-                        id="event-zip"
-                        value={eventForm.zipCode}
-                        onChange={(event) => setEventForm((prev) => ({ ...prev, zipCode: event.target.value }))}
-                        placeholder="80202"
-                      />
-                    </div>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="event-lat">Latitude</Label>
-                      <Input
-                        id="event-lat"
-                        value={eventForm.latitude}
-                        onChange={(event) => setEventForm((prev) => ({ ...prev, latitude: event.target.value }))}
-                        placeholder="39.7525"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="event-lng">Longitude</Label>
-                      <Input
-                        id="event-lng"
-                        value={eventForm.longitude}
-                        onChange={(event) => setEventForm((prev) => ({ ...prev, longitude: event.target.value }))}
-                        placeholder="-104.9995"
-                      />
-                    </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="event-lat">Latitude</Label>
+                    <Input
+                      id="event-lat"
+                      value={eventForm.latitude}
+                      onChange={(event) => setEventForm((prev) => ({ ...prev, latitude: event.target.value }))}
+                      placeholder="39.7525"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="event-lng">Longitude</Label>
+                    <Input
+                      id="event-lng"
+                      value={eventForm.longitude}
+                      onChange={(event) => setEventForm((prev) => ({ ...prev, longitude: event.target.value }))}
+                      placeholder="-104.9995"
+                    />
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -613,7 +584,7 @@ export default function DebugSeedPage() {
                     <Label>Provider</Label>
                     <Select
                       value={sourceForm.provider}
-                      onValueChange={(value) => setSourceForm((prev) => ({ ...prev, provider: value }))}
+                      onValueChange={(value) => setSourceForm((prev) => ({ ...prev, provider: value}))}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select provider">
