@@ -64,6 +64,16 @@ export default defineSchema({
     .index("by_content", ["contentType", "contentId"])
     .index("by_user_and_content", ["userId", "contentType", "contentId"]),
 
+  // User Following (tracks which museums a user follows)
+  userFollows: defineTable({
+    userId: v.string(), // Better Auth user ID
+    museumId: v.id("museums"),
+    followedAt: v.number(), // Timestamp
+  })
+    .index("by_user", ["userId"])
+    .index("by_museum", ["museumId"])
+    .index("by_user_and_museum", ["userId", "museumId"]),
+
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
 });

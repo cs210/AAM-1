@@ -1,45 +1,86 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, TextInput, FlatList, StyleSheet, Dimensions, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchIcon } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { useQuery } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
+import { Doc } from '@packages/backend/convex/_generated/dataModel';
 
 const { width } = Dimensions.get('window');
 const CARD_HEIGHT = 150;
 
-const MUSEUMS = [
-  { id: '1', name: 'Museum 1', location: 'New York' },
-  { id: '2', name: 'Museum 2', location: 'Los Angeles' },
-  { id: '3', name: 'Museum 3', location: 'Chicago' },
-  { id: '4', name: 'Museum 4', location: 'Houston' },
-  { id: '5', name: 'Museum 5', location: 'Phoenix' },
-  { id: '6', name: 'Museum 6', location: 'Philadelphia' },
-  { id: '7', name: 'Museum 7', location: 'San Antonio' },
-  { id: '8', name: 'Museum 8', location: 'San Diego' },
-];
+type Museum = Doc<"museums">;
 
-const MuseumCard = ({ item }: { item: (typeof MUSEUMS)[0] }) => (
-  <View style={styles.card}>
-    <Text style={styles.museumName}>{item.name}</Text>
-    <Text style={styles.museumLocation}>{item.location}</Text>
+const MuseumCard = ({ item }: { item: Museum }) => (
+  <Pressable 
+    style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+    onPress={() => router.push(`/${item._id}`)}
+  >
+    <View style={styles.cardHeader}>
+      <Text style={styles.museumName} numberOfLines={2}>{item.name}</Text>
+      <View style={styles.categoryBadge}>
+        <Text style={styles.categoryText}>{item.category}</Text>
+      </View>
+    </View>
+    <Text style={styles.museumLocation}>
+      {item.location?.city || 'Unknown'}, {item.location?.state || ''}
+    </Text>
     <View style={styles.detailsContainer}>
       <Text style={styles.detailText}>★ 4.5 Rating</Text>
       <Text style={styles.detailText}>📸 245 Photos</Text>
     </View>
-  </View>
+  </Pressable>
 );
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState('');
-  const [filteredMuseums, setFilteredMuseums] = useState(MUSEUMS);
+  
+  // Fetch museums from Convex
+  const museums = useQuery(api.museums.listMuseums);
 
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    const filtered = MUSEUMS.filter((museum) =>
-      museum.name.toLowerCase().includes(text.toLowerCase()) ||
-      museum.location.toLowerCase().includes(text.toLowerCase())
+  // Filter museums based on search text
+  const filteredMuseums = useMemo(() => {
+    if (!museums) return [];
+    if (!searchText.trim()) return museums;
+    
+    const lowerSearch = searchText.toLowerCase();
+    return museums.filter((museum) =>
+      museum.name.toLowerCase().includes(lowerSearch) ||
+      museum.location?.city?.toLowerCase().includes(lowerSearch) ||
+      museum.location?.state?.toLowerCase().includes(lowerSearch)
     );
-    setFilteredMuseums(filtered);
-  };
+  }, [museums, searchText]);
+
+  // Loading state
+  if (museums === undefined) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Search Museums</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading museums...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Empty state
+  if (museums.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Search Museums</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No museums found</Text>
+          <Text style={styles.emptySubtext}>Run the fake data script to populate museums</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,7 +94,7 @@ export default function SearchScreen() {
           style={styles.searchInput}
           placeholder="Search museums..."
           value={searchText}
-          onChangeText={handleSearch}
+          onChangeText={setSearchText}
           placeholderTextColor="#C7C7CC"
         />
       </View>
@@ -61,10 +102,15 @@ export default function SearchScreen() {
       <FlatList
         data={filteredMuseums}
         renderItem={({ item }) => <MuseumCard item={item} />}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
         scrollEnabled={true}
+        ListEmptyComponent={
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>No museums match your search</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -118,12 +164,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
+  cardPressed: {
+    backgroundColor: '#F5F5F5',
+    transform: [{ scale: 0.98 }],
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  categoryBadge: {
+    backgroundColor: '#007AFF15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  categoryText: {
+    fontSize: 11,
+    color: '#007AFF',
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
   museumName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#222',
     fontFamily: 'PublicSans',
-    marginBottom: 4,
+    flex: 1,
   },
   museumLocation: {
     fontSize: 14,
@@ -139,5 +208,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#555',
     fontFamily: 'PublicSans',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#8E8E93',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#222',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+  },
+  noResultsContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: '#8E8E93',
   },
 });

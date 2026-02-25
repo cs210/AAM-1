@@ -10,6 +10,8 @@
 
 import type * as auth from "../auth.js";
 import type * as events from "../events.js";
+import type * as fakeData from "../fakeData.js";
+import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as ratings from "../ratings.js";
@@ -24,6 +26,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   events: typeof events;
+  fakeData: typeof fakeData;
+  follows: typeof follows;
   http: typeof http;
   museums: typeof museums;
   ratings: typeof ratings;
