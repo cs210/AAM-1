@@ -105,10 +105,10 @@ export default function DebugSeedPage() {
 
     try {
       await addMuseum({
+        point: { latitude: latitude ?? 0, longitude: longitude ?? 0 },
         name: museumForm.name.trim(),
         description: museumForm.description.trim() || undefined,
         category: museumForm.category.trim(),
-        point: { latitude, longitude },
         location: {
           address: museumForm.address.trim() || undefined,
           city: museumForm.city.trim() || undefined,
@@ -157,7 +157,7 @@ export default function DebugSeedPage() {
 
     try {
       await addEvent({
-        point: { latitude, longitude },
+        point: { latitude: latitude ?? 0, longitude: longitude ?? 0 },
         title: eventForm.title.trim(),
         description: eventForm.description.trim() || undefined,
         category: eventForm.category.trim(),

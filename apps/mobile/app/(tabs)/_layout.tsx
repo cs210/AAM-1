@@ -1,5 +1,6 @@
+
 import { Tabs } from 'expo-router';
-import { HomeIcon, CompassIcon } from 'lucide-react-native';
+import { HomeIcon, CompassIcon, UserIcon } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -20,9 +21,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Search',
           tabBarIcon: ({ color, size }) => (
             <CompassIcon size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'My Profile',
+          tabBarIcon: ({ color, size }) => (
+            <UserIcon size={size} color={color} />
           ),
         }}
       />

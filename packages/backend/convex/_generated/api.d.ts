@@ -8,15 +8,20 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
+import type * as email from "../email.js";
 import type * as events from "../events.js";
+import type * as fakeData from "../fakeData.js";
+import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museumSources from "../museumSources.js";
 import type * as museums from "../museums.js";
 import type * as providers_harvard from "../providers/harvard.js";
 import type * as providers_index from "../providers/index.js";
 import type * as providers_types from "../providers/types.js";
+import type * as organizationRequests from "../organizationRequests.js";
 import type * as ratings from "../ratings.js";
 import type * as recsys from "../recsys.js";
 import type * as sync from "../sync.js";
@@ -28,15 +33,20 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   auth: typeof auth;
   crons: typeof crons;
+  email: typeof email;
   events: typeof events;
+  fakeData: typeof fakeData;
+  follows: typeof follows;
   http: typeof http;
   museumSources: typeof museumSources;
   museums: typeof museums;
   "providers/harvard": typeof providers_harvard;
   "providers/index": typeof providers_index;
   "providers/types": typeof providers_types;
+  organizationRequests: typeof organizationRequests;
   ratings: typeof ratings;
   recsys: typeof recsys;
   sync: typeof sync;
