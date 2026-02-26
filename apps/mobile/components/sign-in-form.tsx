@@ -44,7 +44,7 @@ export function SignInForm() {
     }
 
     if (data) {
-      router.replace('/');
+      router.replace('/(tabs)');
     }
   }
 

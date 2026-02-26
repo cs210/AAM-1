@@ -10,7 +10,7 @@ export default defineSchema({
     location: v.object({
       address: v.optional(v.string()),
       city: v.optional(v.string()),
-      state: v.optional(v.string())
+      state: v.optional(v.string()),
     }),
 
     // Category for recommendation
@@ -33,7 +33,7 @@ export default defineSchema({
     location: v.optional(v.object({
       address: v.optional(v.string()),
       city: v.optional(v.string()),
-      state: v.optional(v.string())
+      state: v.optional(v.string()),
     })),
 
     // Category for recommendation
@@ -86,6 +86,15 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_betterAuthOrgId", ["betterAuthOrgId"]),
 
+  // User Following (tracks which museums a user follows)
+  userFollows: defineTable({
+    userId: v.string(), // Better Auth user ID
+    museumId: v.id("museums"),
+    followedAt: v.number(), // Timestamp
+  })
+    .index("by_user", ["userId"])
+    .index("by_museum", ["museumId"])
+    .index("by_user_and_museum", ["userId", "museumId"]),
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
 });

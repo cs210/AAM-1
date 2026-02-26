@@ -12,6 +12,8 @@ import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as email from "../email.js";
 import type * as events from "../events.js";
+import type * as fakeData from "../fakeData.js";
+import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as organizationRequests from "../organizationRequests.js";
@@ -29,6 +31,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   email: typeof email;
   events: typeof events;
+  fakeData: typeof fakeData;
+  follows: typeof follows;
   http: typeof http;
   museums: typeof museums;
   organizationRequests: typeof organizationRequests;

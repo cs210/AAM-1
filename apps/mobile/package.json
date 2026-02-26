@@ -10,6 +10,7 @@
     "clean": "rm -rf .expo node_modules"
   },
   "dependencies": {
+    "@packages/backend": "workspace:*",
     "@better-auth/core": "1.4.9",
     "@better-auth/expo": "1.4.9",
     "@better-auth/utils": "0.3.0",

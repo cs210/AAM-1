@@ -38,6 +38,40 @@ export const listMuseums = query({
   },
 });
 
+// List all museums with computed stats (average rating, rating count)
+export const listMuseumsWithStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const museums = await ctx.db.query("museums").collect();
+
+    // Get stats for each museum
+    const museumsWithStats = await Promise.all(
+      museums.map(async (museum) => {
+        const ratings = await ctx.db
+          .query("userRatings")
+          .withIndex("by_content", (q) =>
+            q.eq("contentType", "museum").eq("contentId", museum._id)
+          )
+          .collect();
+
+        const ratingCount = ratings.length;
+        const averageRating =
+          ratingCount > 0
+            ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratingCount
+            : null;
+
+        return {
+          ...museum,
+          averageRating,
+          ratingCount,
+        };
+      })
+    );
+
+    return museumsWithStats;
+  },
+});
+
 // Get museum by ID
 export const getMuseum = query({
   args: { id: v.id("museums") },
