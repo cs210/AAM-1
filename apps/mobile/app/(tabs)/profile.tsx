@@ -78,17 +78,32 @@ export default function WrappedScreen({ route }: any) {
     await unfollowUser({ userId: viewedUserId });
   };
 
+  const FALLBACK_DISPLAY_NAME = "Name can't be displayed";
+  // Own profile: use current user's name/email from auth; else profile. Other users: name only (never show their email).
+  const rawDisplayName = viewedUserId === currentUserId
+    ? (currentUser?.name ?? currentUser?.email ?? profile?.name ?? profile?.email ?? FALLBACK_DISPLAY_NAME)
+    : (profile?.name ?? FALLBACK_DISPLAY_NAME);
+  // Never show trailing " 2", " 3", etc. (e.g. from auth duplicate-name handling)
+  const displayName = typeof rawDisplayName === 'string'
+    ? rawDisplayName.replace(/\s+\d+$/, '').trim() || FALLBACK_DISPLAY_NAME
+    : FALLBACK_DISPLAY_NAME;
+
   return (
     <View style={styles.container}>
-      {/* Profile info and follower/following counts */}
       <View style={styles.profileHeader}>
-        {profile?.imageUrl ? (
-          <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}><Text style={styles.avatarInitial}>{profile?.name?.[0]?.toUpperCase() || '?'}</Text></View>
+        <View style={styles.avatarRow}>
+          {profile?.imageUrl ? (
+            <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
+            </View>
+          )}
+          <Text style={styles.profileNameNextToAvatar} numberOfLines={1}>{displayName}</Text>
+        </View>
+        {viewedUserId === currentUserId && profile?.email && (
+          <Text style={styles.profileEmail}>{profile.email}</Text>
         )}
-        <Text style={styles.profileTitle}>{profile?.name || profile?.email || 'Profile'}</Text>
-        {profile?.email && <Text style={styles.profileEmail}>{profile.email}</Text>}
         <View style={styles.countsRow}>
           <View style={styles.countBox}>
             <Text style={styles.countNumber}>{followers ? followers.length : '-'}</Text>
@@ -109,17 +124,20 @@ export default function WrappedScreen({ route }: any) {
           </TouchableOpacity>
         )}
       </View>
-      <FlatList
-        data={stats}
-        renderItem={({ item, index }) => <Pane item={item} index={index} />}
-        keyExtractor={(_, idx) => idx.toString()}
-        showsVerticalScrollIndicator={false}
-        pagingEnabled
-        snapToInterval={CARD_HEIGHT}
-        decelerationRate="fast"
-        disableIntervalMomentum={true}
-        contentContainerStyle={{}}
-      />
+      {/* Wrapped is only visible on your own profile */}
+      {viewedUserId === currentUserId ? (
+        <FlatList
+          data={stats}
+          renderItem={({ item, index }) => <Pane item={item} index={index} />}
+          keyExtractor={(_, idx) => idx.toString()}
+          showsVerticalScrollIndicator={false}
+          pagingEnabled
+          snapToInterval={CARD_HEIGHT}
+          decelerationRate="fast"
+          disableIntervalMomentum={true}
+          contentContainerStyle={{}}
+        />
+      ) : null}
     </View>
   );
 }
@@ -130,31 +148,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   profileHeader: {
-    alignItems: 'center',
-    paddingTop: 32,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 14,
     backgroundColor: '#e0e7ef',
   },
+  profileNameNextToAvatar: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#222',
+  },
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 14,
     backgroundColor: '#e0e7ef',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#888',
   },
@@ -162,12 +191,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     marginBottom: 4,
-  },
-  profileTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#222',
   },
   countsRow: {
     flexDirection: 'row',

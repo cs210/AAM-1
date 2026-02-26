@@ -70,15 +70,19 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
       ) : (
         <FlatList
           data={filteredUsers}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.userCard}
-              onPress={() => router.push({ pathname: '/(tabs)/profile', params: { userId: item.userId } })}
-            >
-              <Text style={styles.userName}>{item.name || item.email}</Text>
-              <Text style={styles.userEmail}>{item.email}</Text>
-            </Pressable>
-          )}
+          renderItem={({ item }) => {
+            const rawName = item.name || item.email || '';
+            const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+            return (
+              <Pressable
+                style={styles.userCard}
+                onPress={() => router.push({ pathname: '/(tabs)/profile', params: { userId: item.userId } })}
+              >
+                <Text style={styles.userName}>{displayName || "Name can't be displayed"}</Text>
+                <Text style={styles.userEmail}>{item.email}</Text>
+              </Pressable>
+            );
+          }}
           keyExtractor={(item) => item.userId}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
