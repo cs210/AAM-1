@@ -76,10 +76,9 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
             return (
               <Pressable
                 style={styles.userCard}
-                onPress={() => router.push({ pathname: '/(tabs)/profile', params: { userId: item.userId } })}
+                onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}`)}
               >
-                <Text style={styles.userName}>{displayName || "Name can't be displayed"}</Text>
-                <Text style={styles.userEmail}>{item.email}</Text>
+                <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
               </Pressable>
             );
           }}
