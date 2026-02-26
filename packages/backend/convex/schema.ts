@@ -19,7 +19,7 @@ export default defineSchema({
     location: v.object({
       address: v.optional(v.string()),
       city: v.optional(v.string()),
-      state: v.optional(v.string())
+      state: v.optional(v.string()),
     }),
 
     // Category for recommendation
@@ -42,7 +42,7 @@ export default defineSchema({
     location: v.optional(v.object({
       address: v.optional(v.string()),
       city: v.optional(v.string()),
-      state: v.optional(v.string())
+      state: v.optional(v.string()),
     })),
 
     // Category for recommendation
@@ -72,6 +72,28 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_content", ["contentType", "contentId"])
     .index("by_user_and_content", ["userId", "contentType", "contentId"]),
+
+  // Organization access requests (museum workspace requests).
+  // betterAuthOrgId = reference to Better Auth component organization (resolve via organizationRequests.resolveOrganization).
+  organizationRequests: defineTable({
+    userId: v.string(),
+    museumName: v.string(),
+    city: v.string(),
+    state: v.string(),
+    website: v.optional(v.string()),
+    staffRole: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    betterAuthOrgId: v.optional(v.string()), // BetterAuthOrgId — resolve via organizationRequests.resolveOrganization
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_betterAuthOrgId", ["betterAuthOrgId"]),
 
   // User Following (tracks which museums a user follows)
   userFollows: defineTable({
