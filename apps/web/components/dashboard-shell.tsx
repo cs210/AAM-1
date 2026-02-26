@@ -154,7 +154,7 @@ export function DashboardShell() {
     )
   }
 
-  if (!pendingRequest || pendingRequest.status === "rejected") {
+  if (!isAdmin && (!pendingRequest || pendingRequest.status === "rejected")) {
     return (
       <div className="bg-background min-h-screen">
         <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
@@ -246,7 +246,7 @@ export function DashboardShell() {
     )
   }
 
-  if (pendingRequest.status === "pending") {
+  if (!isAdmin && (pendingRequest && pendingRequest.status === "pending")) {
     const requestName = pendingRequest.museumName
     return (
       <div className="bg-background min-h-screen">
