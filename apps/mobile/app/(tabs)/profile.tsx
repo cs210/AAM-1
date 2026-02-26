@@ -9,7 +9,9 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { authClient } from '@/lib/auth-client';
 
 const { width, height } = Dimensions.get('window');
-const CARD_HEIGHT = height;
+// Pane height fits the area below the profile header so content isn't shifted down
+const PROFILE_HEADER_APPROX = 220;
+const CARD_HEIGHT = Math.max(height - PROFILE_HEADER_APPROX, 400);
 
 const stats = [
   { title: 'You visited', value: '12 museums this year', icon: '🏛️' },
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     backgroundColor: '#f8fafc',
-    marginTop: -40,
+    marginTop: 0,
   },
   iconContainer: {
     backgroundColor: '#e0e7ef',

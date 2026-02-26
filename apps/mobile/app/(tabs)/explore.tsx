@@ -180,9 +180,6 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Search</Text>
-      </View>
       <TabView
         navigationState={{ index, routes }}
         renderScene={renderScene}
@@ -206,16 +203,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9F9F9',
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 8,
   },
   toggleRow: {
     flexDirection: 'row',
