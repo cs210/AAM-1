@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 
-function ExampleWrapper({ className, ...props }: React.ComponentProps<"div">) {
+function ExampleWrapper({ className, ref: _ref, ...props }: React.ComponentProps<"div">) {
   return (
     <div className="bg-background w-full">
       <div
@@ -21,6 +21,7 @@ function Example({
   children,
   className,
   containerClassName,
+  ref: _ref,
   ...props
 }: React.ComponentProps<"div"> & {
   title?: string
