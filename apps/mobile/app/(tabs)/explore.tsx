@@ -6,7 +6,7 @@ import { SearchIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { TabView, TabBar } from 'react-native-tab-view';
 
 
@@ -76,7 +76,7 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
             return (
               <Pressable
                 style={styles.userCard}
-                onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}`)}
+                onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`)}
               >
                 <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
               </Pressable>
@@ -102,11 +102,25 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
 
 export default function SearchScreen() {
   const layout = useWindowDimensions();
+  const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
   const [index, setIndex] = useState(0);
   const routes = React.useMemo(() => [
     { key: 'museums', title: 'Museums' },
     { key: 'people', title: 'People' },
   ], []);
+
+  // People tab state (restore from URL when returning from profile)
+  const [peopleSearch, setPeopleSearch] = useState('');
+  React.useEffect(() => {
+    const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
+    const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+    if (typeof searchParam === 'string' && searchParam !== '') {
+      setPeopleSearch(searchParam);
+    }
+    if (tabParam === 'people') {
+      setIndex(1);
+    }
+  }, [params.search, params.tab]);
 
   // Museums tab state
   const [museumSearch, setMuseumSearch] = useState('');
@@ -122,8 +136,6 @@ export default function SearchScreen() {
     );
   }, [museums, museumSearch]);
 
-  // People tab state
-  const [peopleSearch, setPeopleSearch] = useState('');
   const users = useQuery(api.auth.listUsers);
   const filteredUsers = useMemo(() => {
     if (!users) return [];
