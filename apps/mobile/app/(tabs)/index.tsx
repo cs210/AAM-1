@@ -22,18 +22,7 @@ const EmptyState = () => (
 );
 
 export default function HomeScreen() {
-  const events = useQuery(api.events.getEventsFromFollowedMuseums);
-
-  // Deduplicate events by _id
-  const uniqueEvents = React.useMemo(() => {
-    if (!events) return [];
-    const seen = new Set();
-    return events.filter((event) => {
-      if (seen.has(event._id)) return false;
-      seen.add(event._id);
-      return true;
-    });
-  }, [events]);
+  const events = useQuery(api.events.getUnifiedFeed);
 
   // Loading state
   if (events === undefined) {
@@ -44,7 +33,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading events...</Text>
+          <Text style={styles.loadingText}>Loading feed...</Text>
         </View>
       </SafeAreaView>
     );
@@ -56,11 +45,11 @@ export default function HomeScreen() {
         <Text style={styles.title}>Your Feed</Text>
       </View>
       <FlatList
-        data={uniqueEvents}
+        data={events}
         renderItem={({ item }) => <EventCard event={item as EventCardData} />}
         keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={uniqueEvents.length === 0 ? styles.emptyList : styles.listContent}
+        contentContainerStyle={events.length === 0 ? styles.emptyList : styles.listContent}
         ListEmptyComponent={<EmptyState />}
       />
     </SafeAreaView>
