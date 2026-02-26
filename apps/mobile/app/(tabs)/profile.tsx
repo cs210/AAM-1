@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { authClient } from '@/lib/auth-client';
@@ -21,8 +22,6 @@ const stats = [
   { title: 'Reviews written', value: '4 reviews', icon: '✍️' },
   { title: 'Badges earned', value: '2 badges', icon: '🏅' },
 ];
-
-// No local helper needed; we'll fetch current user via Convex query
 
 const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -46,12 +45,13 @@ const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
 };
 
 
-export default function WrappedScreen({ route }: any) {
-  // If viewing another user's profile, their userId will be in route.params.userId
-  // Otherwise, show current user's profile
+export default function WrappedScreen() {
+  const { userId: paramUserId } = useLocalSearchParams<{ userId?: string | string[] }>();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
-  const viewedUserId = route?.params?.userId || currentUserId;
+  // When navigating from search, userId is in URL params; otherwise show current user's profile
+  const paramUserIdStr = Array.isArray(paramUserId) ? paramUserId[0] : paramUserId;
+  const viewedUserId = (typeof paramUserIdStr === 'string' && paramUserIdStr ? paramUserIdStr : null) || currentUserId;
 
   // Fetch user profile info
   const userProfile = useQuery(api.auth.listUsers, {});
@@ -114,15 +114,17 @@ export default function WrappedScreen({ route }: any) {
             <Text style={styles.countLabel}>Following</Text>
           </View>
         </View>
-        {/* Show follow/unfollow button if not viewing own profile */}
-        {viewedUserId && currentUserId && viewedUserId !== currentUserId && (
+        {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
+        {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
           <TouchableOpacity
-            style={isFollowing ? styles.unfollowButton : styles.followButton}
+            style={[styles.followButtonBase, isFollowing ? styles.unfollowButton : styles.followButton]}
             onPress={isFollowing ? handleUnfollow : handleFollow}
           >
-            <Text style={styles.followButtonText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+            <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
+              {isFollowing ? 'Unfollow' : 'Follow'}
+            </Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
       {/* Wrapped is only visible on your own profile */}
       {viewedUserId === currentUserId ? (
@@ -210,24 +212,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
   },
-  followButton: {
-    backgroundColor: '#007AFF',
+  followButtonBase: {
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 20,
-    marginTop: 8,
+    marginTop: 12,
+    alignSelf: 'center',
+  },
+  followButton: {
+    backgroundColor: '#007AFF',
   },
   unfollowButton: {
     backgroundColor: '#eee',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 8,
     borderWidth: 1,
     borderColor: '#ccc',
   },
   followButtonText: {
     color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  unfollowButtonText: {
+    color: '#555',
     fontWeight: 'bold',
     fontSize: 16,
   },
