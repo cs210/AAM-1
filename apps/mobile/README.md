@@ -54,6 +54,20 @@ To dive deeper into the technologies used:
 - [Uniwind Docs](https://docs.uniwind.dev/)
 - [React Native Reusables](https://reactnativereusables.com)
 
+## Populating the Database with Dummy Data
+
+Before populating data, you must have Convex set up and running. From the `packages/backend` directory:
+
+```bash
+# First, ensure Convex is configured and running
+npx convex dev --once
+
+# Then populate fake data for testing
+npx convex run fakeData:populateFakeMuseums
+npx convex run fakeData:populateFakeEvents
+npx convex run fakeData:populateFakeRatings
+```
+
 ## Deploy with EAS
 
 The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).
