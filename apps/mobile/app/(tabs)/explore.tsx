@@ -7,46 +7,13 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 import { router } from 'expo-router';
-import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
+import { TabView, TabBar } from 'react-native-tab-view';
 
 
-export default function SearchScreen() {
-  const layout = useWindowDimensions();
-  const [index, setIndex] = useState(0);
-  const [routes] = useState([
-    { key: 'museums', title: 'Museums' },
-    { key: 'people', title: 'People' },
-  ]);
 
-  // Museums tab state
-  const [museumSearch, setMuseumSearch] = useState('');
-  const museums = useQuery(api.museums.listMuseumsWithStats);
-  const filteredMuseums = useMemo(() => {
-    if (!museums) return [];
-    if (!museumSearch.trim()) return museums;
-    const lowerSearch = museumSearch.toLowerCase();
-    return museums.filter((museum) =>
-      museum.name.toLowerCase().includes(lowerSearch) ||
-      museum.location?.city?.toLowerCase().includes(lowerSearch) ||
-      museum.location?.state?.toLowerCase().includes(lowerSearch)
-    );
-  }, [museums, museumSearch]);
-
-  // People tab state
-  const [peopleSearch, setPeopleSearch] = useState('');
-  const users = useQuery(api.auth.listUsers);
-  const filteredUsers = useMemo(() => {
-    if (!users) return [];
-    if (!peopleSearch.trim()) return users;
-    const lowerSearch = peopleSearch.toLowerCase();
-    return users.filter((user: any) =>
-      user.name?.toLowerCase().includes(lowerSearch) ||
-      user.email?.toLowerCase().includes(lowerSearch)
-    );
-  }, [users, peopleSearch]);
-
-  // Museums tab scene
-  const MuseumsRoute = () => (
+// --- Tab Scenes defined outside main component for stability ---
+function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums, styles }: any) {
+  return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
         <SearchIcon size={20} color="#8E8E93" style={styles.searchIcon} />
@@ -80,9 +47,10 @@ export default function SearchScreen() {
       )}
     </View>
   );
+}
 
-  // People tab scene
-  const PeopleRoute = () => (
+function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styles }: any) {
+  return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
         <SearchIcon size={20} color="#8E8E93" style={styles.searchIcon} />
@@ -105,16 +73,17 @@ export default function SearchScreen() {
           renderItem={({ item }) => (
             <Pressable
               style={styles.userCard}
-              onPress={() => router.push({ pathname: '/(tabs)/profile', params: { userId: item._id } })}
+              onPress={() => router.push({ pathname: '/(tabs)/profile', params: { userId: item.userId } })}
             >
               <Text style={styles.userName}>{item.name || item.email}</Text>
               <Text style={styles.userEmail}>{item.email}</Text>
             </Pressable>
           )}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => item.userId}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           scrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <View style={styles.noResultsContainer}>
               <Text style={styles.noResultsText}>No people match your search</Text>
@@ -124,11 +93,73 @@ export default function SearchScreen() {
       )}
     </View>
   );
+}
 
-  const renderScene = SceneMap({
-    museums: MuseumsRoute,
-    people: PeopleRoute,
-  });
+export default function SearchScreen() {
+  const layout = useWindowDimensions();
+  const [index, setIndex] = useState(0);
+  const routes = React.useMemo(() => [
+    { key: 'museums', title: 'Museums' },
+    { key: 'people', title: 'People' },
+  ], []);
+
+  // Museums tab state
+  const [museumSearch, setMuseumSearch] = useState('');
+  const museums = useQuery(api.museums.listMuseumsWithStats);
+  const filteredMuseums = useMemo(() => {
+    if (!museums) return [];
+    if (!museumSearch.trim()) return museums;
+    const lowerSearch = museumSearch.toLowerCase();
+    return museums.filter((museum) =>
+      museum.name.toLowerCase().includes(lowerSearch) ||
+      museum.location?.city?.toLowerCase().includes(lowerSearch) ||
+      museum.location?.state?.toLowerCase().includes(lowerSearch)
+    );
+  }, [museums, museumSearch]);
+
+  // People tab state
+  const [peopleSearch, setPeopleSearch] = useState('');
+  const users = useQuery(api.auth.listUsers);
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    if (!peopleSearch.trim()) return users;
+    const lowerSearch = peopleSearch.toLowerCase();
+    return users.filter((user: any) =>
+      user.name?.toLowerCase().includes(lowerSearch) ||
+      user.email?.toLowerCase().includes(lowerSearch)
+    );
+  }, [users, peopleSearch]);
+
+  // renderScene directly returns the route components with current props
+  const renderScene = React.useCallback(
+    ({ route }: { route: { key: string } }) => {
+      switch (route.key) {
+        case 'museums':
+          return (
+            <MuseumsRoute
+              museumSearch={museumSearch}
+              setMuseumSearch={setMuseumSearch}
+              museums={museums}
+              filteredMuseums={filteredMuseums}
+              styles={styles}
+            />
+          );
+        case 'people':
+          return (
+            <PeopleRoute
+              peopleSearch={peopleSearch}
+              setPeopleSearch={setPeopleSearch}
+              users={users}
+              filteredUsers={filteredUsers}
+              styles={styles}
+            />
+          );
+        default:
+          return null;
+      }
+    },
+    [museumSearch, setMuseumSearch, museums, filteredMuseums, peopleSearch, setPeopleSearch, users, filteredUsers, styles]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -145,7 +176,6 @@ export default function SearchScreen() {
             {...props}
             indicatorStyle={{ backgroundColor: '#007AFF' }}
             style={{ backgroundColor: '#fff' }}
-            labelStyle={{ color: '#222', fontWeight: 'bold' }}
             activeColor="#007AFF"
             inactiveColor="#888"
           />

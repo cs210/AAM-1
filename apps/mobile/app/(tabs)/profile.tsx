@@ -1,6 +1,7 @@
 
+
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image } from 'react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { authClient } from '@/lib/auth-client';
@@ -59,6 +60,14 @@ export default function WrappedScreen({ route }: any) {
     getCurrentUserId().then(setCurrentUserId);
   }, []);
 
+
+  // Fetch user profile info
+  const userProfile = useQuery(api.auth.listUsers, {});
+  const profile = React.useMemo(() => {
+    if (!userProfile || !viewedUserId) return null;
+    return userProfile.find((u: any) => u.userId === viewedUserId);
+  }, [userProfile, viewedUserId]);
+
   // Fetch follower/following counts
   const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
   const following = useQuery(api.follows.getFollowing, viewedUserId ? { userId: viewedUserId } : 'skip');
@@ -78,9 +87,15 @@ export default function WrappedScreen({ route }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Follower/Following counts and follow button */}
+      {/* Profile info and follower/following counts */}
       <View style={styles.profileHeader}>
-        <Text style={styles.profileTitle}>Profile</Text>
+        {profile?.imageUrl ? (
+          <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}><Text style={styles.avatarInitial}>{profile?.name?.[0]?.toUpperCase() || '?'}</Text></View>
+        )}
+        <Text style={styles.profileTitle}>{profile?.name || profile?.email || 'Profile'}</Text>
+        {profile?.email && <Text style={styles.profileEmail}>{profile.email}</Text>}
         <View style={styles.countsRow}>
           <View style={styles.countBox}>
             <Text style={styles.countNumber}>{followers ? followers.length : '-'}</Text>
@@ -128,6 +143,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    backgroundColor: '#e0e7ef',
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    backgroundColor: '#e0e7ef',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#888',
+  },
+  profileEmail: {
+    fontSize: 16,
+    color: '#888',
+    marginBottom: 4,
   },
   profileTitle: {
     fontSize: 32,
