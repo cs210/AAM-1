@@ -3,15 +3,9 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Syne, Newsreader } from "next/font/google";
+import Link from "next/link";
+import { Dialog } from "@base-ui/react/dialog";
 import { api } from "@packages/backend/convex/_generated/api";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogCancel,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -89,8 +83,8 @@ export default function MuseumsPage() {
           {museumList.map((museum) => {
             const events = eventsByMuseum.get(museum._id) ?? [];
             return (
-              <AlertDialog key={museum._id}>
-                <AlertDialogTrigger
+              <Dialog.Root key={museum._id}>
+                <Dialog.Trigger
                   render={
                     <button
                       type="button"
@@ -126,81 +120,96 @@ export default function MuseumsPage() {
                     </span>
                     <span className="uppercase tracking-[0.2em]">Tap for details</span>
                   </div>
-                </AlertDialogTrigger>
-                <AlertDialogContent
-                  className="max-h-[85vh] max-w-2xl overflow-hidden rounded-[32px] border border-border/60 bg-background/95 p-0 shadow-[0_25px_80px_-45px_rgba(15,23,42,0.55)]"
-                >
-                  <AlertDialogHeader className="gap-5 p-6 text-left">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.35em] text-muted-foreground">
-                        <span>{museum.category}</span>
-                        <span>/</span>
-                        <span>
-                          {museum.location.city}, {museum.location.state}
-                        </span>
-                      </div>
-                      <h3 className={`${display.className} text-3xl`}>{museum.name}</h3>
-                      <p className={`${body.className} text-base text-muted-foreground`}>
-                        {museum.description || "Add a description to spotlight what makes this museum unique."}
-                      </p>
-                    </div>
-                  </AlertDialogHeader>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Backdrop className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs" />
+                  <Dialog.Popup
+                    className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed left-1/2 top-1/2 z-50 grid w-full max-h-[85vh] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[32px] border border-border/60 bg-background/95 p-0 shadow-[0_25px_80px_-45px_rgba(15,23,42,0.55)] outline-none duration-100"
+                  >
+                    <Dialog.Close
+                      aria-label={`Close ${museum.name} details`}
+                      className="absolute right-4 top-4 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/70 bg-background/85 text-base text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                      render={<button type="button" />}
+                    >
+                      ×
+                    </Dialog.Close>
 
-                  <div className="grid gap-4 border-y border-border/60 bg-muted/40 px-6 py-5">
-                    <div className="flex items-center justify-between">
-                      <h4 className={`${display.className} text-lg`}>Ongoing events</h4>
-                      <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                        {events.length} active
-                      </Badge>
+                    <div className="grid gap-5 p-6 text-left">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.35em] text-muted-foreground">
+                          <span>{museum.category}</span>
+                          <span>/</span>
+                          <span>
+                            {museum.location.city}, {museum.location.state}
+                          </span>
+                        </div>
+                        <h3 className={`${display.className} text-3xl`}>{museum.name}</h3>
+                        <p className={`${body.className} text-base text-muted-foreground`}>
+                          {museum.description || "Add a description to spotlight what makes this museum unique."}
+                        </p>
+                      </div>
                     </div>
-                    {events.length === 0 ? (
-                      <p className={`${body.className} text-sm text-muted-foreground`}>
-                        No active events right now. Add one in the debug console or check back later.
-                      </p>
-                    ) : (
-                      <div className="grid gap-3">
-                        {events.slice(0, 5).map((event) => (
-                          <div key={event._id} className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div className="flex flex-col gap-1">
-                                <div className="text-sm font-semibold">{event.title}</div>
-                                {event.description && (
-                                  <div className="text-xs text-muted-foreground line-clamp-2">
-                                    {event.description}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                                {formatRange(event.startDate, event.endDate)}
+
+                    <div className="grid gap-4 border-y border-border/60 bg-muted/40 px-6 py-5">
+                      <div className="flex items-center justify-between">
+                        <h4 className={`${display.className} text-lg`}>Ongoing events</h4>
+                        <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+                          {events.length} active
+                        </Badge>
+                      </div>
+                      {events.length === 0 ? (
+                        <p className={`${body.className} text-sm text-muted-foreground`}>
+                          No active events right now. Add one in the debug console or check back later.
+                        </p>
+                      ) : (
+                        <div className="grid gap-3">
+                          {events.slice(0, 5).map((event) => (
+                            <div key={event._id} className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex flex-col gap-1">
+                                  <div className="text-sm font-semibold">{event.title}</div>
+                                  {event.description && (
+                                    <div className="text-xs text-muted-foreground line-clamp-2">
+                                      {event.description}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                                  {formatRange(event.startDate, event.endDate)}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-                  <AlertDialogFooter className="sticky bottom-0 z-10 border-none bg-background/95 px-6 py-3 backdrop-blur">
-                    {museum.website ? (
+                    <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-none bg-background/95 px-6 py-3 backdrop-blur sm:flex-row sm:justify-end">
+                      {museum.website ? (
+                        <Button
+                        variant="outline"
+                          className="rounded-full"
+                          render={
+                            <a href={museum.website} target="_blank" rel="noreferrer" />
+                          }
+                        >
+                          Visit museum site
+                        </Button>
+                      ) : (
+                        <Button disabled className="rounded-full">
+                          No website yet
+                        </Button>
+                      )}
                       <Button
                         className="rounded-full"
-                        render={
-                          <a href={museum.website} target="_blank" rel="noreferrer" />
-                        }
+                        render={<Link href={`/museums/${encodeURIComponent(museum._id)}`} />}
                       >
-                        Visit museum site
+                        See more
                       </Button>
-                    ) : (
-                      <Button disabled className="rounded-full">
-                        No website yet
-                      </Button>
-                    )}
-                    <AlertDialogCancel variant="ghost" className="rounded-full">
-                      Close
-                    </AlertDialogCancel>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    </div>
+                  </Dialog.Popup>
+                </Dialog.Portal>
+              </Dialog.Root>
             );
           })}
         </section>
