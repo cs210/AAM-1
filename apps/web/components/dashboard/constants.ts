@@ -3,6 +3,10 @@ import {
   CalendarDaysIcon,
   ChartSplineIcon,
   TicketIcon,
+  ShieldCheckIcon,
+  UsersIcon,
+  MailIcon,
+  LayersIcon,
 } from "lucide-react"
 
 export const dashboardTabs = [
@@ -10,6 +14,11 @@ export const dashboardTabs = [
     id: "museum-details",
     label: "Museum Details",
     icon: Building2Icon,
+  },
+  {
+    id: "organizations",
+    label: "Organizations",
+    icon: LayersIcon,
   },
   {
     id: "exhibitions",
@@ -28,4 +37,12 @@ export const dashboardTabs = [
   },
 ] as const
 
+export const adminDashboardTabs = [
+  { id: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
+  { id: "users", label: "Users", icon: UsersIcon },
+  { id: "invitations", label: "Invitations", icon: MailIcon },
+] as const
+
 export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
+export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
+export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId

@@ -89,6 +89,7 @@ export default function DebugSeedPage() {
 
     try {
       await addMuseum({
+        point: { latitude, longitude },
         name: museumForm.name.trim(),
         description: museumForm.description.trim() || undefined,
         category: museumForm.category.trim(),
@@ -96,9 +97,6 @@ export default function DebugSeedPage() {
           address: museumForm.address.trim() || undefined,
           city: museumForm.city.trim(),
           state: museumForm.state.trim(),
-          zipCode: museumForm.zipCode.trim(),
-          latitude,
-          longitude,
         },
         imageUrl: museumForm.imageUrl.trim() || undefined,
         website: museumForm.website.trim() || undefined,
@@ -154,6 +152,7 @@ export default function DebugSeedPage() {
 
     try {
       await addEvent({
+        point: { latitude: latitude ?? 0, longitude: longitude ?? 0 },
         title: eventForm.title.trim(),
         description: eventForm.description.trim() || undefined,
         category: eventForm.category.trim(),
@@ -163,9 +162,6 @@ export default function DebugSeedPage() {
           : {
               city: eventForm.city.trim(),
               state: eventForm.state.trim(),
-              zipCode: eventForm.zipCode.trim(),
-              latitude: latitude ?? 0,
-              longitude: longitude ?? 0,
             },
         startDate,
         endDate,
