@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
+import { ArrowLeftIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { authClient } from '@/lib/auth-client';
@@ -46,12 +47,15 @@ const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
 
 
 export default function WrappedScreen() {
-  const { userId: paramUserId } = useLocalSearchParams<{ userId?: string | string[] }>();
+  const { userId: paramUserId, search: paramSearch } = useLocalSearchParams<{ userId?: string | string[]; search?: string | string[] }>();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   // When navigating from search, userId is in URL params; otherwise show current user's profile
   const paramUserIdStr = Array.isArray(paramUserId) ? paramUserId[0] : paramUserId;
   const viewedUserId = (typeof paramUserIdStr === 'string' && paramUserIdStr ? paramUserIdStr : null) || currentUserId;
+  const searchFromParams = Array.isArray(paramSearch) ? paramSearch[0] : paramSearch;
+  const returnSearch = typeof searchFromParams === 'string' ? searchFromParams : '';
+  const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
 
   // Fetch user profile info
   const userProfile = useQuery(api.auth.listUsers, {});
@@ -88,8 +92,20 @@ export default function WrappedScreen() {
     ? rawDisplayName.replace(/\s+\d+$/, '').trim() || FALLBACK_DISPLAY_NAME
     : FALLBACK_DISPLAY_NAME;
 
+  const handleBackToSearch = () => {
+    const search = encodeURIComponent(returnSearch);
+    router.replace(`/(tabs)/explore?tab=people&search=${search}`);
+  };
+
   return (
     <View style={styles.container}>
+      {isViewingOtherProfile ? (
+        <View style={styles.backBar}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <ArrowLeftIcon size={24} color="#222" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <View style={styles.profileHeader}>
         <View style={styles.avatarRow}>
           {profile?.imageUrl ? (
@@ -148,6 +164,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  backBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    padding: 8,
   },
   profileHeader: {
     paddingHorizontal: 20,
