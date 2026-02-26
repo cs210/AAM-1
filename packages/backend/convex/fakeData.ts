@@ -93,17 +93,15 @@ export const populateFakeEvents = mutation({
     const eventTemplates = [
       { title: "New Exhibition Opening", category: "exhibition", daysFromNow: 7 },
       { title: "Guided Tour: Highlights", category: "tour", daysFromNow: 3 },
-      { title: "Family Art Workshop", category: "workshop", daysFromNow: 14 },
-      { title: "Evening Lecture Series", category: "lecture", daysFromNow: 10 },
     ];
 
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
     let insertedCount = 0;
 
-    for (const museum of museums.slice(0, 4)) {
-      // Add events to first 4 museums
-      for (const template of eventTemplates.slice(0, 2)) {
+    for (const museum of museums.slice(0, eventTemplates.length)) {
+      // Add events to museums (one per template)
+      for (const template of eventTemplates) {
         // 2 events per museum
         await ctx.db.insert("events", {
           title: `${template.title} at ${museum.name}`,
