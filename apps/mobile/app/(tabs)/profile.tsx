@@ -1,5 +1,9 @@
+
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity } from 'react-native';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
+import { authClient } from '@/lib/auth-client';
 
 const { width, height } = Dimensions.get('window');
 const CARD_HEIGHT = height;
@@ -16,6 +20,12 @@ const stats = [
   { title: 'Reviews written', value: '4 reviews', icon: '✍️' },
   { title: 'Badges earned', value: '2 badges', icon: '🏅' },
 ];
+
+// Helper to get the current user's ID
+async function getCurrentUserId() {
+  const user = await authClient.getUser();
+  return user?._id;
+}
 
 const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -38,9 +48,59 @@ const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
   );
 };
 
-export default function WrappedScreen() {
+
+export default function WrappedScreen({ route }: any) {
+  // If viewing another user's profile, their userId will be in route.params.userId
+  // Otherwise, show current user's profile
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const viewedUserId = route?.params?.userId || currentUserId;
+
+  React.useEffect(() => {
+    getCurrentUserId().then(setCurrentUserId);
+  }, []);
+
+  // Fetch follower/following counts
+  const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
+  const following = useQuery(api.follows.getFollowing, viewedUserId ? { userId: viewedUserId } : 'skip');
+  const isFollowing = useQuery(api.follows.isFollowingUser, viewedUserId && currentUserId && viewedUserId !== currentUserId ? { userId: viewedUserId } : 'skip');
+
+  const followUser = useMutation(api.follows.followUser);
+  const unfollowUser = useMutation(api.follows.unfollowUser);
+
+  const handleFollow = async () => {
+    if (!viewedUserId) return;
+    await followUser({ userId: viewedUserId });
+  };
+  const handleUnfollow = async () => {
+    if (!viewedUserId) return;
+    await unfollowUser({ userId: viewedUserId });
+  };
+
   return (
     <View style={styles.container}>
+      {/* Follower/Following counts and follow button */}
+      <View style={styles.profileHeader}>
+        <Text style={styles.profileTitle}>Profile</Text>
+        <View style={styles.countsRow}>
+          <View style={styles.countBox}>
+            <Text style={styles.countNumber}>{followers ? followers.length : '-'}</Text>
+            <Text style={styles.countLabel}>Followers</Text>
+          </View>
+          <View style={styles.countBox}>
+            <Text style={styles.countNumber}>{following ? following.length : '-'}</Text>
+            <Text style={styles.countLabel}>Following</Text>
+          </View>
+        </View>
+        {/* Show follow/unfollow button if not viewing own profile */}
+        {viewedUserId && currentUserId && viewedUserId !== currentUserId && (
+          <TouchableOpacity
+            style={isFollowing ? styles.unfollowButton : styles.followButton}
+            onPress={isFollowing ? handleUnfollow : handleFollow}
+          >
+            <Text style={styles.followButtonText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <FlatList
         data={stats}
         renderItem={({ item, index }) => <Pane item={item} index={index} />}
@@ -60,6 +120,59 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  profileHeader: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  profileTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#222',
+  },
+  countsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  countBox: {
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  countNumber: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  countLabel: {
+    fontSize: 14,
+    color: '#888',
+  },
+  followButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  unfollowButton: {
+    backgroundColor: '#eee',
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  followButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   pane: {
     width,

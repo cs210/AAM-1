@@ -2,6 +2,15 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+    // User-to-User Following
+    userUserFollows: defineTable({
+      followerId: v.string(), // Auth user ID of the follower
+      followingId: v.string(), // Auth user ID of the user being followed
+      followedAt: v.number(), // Timestamp
+    })
+      .index("by_follower", ["followerId"])
+      .index("by_following", ["followingId"])
+      .index("by_follower_and_following", ["followerId", "followingId"]),
   museums: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
