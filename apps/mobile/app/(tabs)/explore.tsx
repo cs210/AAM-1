@@ -49,7 +49,7 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
   );
 }
 
-function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styles }: any) {
+function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styles, currUser }: any) {
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
@@ -71,6 +71,10 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
         <FlatList
           data={filteredUsers}
           renderItem={({ item }) => {
+            // don't show the current user as a potential user
+            if (item.userId == currUser._id) {
+              return (<></>);
+            }
             const rawName = item.name || item.email || '';
             const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
             return (
@@ -148,6 +152,7 @@ export default function SearchScreen() {
   }, [users, peopleSearch]);
 
   // renderScene directly returns the route components with current props
+  const currUser = useQuery(api.auth.getCurrentUser);
   const renderScene = React.useCallback(
     ({ route }: { route: { key: string } }) => {
       switch (route.key) {
@@ -169,6 +174,7 @@ export default function SearchScreen() {
               users={users}
               filteredUsers={filteredUsers}
               styles={styles}
+              currUser={currUser}
             />
           );
         default:
