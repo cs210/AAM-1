@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getAuthUser } from "./auth";
+import { authComponent } from "./auth";
 
 // Rate a museum or event
 export const rateContent = mutation({
@@ -10,14 +10,15 @@ export const rateContent = mutation({
     rating: v.number(), // 1-5
   },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
+    const userId = (user as { userId?: string; _id: string }).userId ?? String((user as { _id: string })._id);
 
     // Check if user already rated this
     const existing = await ctx.db
       .query("userRatings")
       .withIndex("by_user_and_content", q =>
-        q.eq("userId", user.userId)
+        q.eq("userId", userId)
          .eq("contentType", args.contentType)
          .eq("contentId", args.contentId)
       )
@@ -34,7 +35,7 @@ export const rateContent = mutation({
     } else {
       // Create new rating
       return await ctx.db.insert("userRatings", {
-        userId: user.userId,
+        userId,
         contentType: args.contentType,
         contentId: args.contentId,
         rating: args.rating,
@@ -49,12 +50,13 @@ export const rateContent = mutation({
 export const getUserRatings = query({
   args: {},
   handler: async (ctx) => {
-    const user = await getAuthUser(ctx);
+    const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) return [];
+    const userId = (user as { userId?: string; _id: string }).userId ?? String((user as { _id: string })._id);
 
     return await ctx.db
       .query("userRatings")
-      .withIndex("by_user", q => q.eq("userId", user.userId))
+      .withIndex("by_user", q => q.eq("userId", userId))
       .collect();
   },
 });
