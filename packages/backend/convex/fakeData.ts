@@ -102,16 +102,29 @@ export const populateFakeEvents = mutation({
     for (const museum of museums.slice(0, eventTemplates.length)) {
       // Add events to museums (one per template)
       for (const template of eventTemplates) {
-        // 2 events per museum
-        await ctx.db.insert("events", {
-          title: `${template.title} at ${museum.name}`,
-          description: `Join us for this special ${template.category} event.`,
-          category: template.category,
-          museumId: museum._id,
-          startDate: now + template.daysFromNow * DAY_MS,
-          endDate: now + (template.daysFromNow + 1) * DAY_MS,
-        });
-        insertedCount++;
+        const startDate = now + template.daysFromNow * DAY_MS;
+        // Check for existing event with same museum, title, and startDate
+        const existing = await ctx.db
+          .query("events")
+          .withIndex("by_museum", (q) => q.eq("museumId", museum._id))
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("title"), `${template.title} at ${museum.name}`),
+              q.eq(q.field("startDate"), startDate)
+            )
+          )
+          .first();
+        if (!existing) {
+          await ctx.db.insert("events", {
+            title: `${template.title} at ${museum.name}`,
+            description: `Join us for this special ${template.category} event.`,
+            category: template.category,
+            museumId: museum._id,
+            startDate,
+            endDate: now + (template.daysFromNow + 1) * DAY_MS,
+          });
+          insertedCount++;
+        }
       }
     }
 
