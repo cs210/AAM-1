@@ -2,6 +2,7 @@ import { GeospatialIndex } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
 
 const geospatial = new GeospatialIndex(components.geospatial);
 // Add an event
@@ -44,5 +45,62 @@ export const getEvent = query({
   args: { id: v.id("events") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+// Get events for a specific museum
+export const getEventsByMuseum = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db
+      .query("events")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .filter((q) => q.gte(q.field("endDate"), now))
+      .collect();
+  },
+});
+
+// Get all upcoming events from followed museums
+export const getEventsFromFollowedMuseums = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return [];
+
+    const follows = await ctx.db
+      .query("userFollows")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const museumIds = follows.map((f) => f.museumId);
+    const now = Date.now();
+
+    // Get upcoming events for each followed museum
+    const eventsArrays = await Promise.all(
+      museumIds.map((museumId) =>
+        ctx.db
+          .query("events")
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+          .filter((q) => q.gte(q.field("endDate"), now))
+          .collect()
+      )
+    );
+
+    // Flatten and sort by start date
+    const allEvents = eventsArrays.flat().sort((a, b) => a.startDate - b.startDate);
+
+    // Attach museum info to each event
+    const eventsWithMuseum = await Promise.all(
+      allEvents.map(async (event) => {
+        const museum = event.museumId ? await ctx.db.get(event.museumId) : null;
+        return {
+          ...event,
+          museum: museum ? { name: museum.name, category: museum.category } : null,
+        };
+      })
+    );
+
+    return eventsWithMuseum;
   },
 });

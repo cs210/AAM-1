@@ -1,45 +1,61 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchIcon } from 'lucide-react-native';
+import { useQuery } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
+import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 
-const { width } = Dimensions.get('window');
-const CARD_HEIGHT = 150;
 
-const MUSEUMS = [
-  { id: '1', name: 'Museum 1', location: 'New York' },
-  { id: '2', name: 'Museum 2', location: 'Los Angeles' },
-  { id: '3', name: 'Museum 3', location: 'Chicago' },
-  { id: '4', name: 'Museum 4', location: 'Houston' },
-  { id: '5', name: 'Museum 5', location: 'Phoenix' },
-  { id: '6', name: 'Museum 6', location: 'Philadelphia' },
-  { id: '7', name: 'Museum 7', location: 'San Antonio' },
-  { id: '8', name: 'Museum 8', location: 'San Diego' },
-];
-
-const MuseumCard = ({ item }: { item: (typeof MUSEUMS)[0] }) => (
-  <View style={styles.card}>
-    <Text style={styles.museumName}>{item.name}</Text>
-    <Text style={styles.museumLocation}>{item.location}</Text>
-    <View style={styles.detailsContainer}>
-      <Text style={styles.detailText}>★ 4.5 Rating</Text>
-      <Text style={styles.detailText}>📸 245 Photos</Text>
-    </View>
-  </View>
-);
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState('');
-  const [filteredMuseums, setFilteredMuseums] = useState(MUSEUMS);
+  
+  // Fetch museums with stats (average rating, rating count) from Convex
+  const museums = useQuery(api.museums.listMuseumsWithStats);
 
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    const filtered = MUSEUMS.filter((museum) =>
-      museum.name.toLowerCase().includes(text.toLowerCase()) ||
-      museum.location.toLowerCase().includes(text.toLowerCase())
+  // Filter museums based on search text
+  const filteredMuseums = useMemo(() => {
+    if (!museums) return [];
+    if (!searchText.trim()) return museums;
+    
+    const lowerSearch = searchText.toLowerCase();
+    return museums.filter((museum) =>
+      museum.name.toLowerCase().includes(lowerSearch) ||
+      museum.location?.city?.toLowerCase().includes(lowerSearch) ||
+      museum.location?.state?.toLowerCase().includes(lowerSearch)
     );
-    setFilteredMuseums(filtered);
-  };
+  }, [museums, searchText]);
+
+  // Loading state
+  if (museums === undefined) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Search Museums</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading museums...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Empty state
+  if (museums.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Search Museums</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No museums found</Text>
+          <Text style={styles.emptySubtext}>Run the fake data script to populate museums</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,18 +69,23 @@ export default function SearchScreen() {
           style={styles.searchInput}
           placeholder="Search museums..."
           value={searchText}
-          onChangeText={handleSearch}
+          onChangeText={setSearchText}
           placeholderTextColor="#C7C7CC"
         />
       </View>
 
       <FlatList
         data={filteredMuseums}
-        renderItem={({ item }) => <MuseumCard item={item} />}
-        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
+        keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
         scrollEnabled={true}
+        ListEmptyComponent={
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>No museums match your search</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -110,34 +131,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
   },
-  museumName: {
+  loadingText: {
+    fontSize: 16,
+    color: '#8E8E93',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#222',
-    fontFamily: 'PublicSans',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  museumLocation: {
+  emptySubtext: {
     fontSize: 14,
     color: '#8E8E93',
-    fontFamily: 'PublicSans',
-    marginBottom: 12,
+    textAlign: 'center',
   },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  noResultsContainer: {
+    padding: 32,
+    alignItems: 'center',
   },
-  detailText: {
-    fontSize: 12,
-    color: '#555',
-    fontFamily: 'PublicSans',
+  noResultsText: {
+    fontSize: 16,
+    color: '#8E8E93',
   },
 });
