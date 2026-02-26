@@ -22,11 +22,7 @@ const stats = [
   { title: 'Badges earned', value: '2 badges', icon: '🏅' },
 ];
 
-// Helper to get the current user's ID
-async function getCurrentUserId() {
-  const user = await authClient.getUser();
-  return user?._id;
-}
+// No local helper needed; we'll fetch current user via Convex query
 
 const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -53,16 +49,13 @@ const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
 export default function WrappedScreen({ route }: any) {
   // If viewing another user's profile, their userId will be in route.params.userId
   // Otherwise, show current user's profile
-  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const currentUserId = currentUser?._id ?? null;
   const viewedUserId = route?.params?.userId || currentUserId;
-
-  React.useEffect(() => {
-    getCurrentUserId().then(setCurrentUserId);
-  }, []);
-
 
   // Fetch user profile info
   const userProfile = useQuery(api.auth.listUsers, {});
+  // Removed redundant saveUserProfile call. Profile upsert now only happens after sign-up.
   const profile = React.useMemo(() => {
     if (!userProfile || !viewedUserId) return null;
     return userProfile.find((u: any) => u.userId === viewedUserId);

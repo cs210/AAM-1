@@ -86,7 +86,9 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <View style={styles.noResultsContainer}>
-              <Text style={styles.noResultsText}>No people match your search</Text>
+              <Text style={styles.noResultsText}>
+                {peopleSearch.trim() ? 'No people match your search' : 'Search for people to find accounts'}
+              </Text>
             </View>
           }
         />
@@ -122,7 +124,7 @@ export default function SearchScreen() {
   const users = useQuery(api.auth.listUsers);
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    if (!peopleSearch.trim()) return users;
+    if (!peopleSearch.trim()) return []; // Only show accounts when user has searched
     const lowerSearch = peopleSearch.toLowerCase();
     return users.filter((user: any) =>
       user.name?.toLowerCase().includes(lowerSearch) ||
