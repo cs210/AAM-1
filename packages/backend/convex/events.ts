@@ -1,3 +1,10 @@
+import { GeospatialIndex } from "@convex-dev/geospatial";
+import { components } from "./_generated/api";
+import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
+
 // Unified feed: events from museums the user follows and museums followed by people the user follows
 export const getUnifiedFeed = query({
   args: {},
@@ -40,7 +47,7 @@ export const getUnifiedFeed = query({
       allMuseumIds.map((museumId) =>
         ctx.db
           .query("events")
-          .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId as Id<"museums">))
           .filter((q) => q.gte(q.field("endDate"), now))
           .collect()
       )
@@ -63,11 +70,6 @@ export const getUnifiedFeed = query({
     return eventsWithMuseum;
   },
 });
-import { GeospatialIndex } from "@convex-dev/geospatial";
-import { components } from "./_generated/api";
-import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { authComponent } from "./auth";
 
 const geospatial = new GeospatialIndex(components.geospatial);
 // Add an event
