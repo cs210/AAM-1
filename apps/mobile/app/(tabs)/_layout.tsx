@@ -1,5 +1,6 @@
-
-import { Tabs } from 'expo-router';
+import React from 'react';
+import { Pressable } from 'react-native';
+import { Tabs, router } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon } from 'lucide-react-native';
 
 export default function TabLayout() {
@@ -34,6 +35,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <UserIcon size={size} color={color} />
           ),
+          // Tapping the Profile tab always goes to your own profile (no userId param)
+          tabBarButton: (props) => {
+            const { onPress, ref, ...rest } = props;
+            return (
+              <Pressable
+                {...rest}
+                ref={ref as any}
+                onPress={() => router.replace('/(tabs)/profile')}
+              />
+            );
+          },
         }}
       />
     </Tabs>

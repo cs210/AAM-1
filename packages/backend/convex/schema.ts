@@ -2,6 +2,15 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+    // User-to-User Following
+    userUserFollows: defineTable({
+      followerId: v.string(), // Auth user ID of the follower
+      followingId: v.string(), // Auth user ID of the user being followed
+      followedAt: v.number(), // Timestamp
+    })
+      .index("by_follower", ["followerId"])
+      .index("by_following", ["followingId"])
+      .index("by_follower_and_following", ["followerId", "followingId"]),
   museums: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
@@ -95,6 +104,18 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_museum", ["museumId"])
     .index("by_user_and_museum", ["userId", "museumId"]),
+
+  // Public user profiles for search/following
+  userProfiles: defineTable({
+    userId: v.string(), // Better Auth user ID
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_name", ["name"]),
+
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
 });

@@ -1,91 +1,205 @@
+
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
+import { router, useLocalSearchParams } from 'expo-router';
+import { TabView, TabBar } from 'react-native-tab-view';
 
 
 
-export default function SearchScreen() {
-  const [searchText, setSearchText] = useState('');
-  
-  // Fetch museums with stats (average rating, rating count) from Convex
-  const museums = useQuery(api.museums.listMuseumsWithStats);
-
-  // Filter museums based on search text
-  const filteredMuseums = useMemo(() => {
-    if (!museums) return [];
-    if (!searchText.trim()) return museums;
-    
-    const lowerSearch = searchText.toLowerCase();
-    return museums.filter((museum) =>
-      museum.name.toLowerCase().includes(lowerSearch) ||
-      museum.location?.city?.toLowerCase().includes(lowerSearch) ||
-      museum.location?.state?.toLowerCase().includes(lowerSearch)
-    );
-  }, [museums, searchText]);
-
-  // Loading state
-  if (museums === undefined) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Search Museums</Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading museums...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Empty state
-  if (museums.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Search Museums</Text>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No museums found</Text>
-          <Text style={styles.emptySubtext}>Run the fake data script to populate museums</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+// --- Tab Scenes defined outside main component for stability ---
+function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums, styles }: any) {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Search Museums</Text>
-      </View>
-
+    <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
         <SearchIcon size={20} color="#8E8E93" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search museums..."
-          value={searchText}
-          onChangeText={setSearchText}
+          value={museumSearch}
+          onChangeText={setMuseumSearch}
           placeholderTextColor="#C7C7CC"
         />
       </View>
+      {museums === undefined ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading museums...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredMuseums}
+          renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
+          keyExtractor={(item) => item._id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+          scrollEnabled={true}
+          ListEmptyComponent={
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>No museums match your search</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+}
 
-      <FlatList
-        data={filteredMuseums}
-        renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
-        keyExtractor={(item) => item._id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-        scrollEnabled={true}
-        ListEmptyComponent={
-          <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>No museums match your search</Text>
-          </View>
-        }
+function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styles, currUser }: any) {
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={styles.searchContainer}>
+        <SearchIcon size={20} color="#8E8E93" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search people..."
+          value={peopleSearch}
+          onChangeText={setPeopleSearch}
+          placeholderTextColor="#C7C7CC"
+        />
+      </View>
+      {users === undefined ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading people...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          renderItem={({ item }) => {
+            // don't show the current user as a potential user
+            if (item.userId == currUser._id) {
+              return (<></>);
+            }
+            const rawName = item.name || item.email || '';
+            const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+            return (
+              <Pressable
+                style={styles.userCard}
+                onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`)}
+              >
+                <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
+              </Pressable>
+            );
+          }}
+          keyExtractor={(item) => item.userId}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+          scrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>
+                {peopleSearch.trim() ? 'No people match your search' : 'Search for people to find accounts'}
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+export default function SearchScreen() {
+  const layout = useWindowDimensions();
+  const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
+  const [index, setIndex] = useState(0);
+  const routes = React.useMemo(() => [
+    { key: 'museums', title: 'Museums' },
+    { key: 'people', title: 'People' },
+  ], []);
+
+  // People tab state (restore from URL when returning from profile)
+  const [peopleSearch, setPeopleSearch] = useState('');
+  React.useEffect(() => {
+    const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
+    const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+    if (typeof searchParam === 'string' && searchParam !== '') {
+      setPeopleSearch(searchParam);
+    }
+    if (tabParam === 'people') {
+      setIndex(1);
+    }
+  }, [params.search, params.tab]);
+
+  // Museums tab state
+  const [museumSearch, setMuseumSearch] = useState('');
+  const museums = useQuery(api.museums.listMuseumsWithStats);
+  const filteredMuseums = useMemo(() => {
+    if (!museums) return [];
+    if (!museumSearch.trim()) return museums;
+    const lowerSearch = museumSearch.toLowerCase();
+    return museums.filter((museum) =>
+      museum.name.toLowerCase().includes(lowerSearch) ||
+      museum.location?.city?.toLowerCase().includes(lowerSearch) ||
+      museum.location?.state?.toLowerCase().includes(lowerSearch)
+    );
+  }, [museums, museumSearch]);
+
+  const users = useQuery(api.auth.listUsers);
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    if (!peopleSearch.trim()) return []; // Only show accounts when user has searched
+    const lowerSearch = peopleSearch.toLowerCase();
+    return users.filter((user: any) =>
+      user.name?.toLowerCase().includes(lowerSearch) ||
+      user.email?.toLowerCase().includes(lowerSearch)
+    );
+  }, [users, peopleSearch]);
+
+  // renderScene directly returns the route components with current props
+  const currUser = useQuery(api.auth.getCurrentUser);
+  const renderScene = React.useCallback(
+    ({ route }: { route: { key: string } }) => {
+      switch (route.key) {
+        case 'museums':
+          return (
+            <MuseumsRoute
+              museumSearch={museumSearch}
+              setMuseumSearch={setMuseumSearch}
+              museums={museums}
+              filteredMuseums={filteredMuseums}
+              styles={styles}
+            />
+          );
+        case 'people':
+          return (
+            <PeopleRoute
+              peopleSearch={peopleSearch}
+              setPeopleSearch={setPeopleSearch}
+              users={users}
+              filteredUsers={filteredUsers}
+              styles={styles}
+              currUser={currUser}
+            />
+          );
+        default:
+          return null;
+      }
+    },
+    [museumSearch, setMuseumSearch, museums, filteredMuseums, peopleSearch, setPeopleSearch, users, filteredUsers, styles]
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <TabView
+        navigationState={{ index, routes }}
+        renderScene={renderScene}
+        onIndexChange={setIndex}
+        initialLayout={{ width: layout.width }}
+        renderTabBar={props => (
+          <TabBar
+            {...props}
+            indicatorStyle={{ backgroundColor: '#007AFF' }}
+            style={{ backgroundColor: '#fff' }}
+            activeColor="#007AFF"
+            inactiveColor="#888"
+          />
+        )}
       />
     </SafeAreaView>
   );
@@ -96,25 +210,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9F9F9',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#222',
-    fontFamily: 'PublicSans',
+  toggleButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+    marginHorizontal: 8,
+  },
+  toggleButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  toggleText: {
+    color: '#888',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  toggleTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
     marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    marginBottom: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
@@ -125,7 +254,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#222',
-    fontFamily: 'PublicSans',
+  },
+  userCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#888',
   },
   listContainer: {
     paddingHorizontal: 16,
@@ -135,28 +281,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
   loadingText: {
+    marginTop: 8,
+    color: '#888',
     fontSize: 16,
-    color: '#8E8E93',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: '#888',
+    marginBottom: 4,
   },
   noResultsContainer: {
     padding: 32,
