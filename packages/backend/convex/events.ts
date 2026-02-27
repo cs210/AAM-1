@@ -1,3 +1,68 @@
+// Unified feed: events from museums the user follows and museums followed by people the user follows
+export const getUnifiedFeed = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return [];
+
+    // Museums the user follows
+    const directFollows = await ctx.db
+      .query("userFollows")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    const directMuseumIds = directFollows.map((f) => f.museumId);
+
+    // People the user follows
+    const userFollows = await ctx.db
+      .query("userUserFollows")
+      .withIndex("by_follower", (q) => q.eq("followerId", user._id))
+      .collect();
+    const followedUserIds = userFollows.map((f) => f.followingId);
+
+    // Museums followed by people the user follows
+    let indirectMuseumIds: string[] = [];
+    if (followedUserIds.length > 0) {
+      const allFollows = await ctx.db
+        .query("userFollows")
+        .withIndex("by_user")
+        .collect();
+      indirectMuseumIds = allFollows
+        .filter((f) => followedUserIds.includes(f.userId))
+        .map((f) => f.museumId);
+    }
+
+    // Combine and dedupe museum IDs
+    const allMuseumIds = Array.from(new Set([...directMuseumIds, ...indirectMuseumIds]));
+    const now = Date.now();
+
+    // Get upcoming events for each museum
+    const eventsArrays = await Promise.all(
+      allMuseumIds.map((museumId) =>
+        ctx.db
+          .query("events")
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+          .filter((q) => q.gte(q.field("endDate"), now))
+          .collect()
+      )
+    );
+
+    // Flatten and sort by start date (descending for most recent first)
+    const allEvents = eventsArrays.flat().sort((a, b) => b.startDate - a.startDate);
+
+    // Attach museum info to each event
+    const eventsWithMuseum = await Promise.all(
+      allEvents.map(async (event) => {
+        const museum = event.museumId ? await ctx.db.get(event.museumId) : null;
+        return {
+          ...event,
+          museum: museum ? { name: museum.name, category: museum.category } : null,
+        };
+      })
+    );
+
+    return eventsWithMuseum;
+  },
+});
 import { GeospatialIndex } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
