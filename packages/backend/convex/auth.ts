@@ -1,5 +1,5 @@
 import { components } from "./_generated/api";
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { createClient, GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
@@ -42,7 +42,7 @@ function getSiteUrl(): string {
     return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
   }
   throw new Error(
-    "Missing SITE_URL or VERCEL_URL. Set in Convex: npx convex env set SITE_URL https://your-site.com (or VERCEL_URL from Vercel build)"
+    "Missing SITE_URL or VERCEL_URL. Set in Convex: npx convex env set SITE_URL https://your-site.com (or VERCEL_URL from Vercel build)",
   );
 }
 
@@ -59,7 +59,8 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
   const siteUrl = getSiteUrl();
   return {
     baseURL: siteUrl,
-    trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"].filter(Boolean),
+    trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"]
+      .filter(Boolean),
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
@@ -68,7 +69,8 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         await sendEmail({
           to: user.email,
           subject: "Reset your password",
-          html: `Click the link to reset your password: <a href="${url}">${url}</a>`,
+          html:
+            `Click the link to reset your password: <a href="${url}">${url}</a>`,
           text: `Click the link to reset your password: ${url}`,
         });
       },
@@ -78,7 +80,8 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         await sendEmail({
           to: user.email,
           subject: "Verify your email address",
-          html: `Click the link to verify your email: <a href="${url}">${url}</a>`,
+          html:
+            `Click the link to verify your email: <a href="${url}">${url}</a>`,
           text: `Click the link to verify your email: ${url}`,
         });
       },
@@ -89,10 +92,15 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       }),
       organization({
         async sendInvitationEmail(data) {
-          console.log("[auth] sendInvitationEmail called", { email: data.email, organizationId: data.organization?.id });
+          console.log("[auth] sendInvitationEmail called", {
+            email: data.email,
+            organizationId: data.organization?.id,
+          });
           const siteUrl = getSiteUrl();
-          const inviteLink = `${siteUrl}/accept-invitation?invitationId=${data.id}`;
-          const inviterName = data.inviter?.user?.name ?? data.inviter?.user?.email ?? "A team member";
+          const inviteLink =
+            `${siteUrl}/accept-invitation?invitationId=${data.id}`;
+          const inviterName = data.inviter?.user?.name ??
+            data.inviter?.user?.email ?? "A team member";
           const orgName = data.organization?.name ?? "the organization";
           await sendEmail({
             to: data.email,
@@ -102,12 +110,15 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
               <p><a href="${inviteLink}">Accept invitation</a></p>
               <p>Or copy this link: ${inviteLink}</p>
             `,
-            text: `${inviterName} has invited you to join ${orgName}. Accept here: ${inviteLink}`,
+            text:
+              `${inviterName} has invited you to join ${orgName}. Accept here: ${inviteLink}`,
           });
         },
       }),
       admin({
-        adminUserIds: process.env.ADMIN_USER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) ?? [],
+        adminUserIds: process.env.ADMIN_USER_IDS?.split(",").map((id) =>
+          id.trim()
+        ).filter(Boolean) ?? [],
       }),
       expo(),
     ],
@@ -141,7 +152,7 @@ export const saveUserProfile = mutation({
     // try to find existing profile
     const existing = await ctx.db
       .query("userProfiles")
-      .withIndex("by_userId", q => q.eq("userId", userId))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -161,4 +172,3 @@ export const saveUserProfile = mutation({
     }
   },
 });
-
