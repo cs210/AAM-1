@@ -2,11 +2,20 @@ import { GeospatialIndex } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireActiveApprovedRequest } from "./organizationRequests";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { authComponent } from "./auth";
 
 const geospatial = new GeospatialIndex(components.geospatial);
-// Add a museum (org-scoped: only users with an approved org request can add).
-// When museums are linked to org in schema, pass betterAuthOrgId from the approved request.
+
+async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+  const user = await authComponent.safeGetAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  const role = (user as { role?: string | null }).role;
+  if (role !== "admin") throw new Error("Admin access required");
+  return user;
+}
+
+// Add a museum (admin only).
 export const addMuseum = mutation({
   args: {
     point: v.object({ latitude: v.number(), longitude: v.number() }),
@@ -23,7 +32,7 @@ export const addMuseum = mutation({
     phone: v.optional(v.string()),
   },
   handler: async (ctx, { point, ...args }) => {
-    await requireActiveApprovedRequest(ctx);
+    await requireAdmin(ctx);
     const id = await ctx.db.insert("museums", args);
     await geospatial.insert(ctx, id, point, { category: args.category });
     return id;

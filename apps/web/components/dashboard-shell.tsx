@@ -12,6 +12,7 @@ import {
   type AllDashboardTabId,
 } from "@/components/dashboard/constants"
 import { AdminInvitations } from "./dashboard/admin-invitations"
+import { AdminMuseums } from "./dashboard/admin-museums"
 import { AdminOrgRequests } from "./dashboard/admin-org-requests"
 import { AdminUsers } from "./dashboard/admin-users"
 import { DashboardOrganizations } from "./dashboard/dashboard-organizations"
@@ -361,6 +362,8 @@ export function DashboardShell() {
             <AdminUsers />
           ) : activeTab === "invitations" ? (
             <AdminInvitations />
+          ) : activeTab === "admin-museums" ? (
+            <AdminMuseums />
           ) : (
             <Card>
               <CardHeader>

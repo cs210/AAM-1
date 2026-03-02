@@ -41,6 +41,7 @@ export const adminDashboardTabs = [
   { id: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
   { id: "users", label: "Users", icon: UsersIcon },
   { id: "invitations", label: "Invitations", icon: MailIcon },
+  { id: "admin-museums", label: "Museums", icon: Building2Icon },
 ] as const
 
 export type DashboardTabId = (typeof dashboardTabs)[number]["id"]

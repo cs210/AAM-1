@@ -1,13 +1,13 @@
+import { GeospatialIndex } from "@convex-dev/geospatial";
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { api, components, internal } from "./_generated/api";
 import { authComponent } from "./auth";
-import {
-  listAllRequestsHelper,
-  updateRequestStatusHelper,
-} from "./organizationRequests";
+import { updateRequestStatusHelper } from "./organizationRequests";
+
+const geospatial = new GeospatialIndex(components.geospatial);
 
 async function requireAdmin(ctx: QueryCtx | MutationCtx) {
   const user = await authComponent.safeGetAuthUser(ctx);
@@ -98,6 +98,21 @@ type PendingInvitation = {
   organizationName?: string;
 };
 
+type MuseumAdminRow = Doc<"museums"> & {
+  point: { latitude: number; longitude: number } | null;
+};
+
+const museumPointValidator = v.object({
+  latitude: v.number(),
+  longitude: v.number(),
+});
+
+const museumLocationValidator = v.object({
+  address: v.optional(v.string()),
+  city: v.optional(v.string()),
+  state: v.optional(v.string()),
+});
+
 /** Action: list pending invitations with org names (admin). */
 export const listPendingInvitationsForAdmin = action({
   args: {},
@@ -126,5 +141,124 @@ export const cancelInvitationForAdmin = action({
     await ctx.runMutation((components.betterAuth as any).invitations.deleteInvitation, {
       id: args.invitationId,
     });
+  },
+});
+
+/** Action: list all museums with geospatial coordinates (admin). */
+export const listMuseumsForAdmin = action({
+  args: {},
+  handler: async (ctx): Promise<MuseumAdminRow[]> => {
+    await requireAdminAction(ctx);
+    const museums = await ctx.runQuery(api.museums.listMuseums, {});
+    const rowsWithPoints = await Promise.all(
+      museums.map(async (museum) => {
+        const geospatialDoc = await ctx.runQuery(components.geospatial.document.get, {
+          key: museum._id,
+        });
+        return {
+          ...museum,
+          point: geospatialDoc?.coordinates ?? null,
+        };
+      })
+    );
+    return rowsWithPoints.sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+
+/** Mutation: create a museum (admin). */
+export const createMuseumForAdmin = mutation({
+  args: {
+    point: museumPointValidator,
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(),
+    location: museumLocationValidator,
+    imageUrl: v.optional(v.string()),
+    website: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, { point, ...museum }) => {
+    await requireAdmin(ctx);
+    const museumId = await ctx.db.insert("museums", museum);
+    await geospatial.insert(ctx, museumId, point, { category: museum.category });
+    return museumId;
+  },
+});
+
+/** Mutation: update a museum and refresh geospatial coordinates (admin). */
+export const updateMuseumForAdmin = mutation({
+  args: {
+    museumId: v.id("museums"),
+    point: museumPointValidator,
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(),
+    location: museumLocationValidator,
+    imageUrl: v.optional(v.string()),
+    website: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, { museumId, point, ...museum }) => {
+    await requireAdmin(ctx);
+    const existingMuseum = await ctx.db.get(museumId);
+    if (!existingMuseum) throw new Error("Museum not found");
+
+    await ctx.db.patch(museumId, museum);
+    await geospatial.insert(ctx, museumId, point, { category: museum.category });
+    return museumId;
+  },
+});
+
+/** Mutation: delete a museum and related geospatial/dependent records (admin). */
+export const deleteMuseumForAdmin = mutation({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const existingMuseum = await ctx.db.get(args.museumId);
+    if (!existingMuseum) throw new Error("Museum not found");
+
+    const museumIdString = args.museumId as string;
+
+    const museumRatings = await ctx.db
+      .query("userRatings")
+      .withIndex("by_content", (q) =>
+        q.eq("contentType", "museum").eq("contentId", museumIdString)
+      )
+      .collect();
+    for (const rating of museumRatings) {
+      await ctx.db.delete(rating._id);
+    }
+
+    const follows = await ctx.db
+      .query("userFollows")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const follow of follows) {
+      await ctx.db.delete(follow._id);
+    }
+
+    const events = await ctx.db
+      .query("events")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const event of events) {
+      const eventIdString = event._id as string;
+
+      const eventRatings = await ctx.db
+        .query("userRatings")
+        .withIndex("by_content", (q) =>
+          q.eq("contentType", "event").eq("contentId", eventIdString)
+        )
+        .collect();
+      for (const rating of eventRatings) {
+        await ctx.db.delete(rating._id);
+      }
+
+      await geospatial.remove(ctx, event._id);
+      await ctx.db.delete(event._id);
+    }
+
+    await geospatial.remove(ctx, args.museumId);
+    await ctx.db.delete(args.museumId);
   },
 });

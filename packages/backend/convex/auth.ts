@@ -27,10 +27,12 @@ export const listUsers = query({
   },
 });
 
-const siteUrl = process.env.SITE_URL;
-
-if (!siteUrl) {
-  throw new Error("Missing SITE_URL environment variable");
+function requireSiteUrl() {
+  const siteUrl = process.env.SITE_URL?.trim();
+  if (!siteUrl) {
+    throw new Error("Missing SITE_URL environment variable");
+  }
+  return siteUrl;
 }
 
 export const authComponent = createClient<DataModel, typeof authSchema>(
@@ -43,7 +45,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 );
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = process.env.SITE_URL ?? "";
+  const siteUrl = process.env.SITE_URL?.trim() ?? "";
   return {
     baseURL: siteUrl,
     trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"].filter(Boolean),
@@ -77,7 +79,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       organization({
         async sendInvitationEmail(data) {
           console.log("[auth] sendInvitationEmail called", { email: data.email, organizationId: data.organization?.id });
-          const siteUrl = process.env.SITE_URL ?? "";
+          const siteUrl = requireSiteUrl();
           const inviteLink = `${siteUrl}/accept-invitation?invitationId=${data.id}`;
           const inviterName = data.inviter?.user?.name ?? data.inviter?.user?.email ?? "A team member";
           const orgName = data.organization?.name ?? "the organization";
@@ -148,4 +150,3 @@ export const saveUserProfile = mutation({
     }
   },
 });
-
