@@ -1,3 +1,5 @@
+import { useMutation } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
 import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +19,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
 export function SignUpForm() {
+    const saveProfile = useMutation(api.auth.saveUserProfile);
   const passwordInputRef = React.useRef<TextInput>(null);
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -46,6 +49,19 @@ export function SignUpForm() {
     }
 
     if (data) {
+      // Upsert user profile immediately after sign-up
+      try {
+        await saveProfile({
+          userId: data.user.id,
+          name: data.user.name || undefined,
+          email: data.user.email || undefined,
+          imageUrl: data.user.image || undefined,
+        });
+      } catch (err) {
+        console.error('Failed to save user profile:', err);
+        setError('Failed to save user profile. Please try again.');
+        return;
+      }
       router.replace('/');
     }
   }
