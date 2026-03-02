@@ -125,6 +125,17 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_betterAuthOrgId", ["betterAuthOrgId"]),
 
+  // One-to-one assignment between Better Auth organizations and museums.
+  organizationMuseumLinks: defineTable({
+    betterAuthOrgId: v.string(),
+    museumId: v.id("museums"),
+    assignedAt: v.number(),
+    assignedBy: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_org", ["betterAuthOrgId"])
+    .index("by_museum", ["museumId"]),
+
   // User Following (tracks which museums a user follows)
   userFollows: defineTable({
     userId: v.string(), // Better Auth user ID

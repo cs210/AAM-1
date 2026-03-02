@@ -1,45 +1,160 @@
 "use client"
 
 import * as React from "react"
-import { useAction, useQuery } from "convex/react"
+import { useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
+import { authClient } from "@/lib/auth-client"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-type OrgRow = { _id: string; name: string; slug: string }
+type OrgRow = {
+  _id: string
+  name?: string
+  slug?: string
+  linkedMuseumId?: string | null
+  linkedMuseumName?: string | null
+  hasInvalidMuseumContext?: boolean
+}
+
+function slugify(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+}
 
 export function DashboardOrganizations() {
   const user = useQuery(api.auth.getCurrentUser)
   const isAdmin = (user as { role?: string } | null)?.role === "admin"
-  const myOrgs = useQuery(api.admin.listMyOrganizations)
-  const listAllOrgs = useAction(api.admin.listOrganizationsForAdmin)
-  const [allOrgs, setAllOrgs] = React.useState<OrgRow[] | null | undefined>(undefined)
+  const myOrgs = useQuery(api.admin.listMyOrganizations) as OrgRow[] | undefined
+  const submitRequest = useMutation(api.organizationRequests.submitRequest)
 
-  React.useEffect(() => {
-    if (!isAdmin) {
-      setAllOrgs(undefined)
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false)
+  const [museumName, setMuseumName] = React.useState("")
+  const [city, setCity] = React.useState("")
+  const [state, setState] = React.useState("")
+  const [website, setWebsite] = React.useState("")
+  const [staffRole, setStaffRole] = React.useState("")
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const [success, setSuccess] = React.useState<string | null>(null)
+
+  const handleCreateOrganization = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError(null)
+    setSuccess(null)
+
+    const name = museumName.trim()
+    const locationCity = city.trim()
+    const locationState = state.trim()
+    const orgSlug = slugify(name)
+    if (!name || !locationCity || !locationState || !orgSlug) {
+      setError("Please complete all required museum details.")
       return
     }
-    setAllOrgs(undefined)
-    listAllOrgs().then(setAllOrgs).catch(() => setAllOrgs(null))
-  }, [isAdmin, listAllOrgs])
+
+    setIsSubmitting(true)
+    try {
+      const { data, error: orgError } = await authClient.organization.create({
+        name,
+        slug: orgSlug,
+        metadata: {
+          activationStatus: "pending",
+          city: locationCity,
+          state: locationState,
+          website: website.trim() || null,
+          staffRole: staffRole.trim() || null,
+        },
+      })
+
+      if (orgError) {
+        setError(orgError.message ?? "Unable to create workspace.")
+        return
+      }
+
+      await submitRequest({
+        museumName: name,
+        city: locationCity,
+        state: locationState,
+        website: website.trim() || undefined,
+        staffRole: staffRole.trim() || undefined,
+        betterAuthOrgId: data?.id ?? undefined,
+      })
+
+      if (data?.id) {
+        await authClient.organization.setActive({ organizationId: data.id })
+      }
+
+      setSuccess(`Created organization request for ${name}.`)
+      setMuseumName("")
+      setCity("")
+      setState("")
+      setWebsite("")
+      setStaffRole("")
+      setIsCreateOpen(false)
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Something went wrong.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Your organizations</CardTitle>
-          <CardDescription>Organizations you are a member of (affiliations).</CardDescription>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle>Your workspaces</CardTitle>
+            {!isAdmin && (
+              <Button type="button" size="sm" onClick={() => setIsCreateOpen(true)}>
+                Request New Organization
+              </Button>
+            )}
+          </div>
+          <CardDescription>
+            Organizations you belong to and their current museum assignment.
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          {error ? (
+            <div className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+          {success ? (
+            <div className="mb-3 rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+              {success}
+            </div>
+          ) : null}
           {myOrgs === undefined ? (
             <p className="text-muted-foreground text-sm">Loading…</p>
           ) : myOrgs.length === 0 ? (
-            <p className="text-muted-foreground text-sm">You are not a member of any organization yet.</p>
+            <p className="text-muted-foreground text-sm">You are not a member of any workspace yet.</p>
           ) : (
             <ul className="space-y-2">
               {myOrgs.map((org: OrgRow) => (
                 <li key={org._id} className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-                  {org.name} ({org._id})
+                  <p className="font-medium">{org.name ?? org._id}</p>
+                  <p className="text-muted-foreground text-xs">{org._id}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Museum:{" "}
+                    {org.hasInvalidMuseumContext
+                      ? "Invalid museum context"
+                      : org.linkedMuseumName ?? "Not assigned yet"}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -47,29 +162,68 @@ export function DashboardOrganizations() {
         </CardContent>
       </Card>
 
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>All organizations</CardTitle>
-            <CardDescription>Every organization in the system (admin view).</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {allOrgs === undefined ? (
-              <p className="text-muted-foreground text-sm">Loading…</p>
-            ) : allOrgs === null || allOrgs.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No organizations yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {(allOrgs as OrgRow[]).map((org: OrgRow) => (
-                  <li key={org._id} className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-                    {org.name} ({org._id})
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <AlertDialog open={isCreateOpen} onOpenChange={(open) => !isSubmitting && setIsCreateOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Request New Organization</AlertDialogTitle>
+            <AlertDialogDescription>
+              Submit a new museum workspace request for admin approval.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form id="request-organization-form" className="space-y-3" onSubmit={handleCreateOrganization}>
+            <Input
+              id="request-organization-name"
+              placeholder="Museum name"
+              value={museumName}
+              onChange={(event) => setMuseumName(event.target.value)}
+              disabled={isSubmitting}
+              required
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                id="request-organization-city"
+                placeholder="City"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                disabled={isSubmitting}
+                required
+              />
+              <Input
+                id="request-organization-state"
+                placeholder="State"
+                value={state}
+                onChange={(event) => setState(event.target.value)}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+            <Input
+              id="request-organization-website"
+              placeholder="Museum website (optional)"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              disabled={isSubmitting}
+            />
+            <Input
+              id="request-organization-role"
+              placeholder="Your role (optional)"
+              value={staffRole}
+              onChange={(event) => setStaffRole(event.target.value)}
+              disabled={isSubmitting}
+            />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form="request-organization-form"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Submit request"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

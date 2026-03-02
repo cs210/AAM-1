@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Building2Icon, ShieldIcon, TriangleAlertIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Building2Icon, LogOutIcon, ShieldIcon, TriangleAlertIcon } from "lucide-react"
 
 import { YamiLogo } from "@/components/yami-logo"
 import { Button } from "@/components/ui/button"
@@ -17,9 +18,11 @@ import { cn } from "@/lib/utils"
 import {
   adminDashboardTabs,
   dashboardTabs,
+  workspaceDashboardTabs,
   type AllDashboardTabId,
 } from "@/components/dashboard/constants"
 import { SidebarUserDetails } from "@/components/dashboard/sidebar-user-details"
+import { authClient } from "@/lib/auth-client"
 
 type DashboardSidebarProps = {
   activeTab: AllDashboardTabId
@@ -34,6 +37,12 @@ type DashboardSidebarProps = {
   museumContextOptions?: { id: string; label: string }[]
   activeMuseumContextId?: string | null
   onMuseumContextChange?: (museumId: string) => void
+  showWorkspaceSwitcher?: boolean
+  workspaceLoading?: boolean
+  workspaceOptions?: { id: string; label: string; museumLabel?: string | null }[]
+  activeWorkspaceId?: string | null
+  onWorkspaceChange?: (workspaceId: string) => void
+  workspaceWarning?: string | null
 }
 
 export function DashboardSidebar({
@@ -49,7 +58,14 @@ export function DashboardSidebar({
   museumContextOptions = [],
   activeMuseumContextId,
   onMuseumContextChange,
+  showWorkspaceSwitcher,
+  workspaceLoading,
+  workspaceOptions = [],
+  activeWorkspaceId,
+  onWorkspaceChange,
+  workspaceWarning,
 }: DashboardSidebarProps) {
+  const router = useRouter()
   const museumOptionById = new Map(museumContextOptions.map((option) => [option.id, option]))
   const comboboxItems = museumContextOptions.map((option) => option.label)
   const activeMuseumOptionLabel = activeMuseumContextId
@@ -177,7 +193,55 @@ export function DashboardSidebar({
         <p className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
           Account
         </p>
-        <SidebarUserDetails />
+        <SidebarUserDetails
+          isAdmin={Boolean(isAdmin)}
+          hideWorkspaceSection={Boolean(isAdmin)}
+          showWorkspaceSwitcher={!isAdmin && showWorkspaceSwitcher}
+          workspaceLoading={workspaceLoading}
+          workspaceOptions={workspaceOptions}
+          activeWorkspaceId={activeWorkspaceId}
+          onWorkspaceChange={onWorkspaceChange}
+          workspaceWarning={workspaceWarning}
+        />
+        {!isAdmin && (
+          <nav className="mt-3 space-y-1">
+            {workspaceDashboardTabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+
+              return (
+                <Button
+                  key={tab.id}
+                  type="button"
+                  variant={isActive ? "secondary" : "ghost"}
+                  className={cn(
+                    "h-10 w-full justify-start gap-2 rounded-xl px-3",
+                    isActive && "ring-border shadow-xs ring-1"
+                  )}
+                  onClick={() => onTabChange(tab.id)}
+                >
+                  <Icon className="size-4" />
+                  {tab.label}
+                </Button>
+              )
+            })}
+          </nav>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 w-full justify-start gap-2"
+          onClick={async () => {
+            await authClient.signOut({
+              fetchOptions: {
+                onSuccess: () => router.push("/sign-in"),
+              },
+            })
+          }}
+        >
+          <LogOutIcon className="size-4" />
+          Log out
+        </Button>
       </div>
     </aside>
   )

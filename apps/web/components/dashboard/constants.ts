@@ -16,11 +16,6 @@ export const dashboardTabs = [
     icon: Building2Icon,
   },
   {
-    id: "organizations",
-    label: "Organizations",
-    icon: LayersIcon,
-  },
-  {
     id: "exhibitions",
     label: "Exhibitions",
     icon: CalendarDaysIcon,
@@ -37,13 +32,23 @@ export const dashboardTabs = [
   },
 ] as const
 
+export const workspaceDashboardTabs = [
+  {
+    id: "organizations",
+    label: "Organizations",
+    icon: LayersIcon,
+  },
+] as const
+
 export const adminDashboardTabs = [
-  { id: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
+  { id: "org-requests", label: "Organizations", icon: ShieldCheckIcon },
   { id: "users", label: "Users", icon: UsersIcon },
   { id: "invitations", label: "Invitations", icon: MailIcon },
   { id: "admin-museums", label: "Museums", icon: Building2Icon },
 ] as const
 
-export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
+export type MuseumDashboardTabId = (typeof dashboardTabs)[number]["id"]
+export type WorkspaceDashboardTabId = (typeof workspaceDashboardTabs)[number]["id"]
+export type DashboardTabId = MuseumDashboardTabId | WorkspaceDashboardTabId
 export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
 export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId

@@ -31,10 +31,19 @@ type PendingInvitation = {
   expiresAt: number
 }
 
+type UserOrganization = {
+  id: string
+  name: string
+}
+
 export function AdminUsers() {
   const listPendingInvitations = useAction(api.admin.listPendingInvitationsForAdmin)
+  const listUserOrganizations = useAction(api.admin.listUserOrganizationsForAdmin)
   const cancelInvitation = useAction(api.admin.cancelInvitationForAdmin)
   const [users, setUsers] = React.useState<{ users: User[]; total: number } | null>(null)
+  const [userOrganizationsByUserId, setUserOrganizationsByUserId] = React.useState<
+    Record<string, UserOrganization[]>
+  >({})
   const [pendingInvites, setPendingInvites] = React.useState<PendingInvitation[] | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -55,15 +64,25 @@ export function AdminUsers() {
     if (res.error) {
       setError(res.error.message ?? "Failed to load users")
       setUsers(null)
+      setUserOrganizationsByUserId({})
     } else {
       const data = res.data as { users?: User[]; total?: number }
+      const nextUsers = data.users ?? []
       setUsers({
-        users: data.users ?? [],
+        users: nextUsers,
         total: data.total ?? 0,
       })
+      try {
+        const organizationsByUserId = await listUserOrganizations({
+          userIds: nextUsers.map((user) => user.id),
+        })
+        setUserOrganizationsByUserId((organizationsByUserId ?? {}) as Record<string, UserOrganization[]>)
+      } catch {
+        setUserOrganizationsByUserId({})
+      }
     }
     setLoading(false)
-  }, [])
+  }, [listUserOrganizations])
 
   const loadPendingInvites = React.useCallback(async () => {
     try {
@@ -257,6 +276,12 @@ export function AdminUsers() {
                 <div className="min-w-0">
                   <p className="font-medium">{u.name || u.email} ({u.id})</p>
                   <p className="text-muted-foreground text-sm">{u.email}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Organizations:{" "}
+                    {(userOrganizationsByUserId[u.id] ?? []).length > 0
+                      ? (userOrganizationsByUserId[u.id] ?? []).map((organization) => organization.name).join(", ")
+                      : "None"}
+                  </p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     <Badge variant="secondary">{u.role ?? "user"}</Badge>
                     {u.banned && <Badge variant="destructive">Banned</Badge>}

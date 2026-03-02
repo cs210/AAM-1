@@ -35,6 +35,56 @@ async function fetchComponentOrganizationsForUser(ctx: QueryCtx, userId: string)
 
 type OrgRequestRow = Doc<"organizationRequests">;
 type UserDisplay = { id: string; name: string; email: string };
+type OrganizationRow = { _id?: string; id?: string; name?: string; slug?: string };
+type OrganizationMuseumLinkRow = Doc<"organizationMuseumLinks">;
+type OrganizationAdminRow = OrganizationRow & {
+  _id: string;
+  linkedMuseumId: string | null;
+  linkedMuseumName: string | null;
+  hasInvalidMuseumContext: boolean;
+};
+type BetterAuthMemberRow = {
+  _id: string;
+  organizationId: string;
+  userId: string;
+  role: string;
+  createdAt: number;
+};
+type BetterAuthUserRow = {
+  id: string;
+  name: string;
+  email: string;
+};
+type UserOrganizationSummary = {
+  id: string;
+  name: string;
+};
+
+function getOrganizationId(organization: OrganizationRow) {
+  return organization._id ?? organization.id ?? "";
+}
+
+async function getLinkedMuseumForOrg(ctx: QueryCtx, betterAuthOrgId: string) {
+  const links = await ctx.db
+    .query("organizationMuseumLinks")
+    .withIndex("by_org", (q) => q.eq("betterAuthOrgId", betterAuthOrgId))
+    .collect();
+  if (links.length === 0) {
+    return {
+      linkedMuseumId: null as string | null,
+      linkedMuseumName: null as string | null,
+      hasInvalidMuseumContext: false,
+    };
+  }
+
+  const primaryLink = links[0]!;
+  const museum = await ctx.db.get(primaryLink.museumId);
+  return {
+    linkedMuseumId: primaryLink.museumId as string,
+    linkedMuseumName: museum?.name ?? null,
+    hasInvalidMuseumContext: museum === null,
+  };
+}
 
 /** Action: list org requests with resolved user display (avoids query-calling-query warning). */
 export const listOrgRequestsForAdmin = action({
@@ -48,9 +98,7 @@ export const listOrgRequestsForAdmin = action({
     return requests.map((req: OrgRequestRow) => {
       const u = userMap.get(req.userId);
       const userDisplay = u ? `${u.name || u.email || "Unknown"} (${req.userId})` : req.userId;
-      const orgDisplay = req.betterAuthOrgId
-        ? `${req.museumName} (${req.betterAuthOrgId})`
-        : req.museumName;
+      const orgDisplay = req.museumName;
       return { ...req, userDisplay, orgDisplay };
     });
   },
@@ -70,9 +118,40 @@ export const setOrgRequestStatusForAdmin = mutation({
 /** Action: list all organizations (avoids query-calling-component warning). */
 export const listOrganizationsForAdmin = action({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<OrganizationAdminRow[]> => {
     await requireAdminAction(ctx);
-    return await ctx.runQuery((components.betterAuth as any).getOrganization.listOrganizations, {});
+    const organizations = (await ctx.runQuery(
+      (components.betterAuth as any).getOrganization.listOrganizations,
+      {}
+    )) as OrganizationRow[];
+    const links = (await ctx.runQuery(
+      (api as any).admin.listOrganizationMuseumLinksForAdmin,
+      {}
+    )) as OrganizationMuseumLinkRow[];
+    const museums = await ctx.runQuery(api.museums.listMuseums, {});
+
+    const museumNameById = new Map<string, string>(
+      museums.map((museum: { _id: string; name: string }) => [museum._id, museum.name])
+    );
+    const linkByOrgId = new Map(
+      links.map((link) => [link.betterAuthOrgId, link])
+    );
+
+    return organizations
+      .map((organization) => {
+        const orgId = getOrganizationId(organization);
+        const linkedMuseum = orgId ? linkByOrgId.get(orgId) : undefined;
+        const linkedMuseumId = linkedMuseum ? (linkedMuseum.museumId as string) : null;
+        const linkedMuseumName = linkedMuseumId ? museumNameById.get(linkedMuseumId) ?? null : null;
+        return {
+          ...organization,
+          _id: orgId,
+          linkedMuseumId,
+          linkedMuseumName,
+          hasInvalidMuseumContext: Boolean(linkedMuseumId && !linkedMuseumName),
+        };
+      })
+      .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
   },
 });
 
@@ -82,7 +161,217 @@ export const listMyOrganizations = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject) return [];
-    return await fetchComponentOrganizationsForUser(ctx, identity.subject);
+    const organizations = (await fetchComponentOrganizationsForUser(ctx, identity.subject)) as OrganizationRow[];
+    const rows = await Promise.all(
+      organizations.map(async (organization) => {
+        const orgId = getOrganizationId(organization);
+        if (!orgId) return null;
+        const linkedMuseum = await getLinkedMuseumForOrg(ctx, orgId);
+        return {
+          ...organization,
+          _id: orgId,
+          ...linkedMuseum,
+        };
+      })
+    );
+    return rows.filter((row): row is NonNullable<typeof row> => row !== null);
+  },
+});
+
+/** List organizations per user (admin). */
+export const listUserOrganizationsForAdmin = action({
+  args: {
+    userIds: v.array(v.string()),
+  },
+  handler: async (ctx, args): Promise<Record<string, UserOrganizationSummary[]>> => {
+    await requireAdminAction(ctx);
+    const uniqueUserIds = [...new Set(args.userIds.filter(Boolean))];
+    const rows = await Promise.all(
+      uniqueUserIds.map(async (userId) => {
+        const organizations = (await ctx.runQuery(
+          (components.betterAuth as any).getOrganization.listOrganizationsForUser,
+          { userId }
+        )) as OrganizationRow[];
+        const summaries = organizations
+          .map((organization) => {
+            const id = getOrganizationId(organization);
+            if (!id) return null;
+            return {
+              id,
+              name: organization.name ?? id,
+            };
+          })
+          .filter((organization): organization is UserOrganizationSummary => organization !== null)
+          .sort((a, b) => a.name.localeCompare(b.name));
+        return [userId, summaries] as const;
+      })
+    );
+    return Object.fromEntries(rows);
+  },
+});
+
+/** List org↔museum links (admin). */
+export const listOrganizationMuseumLinksForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("organizationMuseumLinks").collect();
+  },
+});
+
+/** Assign or clear an org↔museum link (admin). Enforces one org per museum and one museum per org. */
+export const setOrganizationMuseumLinkForAdmin = mutation({
+  args: {
+    betterAuthOrgId: v.string(),
+    museumId: v.optional(v.id("museums")),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAdmin(ctx);
+    const now = Date.now();
+
+    const organization = await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
+      id: args.betterAuthOrgId,
+    });
+    if (!organization) throw new Error("Organization not found");
+
+    const existingOrgLinks = await ctx.db
+      .query("organizationMuseumLinks")
+      .withIndex("by_org", (q) => q.eq("betterAuthOrgId", args.betterAuthOrgId))
+      .collect();
+    const existingOrgLink = existingOrgLinks[0] ?? null;
+    for (const duplicate of existingOrgLinks.slice(1)) {
+      await ctx.db.delete(duplicate._id);
+    }
+
+    if (!args.museumId) {
+      if (existingOrgLink) {
+        await ctx.db.delete(existingOrgLink._id);
+      }
+      return { linkedMuseumId: null };
+    }
+    const museumId = args.museumId;
+
+    const museum = await ctx.db.get(museumId);
+    if (!museum) throw new Error("Museum not found");
+
+    const existingMuseumLinks = await ctx.db
+      .query("organizationMuseumLinks")
+      .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+      .collect();
+    const conflictingLink = existingMuseumLinks.find(
+      (link) => link.betterAuthOrgId !== args.betterAuthOrgId
+    );
+    if (conflictingLink) {
+      throw new Error("Museum is already assigned to another organization");
+    }
+    for (const duplicate of existingMuseumLinks.slice(1)) {
+      await ctx.db.delete(duplicate._id);
+    }
+
+    if (existingOrgLink) {
+      await ctx.db.patch(existingOrgLink._id, {
+        museumId,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.insert("organizationMuseumLinks", {
+        betterAuthOrgId: args.betterAuthOrgId,
+        museumId,
+        assignedAt: now,
+        assignedBy: user._id,
+        updatedAt: now,
+      });
+    }
+
+    return { linkedMuseumId: museumId as string };
+  },
+});
+
+/** List organization members with user profile info (admin). */
+export const listOrganizationMembersForAdmin = action({
+  args: { organizationId: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdminAction(ctx);
+    const organization = await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
+      id: args.organizationId,
+    });
+    if (!organization) throw new Error("Organization not found");
+
+    const members = (await ctx.runQuery(
+      (components.betterAuth as any).getOrganization.listMembersByOrganization,
+      { organizationId: args.organizationId }
+    )) as BetterAuthMemberRow[];
+    const uniqueUserIds = [...new Set(members.map((member) => member.userId))];
+    const users = (await ctx.runQuery((components.betterAuth as any).getUser.getUsers, {
+      ids: uniqueUserIds,
+    })) as BetterAuthUserRow[];
+    const userMap = new Map(users.map((user) => [user.id, user]));
+
+    return members
+      .map((member) => ({
+        ...member,
+        userName: userMap.get(member.userId)?.name ?? "",
+        userEmail: userMap.get(member.userId)?.email ?? "",
+      }))
+      .sort((a, b) => a.userEmail.localeCompare(b.userEmail));
+  },
+});
+
+/** Search users by email to add to an organization (admin). */
+export const searchUsersByEmailForAdmin = action({
+  args: {
+    emailQuery: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminAction(ctx);
+    return (await ctx.runQuery((components.betterAuth as any).getUser.searchUsersByEmail, {
+      emailQuery: args.emailQuery,
+      limit: args.limit,
+    })) as BetterAuthUserRow[];
+  },
+});
+
+/** Add an existing user to an organization by email (admin). */
+export const addUserToOrganizationByEmailForAdmin = mutation({
+  args: {
+    organizationId: v.string(),
+    email: v.string(),
+    role: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const organization = await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
+      id: args.organizationId,
+    });
+    if (!organization) throw new Error("Organization not found");
+
+    const user = (await ctx.runQuery((components.betterAuth as any).getUser.getUserByEmail, {
+      email: args.email,
+    })) as BetterAuthUserRow | null;
+    if (!user) throw new Error("No user found for that email");
+
+    await ctx.runMutation((components.betterAuth as any).getOrganization.addMemberToOrganization, {
+      organizationId: args.organizationId,
+      userId: user.id,
+      role: args.role ?? "member",
+    });
+    return user;
+  },
+});
+
+/** Remove a user from an organization (admin). */
+export const removeUserFromOrganizationForAdmin = mutation({
+  args: {
+    organizationId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.runMutation((components.betterAuth as any).getOrganization.removeMemberFromOrganization, {
+      organizationId: args.organizationId,
+      userId: args.userId,
+    });
   },
 });
 
@@ -249,6 +538,14 @@ export const deleteMuseumForAdmin = mutation({
       .collect();
     for (const follow of follows) {
       await ctx.db.delete(follow._id);
+    }
+
+    const organizationLinks = await ctx.db
+      .query("organizationMuseumLinks")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const link of organizationLinks) {
+      await ctx.db.delete(link._id);
     }
 
     const museumImages = await ctx.db

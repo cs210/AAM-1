@@ -22,22 +22,42 @@ async function requireAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
   return user;
 }
 
-async function hasApprovedRequestForMuseum(ctx: QueryCtx | MutationCtx, userId: string, museumName: string) {
-  const requests = await ctx.db
-    .query("organizationRequests")
-    .withIndex("by_userId", (q) => q.eq("userId", userId))
-    .collect();
-  const latest = requests.length > 0 ? requests[requests.length - 1] : null;
-  return latest?.status === "approved" && latest.museumName === museumName;
+type OrganizationRow = { _id?: string; id?: string };
+
+function getOrganizationId(organization: OrganizationRow) {
+  return organization._id ?? organization.id ?? "";
+}
+
+async function listOrganizationIdsForUser(ctx: QueryCtx | MutationCtx, userId: string) {
+  const organizations = (await ctx.runQuery(
+    (components.betterAuth as any).getOrganization.listOrganizationsForUser,
+    { userId }
+  )) as OrganizationRow[];
+  return organizations.map(getOrganizationId).filter(Boolean);
+}
+
+async function hasLinkedMuseumAccess(
+  ctx: QueryCtx | MutationCtx,
+  userId: string,
+  museumId: Id<"museums">
+) {
+  const link = await ctx.db
+    .query("organizationMuseumLinks")
+    .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+    .first();
+  if (!link) return false;
+
+  const orgIds = new Set(await listOrganizationIdsForUser(ctx, userId));
+  return orgIds.has(link.betterAuthOrgId);
 }
 
 async function assertDashboardMuseumAccess(
   ctx: QueryCtx | MutationCtx,
   user: { _id: string; role?: string | null },
-  museumName: string
+  museumId: Id<"museums">
 ) {
   if (user.role === "admin") return;
-  const allowed = await hasApprovedRequestForMuseum(ctx, user._id, museumName);
+  const allowed = await hasLinkedMuseumAccess(ctx, user._id, museumId);
   if (!allowed) throw new Error("Museum access denied");
 }
 
@@ -271,7 +291,7 @@ export const getMuseumDetailsForDashboard = query({
     const role = (user as { role?: string | null }).role;
     const museum = await ctx.db.get(args.id);
     if (!museum) return null;
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, args.id);
 
     const point = await getMuseumPoint(ctx, args.id);
     return {
@@ -326,15 +346,19 @@ export const updateMuseumDetailsForDashboard = mutation({
     const role = (user as { role?: string | null }).role;
     const museum = await ctx.db.get(args.museumId);
     if (!museum) throw new Error("Museum not found");
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
 
     const currentPoint = await getMuseumPoint(ctx, args.museumId);
     if (!museumMatchesSnapshot(museum, currentPoint, args.expected)) {
       throw new Error("Museum data changed since you opened this form. Refresh and review latest values.")
     }
-    if (role !== "admin" && args.next.name !== museum.name) {
-      throw new Error("Only admins can edit museum name.")
-    }
+    // if (role !== "admin" && args.next.name !== museum.name) {
+    //   throw new Error("Only admins can edit museum name.")
+    // }
 
     await ctx.db.patch(args.museumId, {
       name: args.next.name,
@@ -362,7 +386,11 @@ export const generateMuseumImageUploadUrl = mutation({
     const user = await requireAuthenticatedUser(ctx);
     const museum = await ctx.db.get(args.museumId);
     if (!museum) throw new Error("Museum not found");
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -373,7 +401,11 @@ export const listMuseumImagesForDashboard = query({
     const user = await requireAuthenticatedUser(ctx);
     const museum = await ctx.db.get(args.museumId);
     if (!museum) return [];
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
 
     return await listMuseumImagesBySort(ctx, args.museumId);
   },
@@ -390,7 +422,11 @@ export const addMuseumImageForDashboard = mutation({
     const user = await requireAuthenticatedUser(ctx);
     const museum = await ctx.db.get(args.museumId);
     if (!museum) throw new Error("Museum not found");
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
 
     if (!args.imageUrl && !args.storageId) {
       throw new Error("Provide either an image URL or an uploaded storageId");
@@ -447,7 +483,11 @@ export const setPrimaryMuseumImageForDashboard = mutation({
     const user = await requireAuthenticatedUser(ctx);
     const museum = await ctx.db.get(args.museumId);
     if (!museum) throw new Error("Museum not found");
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
 
     const targetImage = await ctx.db.get(args.imageId);
     if (!targetImage || targetImage.museumId !== args.museumId) {
@@ -481,7 +521,11 @@ export const deleteMuseumImageForDashboard = mutation({
     const user = await requireAuthenticatedUser(ctx);
     const museum = await ctx.db.get(args.museumId);
     if (!museum) throw new Error("Museum not found");
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
 
     const image = await ctx.db.get(args.imageId);
     if (!image || image.museumId !== args.museumId) {
@@ -529,7 +573,11 @@ export const reorderMuseumImagesForDashboard = mutation({
     const user = await requireAuthenticatedUser(ctx);
     const museum = await ctx.db.get(args.museumId);
     if (!museum) throw new Error("Museum not found");
-    await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, museum.name);
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
 
     const currentImages = await listMuseumImagesBySort(ctx, args.museumId);
     if (currentImages.length !== args.orderedImageIds.length) {

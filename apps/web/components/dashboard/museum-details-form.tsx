@@ -404,9 +404,9 @@ export function MuseumDetailsForm({ museumId }: MuseumDetailsFormProps) {
                 disabled={!details.canEditName}
                 required
               />
-              {!details.canEditName && (
+              {/* {!details.canEditName && (
                 <p className="text-muted-foreground text-xs">Only admins can edit museum name.</p>
-              )}
+              )} */}
             </div>
             <div className="grid gap-1">
               <Label htmlFor="museum-details-tagline">Tagline</Label>
