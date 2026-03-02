@@ -74,122 +74,124 @@ export function DashboardSidebar({
   const labelToMuseumId = new Map(museumContextOptions.map((option) => [option.label, option.id]))
 
   return (
-    <aside className="bg-card/85 fixed top-4 bottom-4 left-4 hidden w-72 flex-col rounded-2xl border p-4 shadow-xl shadow-black/5 backdrop-blur md:flex">
-      <Link href="/" className="inline-flex">
+    <aside className="bg-card/85 fixed top-4 bottom-4 left-4 hidden h-[calc(100vh-2rem)] w-72 flex-col rounded-2xl border p-4 shadow-xl shadow-black/5 backdrop-blur md:flex">
+      <Link href="/" className="shrink-0 inline-flex">
         <YamiLogo />
       </Link>
 
-      <div className="mt-5 space-y-3">
-        <div className="rounded-xl border bg-background/70 p-3">
-          <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
-            <Building2Icon className="size-3.5" />
-            Museum Context
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+        <div className="mt-5 space-y-3">
+          <div className="rounded-xl border bg-background/70 p-3">
+            <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
+              <Building2Icon className="size-3.5" />
+              Museum Context
+            </div>
+            {showMuseumContextSelector ? (
+              <Combobox
+                items={comboboxItems}
+                value={activeMuseumOptionLabel || null}
+                onValueChange={(value) => {
+                  const museumId = value ? labelToMuseumId.get(value) : undefined
+                  if (museumId) onMuseumContextChange?.(museumId)
+                }}
+              >
+                <ComboboxInput
+                  placeholder={museumContextLoading ? "Loading museums..." : "Search and select museum"}
+                  disabled={museumContextLoading || museumContextOptions.length === 0}
+                  showClear={false}
+                />
+                <ComboboxContent>
+                  <ComboboxEmpty>No museums found.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            ) : (
+              <p className="line-clamp-2 text-sm font-medium">{museumContextLabel}</p>
+            )}
+            {museumContextWarning && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+                {museumContextWarning}
+              </p>
+            )}
           </div>
-          {showMuseumContextSelector ? (
-            <Combobox
-              items={comboboxItems}
-              value={activeMuseumOptionLabel || null}
-              onValueChange={(value) => {
-                const museumId = value ? labelToMuseumId.get(value) : undefined
-                if (museumId) onMuseumContextChange?.(museumId)
-              }}
-            >
-              <ComboboxInput
-                placeholder={museumContextLoading ? "Loading museums..." : "Search and select museum"}
-                disabled={museumContextLoading || museumContextOptions.length === 0}
-                showClear={false}
-              />
-              <ComboboxContent>
-                <ComboboxEmpty>No museums found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(item) => (
-                    <ComboboxItem key={item} value={item}>
-                      {item}
-                    </ComboboxItem>
+
+          <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
+            Navigation
+          </p>
+          <nav className="mt-2 space-y-1">
+            {dashboardTabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+
+              return (
+                <Button
+                  key={tab.id}
+                  type="button"
+                  variant={isActive ? "secondary" : "ghost"}
+                  className={cn(
+                    "h-10 w-full justify-start gap-2 rounded-xl px-3",
+                    isActive && "ring-border shadow-xs ring-1"
                   )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          ) : (
-            <p className="line-clamp-2 text-sm font-medium">{museumContextLabel}</p>
-          )}
-          {museumContextWarning && (
-            <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-              <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
-              {museumContextWarning}
-            </p>
-          )}
+                  onClick={() => onTabChange(tab.id)}
+                >
+                  <Icon className="size-4" />
+                  {tab.label}
+                </Button>
+              )
+            })}
+          </nav>
         </div>
 
-        <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
-          Navigation
-        </p>
-        <nav className="mt-2 space-y-1">
-          {dashboardTabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
+        {isAdmin && (
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant={isAdminMode ? "secondary" : "outline"}
+              className="h-10 w-full justify-start gap-2 rounded-xl px-3"
+              onClick={onAdminModeToggle}
+            >
+              <ShieldIcon className="size-4" />
+              Admin mode {isAdminMode ? "on" : "off"}
+            </Button>
+            {isAdminMode && (
+              <nav className="mt-2 space-y-1">
+                <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
+                  Admin
+                </p>
+                {adminDashboardTabs.map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = activeTab === tab.id
 
-            return (
-              <Button
-                key={tab.id}
-                type="button"
-                variant={isActive ? "secondary" : "ghost"}
-                className={cn(
-                  "h-10 w-full justify-start gap-2 rounded-xl px-3",
-                  isActive && "ring-border shadow-xs ring-1"
-                )}
-                onClick={() => onTabChange(tab.id)}
-              >
-                <Icon className="size-4" />
-                {tab.label}
-              </Button>
-            )
-          })}
-        </nav>
+                  return (
+                    <Button
+                      key={tab.id}
+                      type="button"
+                      variant={isActive ? "secondary" : "ghost"}
+                      className={cn(
+                        "h-10 w-full justify-start gap-2 rounded-xl px-3",
+                        isActive && "ring-border shadow-xs ring-1"
+                      )}
+                      onClick={() => onTabChange(tab.id)}
+                    >
+                      <Icon className="size-4" />
+                      {tab.label}
+                    </Button>
+                  )
+                })}
+              </nav>
+            )}
+          </div>
+        )}
       </div>
 
-      {isAdmin && (
-        <div className="mt-4">
-          <Button
-            type="button"
-            variant={isAdminMode ? "secondary" : "outline"}
-            className="h-10 w-full justify-start gap-2 rounded-xl px-3"
-            onClick={onAdminModeToggle}
-          >
-            <ShieldIcon className="size-4" />
-            Admin mode {isAdminMode ? "on" : "off"}
-          </Button>
-          {isAdminMode && (
-            <nav className="mt-2 space-y-1">
-              <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
-                Admin
-              </p>
-              {adminDashboardTabs.map((tab) => {
-                const Icon = tab.icon
-                const isActive = activeTab === tab.id
-
-                return (
-                  <Button
-                    key={tab.id}
-                    type="button"
-                    variant={isActive ? "secondary" : "ghost"}
-                    className={cn(
-                      "h-10 w-full justify-start gap-2 rounded-xl px-3",
-                      isActive && "ring-border shadow-xs ring-1"
-                    )}
-                    onClick={() => onTabChange(tab.id)}
-                  >
-                    <Icon className="size-4" />
-                    {tab.label}
-                  </Button>
-                )
-              })}
-            </nav>
-          )}
-        </div>
-      )}
-
-      <div className="mt-auto rounded-xl border bg-background/80 p-3">
+      <div className="shrink-0 rounded-xl border bg-background/80 p-3">
         <p className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
           Account
         </p>

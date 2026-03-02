@@ -29,7 +29,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { authClient } from "@/lib/auth-client"
-import { Building2Icon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 const ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY = "dashboard:activeMuseumContextId"
