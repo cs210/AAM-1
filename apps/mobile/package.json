@@ -10,6 +10,7 @@
     "clean": "rm -rf .expo node_modules"
   },
   "dependencies": {
+    "react-native-tab-view": "^4.2.2",
     "@packages/backend": "workspace:*",
     "@better-auth/core": "1.4.9",
     "@better-auth/expo": "1.4.9",
