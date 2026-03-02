@@ -27,10 +27,23 @@ export const listUsers = query({
   },
 });
 
-const siteUrl = process.env.SITE_URL;
-
-if (!siteUrl) {
-  throw new Error("Missing SITE_URL environment variable");
+/**
+ * Resolves the canonical site URL for auth (callbacks, emails, etc.).
+ * Prefers SITE_URL. If running behind Vercel, falls back to VERCEL_URL (set in Convex
+ * e.g. by a Vercel build step: npx convex env set VERCEL_URL $VERCEL_URL).
+ */
+function getSiteUrl(): string {
+  const siteUrl = process.env.SITE_URL?.trim();
+  if (siteUrl) {
+    return siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`;
+  }
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+  }
+  throw new Error(
+    "Missing SITE_URL or VERCEL_URL. Set in Convex: npx convex env set SITE_URL https://your-site.com (or VERCEL_URL from Vercel build)"
+  );
 }
 
 export const authComponent = createClient<DataModel, typeof authSchema>(
@@ -43,7 +56,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 );
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = process.env.SITE_URL ?? "";
+  const siteUrl = getSiteUrl();
   return {
     baseURL: siteUrl,
     trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"].filter(Boolean),
@@ -77,7 +90,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
       organization({
         async sendInvitationEmail(data) {
           console.log("[auth] sendInvitationEmail called", { email: data.email, organizationId: data.organization?.id });
-          const siteUrl = process.env.SITE_URL ?? "";
+          const siteUrl = getSiteUrl();
           const inviteLink = `${siteUrl}/accept-invitation?invitationId=${data.id}`;
           const inviterName = data.inviter?.user?.name ?? data.inviter?.user?.email ?? "A team member";
           const orgName = data.organization?.name ?? "the organization";
