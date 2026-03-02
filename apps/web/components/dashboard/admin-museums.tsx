@@ -6,11 +6,20 @@ import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 
 type MuseumRow = {
   _id: Id<"museums">
@@ -28,249 +37,24 @@ type MuseumRow = {
   point: { latitude: number; longitude: number } | null
 }
 
-type MuseumFormState = {
-  name: string
-  description: string
-  category: string
-  address: string
-  city: string
-  state: string
-  imageUrl: string
-  website: string
-  phone: string
-  latitude: string
-  longitude: string
+type AdminMuseumsProps = {
+  activeMuseumContextId?: string | null
+  onEditMuseumContext?: (museumId: string) => void
 }
 
-type MuseumPayload = {
-  point: { latitude: number; longitude: number }
-  name: string
-  description?: string
-  category: string
-  location: {
-    address?: string
-    city?: string
-    state?: string
-  }
-  imageUrl?: string
-  website?: string
-  phone?: string
-}
-
-const EMPTY_FORM: MuseumFormState = {
-  name: "",
-  description: "",
-  category: "art",
-  address: "",
-  city: "",
-  state: "",
-  imageUrl: "",
-  website: "",
-  phone: "",
-  latitude: "",
-  longitude: "",
-}
-
-function optionalText(value: string) {
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : undefined
-}
-
-function toFormState(museum: MuseumRow): MuseumFormState {
-  return {
-    name: museum.name ?? "",
-    description: museum.description ?? "",
-    category: museum.category ?? "",
-    address: museum.location.address ?? "",
-    city: museum.location.city ?? "",
-    state: museum.location.state ?? "",
-    imageUrl: museum.imageUrl ?? "",
-    website: museum.website ?? "",
-    phone: museum.phone ?? "",
-    latitude: museum.point?.latitude?.toString() ?? "",
-    longitude: museum.point?.longitude?.toString() ?? "",
-  }
-}
-
-function parseMuseumForm(form: MuseumFormState): { payload?: MuseumPayload; error?: string } {
-  const name = form.name.trim()
-  const category = form.category.trim()
-  const city = form.city.trim()
-  const state = form.state.trim()
-  const latitude = Number(form.latitude.trim())
-  const longitude = Number(form.longitude.trim())
-
-  if (!name) return { error: "Museum name is required." }
-  if (!category) return { error: "Category is required." }
-  if (!city || !state) return { error: "City and state are required." }
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    return { error: "Latitude must be a number between -90 and 90." }
-  }
-  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return { error: "Longitude must be a number between -180 and 180." }
-  }
-
-  return {
-    payload: {
-      point: { latitude, longitude },
-      name,
-      description: optionalText(form.description),
-      category,
-      location: {
-        address: optionalText(form.address),
-        city,
-        state,
-      },
-      imageUrl: optionalText(form.imageUrl),
-      website: optionalText(form.website),
-      phone: optionalText(form.phone),
-    },
-  }
-}
-
-function MuseumFormFields({
-  form,
-  onChange,
-  idPrefix,
-}: {
-  form: MuseumFormState
-  onChange: (next: MuseumFormState) => void
-  idPrefix: string
-}) {
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-name`}>Name</Label>
-          <Input
-            id={`${idPrefix}-name`}
-            value={form.name}
-            onChange={(e) => onChange({ ...form, name: e.target.value })}
-            required
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-category`}>Category</Label>
-          <Input
-            id={`${idPrefix}-category`}
-            value={form.category}
-            onChange={(e) => onChange({ ...form, category: e.target.value })}
-            placeholder="art, history, science"
-            required
-          />
-        </div>
-      </div>
-      <div className="grid gap-1">
-        <Label htmlFor={`${idPrefix}-description`}>Description</Label>
-        <Textarea
-          id={`${idPrefix}-description`}
-          value={form.description}
-          onChange={(e) => onChange({ ...form, description: e.target.value })}
-          rows={3}
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-address`}>Address</Label>
-          <Input
-            id={`${idPrefix}-address`}
-            value={form.address}
-            onChange={(e) => onChange({ ...form, address: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-city`}>City</Label>
-          <Input
-            id={`${idPrefix}-city`}
-            value={form.city}
-            onChange={(e) => onChange({ ...form, city: e.target.value })}
-            required
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-state`}>State</Label>
-          <Input
-            id={`${idPrefix}-state`}
-            value={form.state}
-            onChange={(e) => onChange({ ...form, state: e.target.value })}
-            required
-          />
-        </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-latitude`}>Latitude</Label>
-          <Input
-            id={`${idPrefix}-latitude`}
-            type="number"
-            step="any"
-            value={form.latitude}
-            onChange={(e) => onChange({ ...form, latitude: e.target.value })}
-            required
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-longitude`}>Longitude</Label>
-          <Input
-            id={`${idPrefix}-longitude`}
-            type="number"
-            step="any"
-            value={form.longitude}
-            onChange={(e) => onChange({ ...form, longitude: e.target.value })}
-            required
-          />
-        </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-image-url`}>Image URL</Label>
-          <Input
-            id={`${idPrefix}-image-url`}
-            value={form.imageUrl}
-            onChange={(e) => onChange({ ...form, imageUrl: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-website`}>Website</Label>
-          <Input
-            id={`${idPrefix}-website`}
-            value={form.website}
-            onChange={(e) => onChange({ ...form, website: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor={`${idPrefix}-phone`}>Phone</Label>
-          <Input
-            id={`${idPrefix}-phone`}
-            value={form.phone}
-            onChange={(e) => onChange({ ...form, phone: e.target.value })}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export function AdminMuseums() {
+export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: AdminMuseumsProps) {
   const listMuseums = useAction(api.admin.listMuseumsForAdmin)
   const createMuseum = useMutation(api.admin.createMuseumForAdmin)
-  const updateMuseum = useMutation(api.admin.updateMuseumForAdmin)
   const deleteMuseum = useMutation(api.admin.deleteMuseumForAdmin)
 
   const [museums, setMuseums] = React.useState<MuseumRow[] | null | undefined>(undefined)
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = React.useState(false)
-  const [createForm, setCreateForm] = React.useState<MuseumFormState>({
-    ...EMPTY_FORM,
-    latitude: "42.3601",
-    longitude: "-71.0589",
-  })
-  const [editForm, setEditForm] = React.useState<MuseumFormState>(EMPTY_FORM)
+  const [newMuseumName, setNewMuseumName] = React.useState("")
   const [creating, setCreating] = React.useState(false)
-  const [savingId, setSavingId] = React.useState<Id<"museums"> | null>(null)
   const [deletingId, setDeletingId] = React.useState<Id<"museums"> | null>(null)
-  const [editingId, setEditingId] = React.useState<Id<"museums"> | null>(null)
+  const [pendingDeleteMuseum, setPendingDeleteMuseum] = React.useState<MuseumRow | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [categoryFilter, setCategoryFilter] = React.useState("all")
   const [stateFilter, setStateFilter] = React.useState("all")
@@ -297,16 +81,16 @@ export function AdminMuseums() {
     setError(null)
     setSuccess(null)
 
-    const parsed = parseMuseumForm(createForm)
-    if (!parsed.payload) {
-      setError(parsed.error ?? "Invalid museum input")
+    const name = newMuseumName.trim()
+    if (!name) {
+      setError("Museum name is required.")
       return
     }
 
     setCreating(true)
     try {
-      await createMuseum(parsed.payload)
-      setCreateForm({ ...EMPTY_FORM, latitude: createForm.latitude, longitude: createForm.longitude })
+      await createMuseum({ name })
+      setNewMuseumName("")
       setShowCreateForm(false)
       setSuccess("Museum created.")
       await loadMuseums()
@@ -317,58 +101,25 @@ export function AdminMuseums() {
     }
   }
 
-  const handleStartEdit = (museum: MuseumRow) => {
-    setEditingId(museum._id)
-    setEditForm(toFormState(museum))
+  const handleEditContext = (museum: MuseumRow) => {
+    onEditMuseumContext?.(museum._id)
     setError(null)
-    setSuccess(null)
-  }
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingId) return
-    setError(null)
-    setSuccess(null)
-
-    const parsed = parseMuseumForm(editForm)
-    if (!parsed.payload) {
-      setError(parsed.error ?? "Invalid museum input")
-      return
-    }
-
-    setSavingId(editingId)
-    try {
-      await updateMuseum({
-        museumId: editingId,
-        ...parsed.payload,
-      })
-      setEditingId(null)
-      setSuccess("Museum updated.")
-      await loadMuseums()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update museum")
-    } finally {
-      setSavingId(null)
-    }
+    setSuccess(`Museum context switched to ${museum.name}.`)
   }
 
   const handleDelete = async (museum: MuseumRow) => {
-    if (!window.confirm(`Permanently delete "${museum.name}" and related records?`)) return
-
     setDeletingId(museum._id)
     setError(null)
     setSuccess(null)
     try {
       await deleteMuseum({ museumId: museum._id })
-      if (editingId === museum._id) {
-        setEditingId(null)
-      }
       setSuccess("Museum deleted.")
       await loadMuseums()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete museum")
     } finally {
       setDeletingId(null)
+      setPendingDeleteMuseum(null)
     }
   }
 
@@ -423,11 +174,12 @@ export function AdminMuseums() {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Museums</CardTitle>
-          <CardDescription>Admin-only create, edit, and delete access for all museums.</CardDescription>
+          <CardDescription>Admin-only create, delete, and museum-context selection.</CardDescription>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadMuseums} disabled={museums === undefined}>
@@ -437,12 +189,24 @@ export function AdminMuseums() {
             {showCreateForm ? "Cancel" : "Add museum"}
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </CardHeader>
+        <CardContent className="space-y-4">
         {showCreateForm && (
           <form onSubmit={handleCreate} className="space-y-4 rounded-xl border bg-muted/30 p-4">
             <p className="font-medium">Create museum</p>
-            <MuseumFormFields form={createForm} onChange={setCreateForm} idPrefix="create-museum" />
+            <div className="grid gap-1">
+              <Label htmlFor="create-museum-name">Museum name</Label>
+              <Input
+                id="create-museum-name"
+                value={newMuseumName}
+                onChange={(e) => setNewMuseumName(e.target.value)}
+                placeholder="New museum name"
+                required
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Additional details can be edited later in the Museum Details tab.
+            </p>
             <div className="flex gap-2">
               <Button type="submit" disabled={creating}>
                 {creating ? "Creating…" : "Create museum"}
@@ -555,8 +319,8 @@ export function AdminMuseums() {
           <div className="space-y-3">
             {filteredMuseums.map((museum) => (
               <div key={museum._id} className="space-y-3 rounded-xl border bg-muted/30 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1">
                     <p className="font-medium">
                       {museum.name} ({museum._id})
                     </p>
@@ -571,16 +335,10 @@ export function AdminMuseums() {
                     )}
                     <div className="flex flex-wrap gap-1">
                       <Badge variant="secondary">{museum.category}</Badge>
-                      {museum.point ? (
-                        <Badge variant="outline">
-                          {museum.point.latitude.toFixed(4)}, {museum.point.longitude.toFixed(4)}
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">No coordinates</Badge>
-                      )}
+                      {activeMuseumContextId === museum._id && <Badge variant="default">Current context</Badge>}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex shrink-0 items-start gap-1">
                     <Button
                       size="sm"
                       variant="outline"
@@ -591,15 +349,15 @@ export function AdminMuseums() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleStartEdit(museum)}
-                      disabled={deletingId === museum._id || savingId === museum._id}
+                      onClick={() => handleEditContext(museum)}
+                      disabled={deletingId === museum._id}
                     >
-                      Edit description
+                      Edit
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleDelete(museum)}
+                      onClick={() => setPendingDeleteMuseum(museum)}
                       disabled={deletingId === museum._id}
                     >
                       {deletingId === museum._id ? "Deleting…" : "Delete"}
@@ -607,25 +365,43 @@ export function AdminMuseums() {
                   </div>
                 </div>
 
-                {editingId === museum._id && (
-                  <form onSubmit={handleUpdate} className="space-y-4 rounded-xl border bg-background/70 p-4">
-                    <p className="font-medium">Edit museum</p>
-                    <MuseumFormFields form={editForm} onChange={setEditForm} idPrefix={`edit-${museum._id}`} />
-                    <div className="flex gap-2">
-                      <Button type="submit" disabled={savingId === museum._id}>
-                        {savingId === museum._id ? "Saving…" : "Save changes"}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => setEditingId(null)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                )}
               </div>
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={pendingDeleteMuseum !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) setPendingDeleteMuseum(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete museum?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteMuseum
+                ? `This will permanently delete "${pendingDeleteMuseum.name}" and related records. This action cannot be undone.`
+                : "This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(deletingId)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={!pendingDeleteMuseum || Boolean(deletingId)}
+              onClick={() => {
+                if (!pendingDeleteMuseum) return
+                handleDelete(pendingDeleteMuseum)
+              }}
+            >
+              {deletingId ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

@@ -111,6 +111,14 @@ const museumLocationValidator = v.object({
   address: v.optional(v.string()),
   city: v.optional(v.string()),
   state: v.optional(v.string()),
+  postalCode: v.optional(v.string()),
+});
+
+const operatingHourValidator = v.object({
+  day: v.string(),
+  isOpen: v.boolean(),
+  openTime: v.string(),
+  closeTime: v.string(),
 });
 
 /** Action: list pending invitations with org names (admin). */
@@ -168,19 +176,18 @@ export const listMuseumsForAdmin = action({
 /** Mutation: create a museum (admin). */
 export const createMuseumForAdmin = mutation({
   args: {
-    point: museumPointValidator,
     name: v.string(),
-    description: v.optional(v.string()),
-    category: v.string(),
-    location: museumLocationValidator,
-    imageUrl: v.optional(v.string()),
-    website: v.optional(v.string()),
-    phone: v.optional(v.string()),
   },
-  handler: async (ctx, { point, ...museum }) => {
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const museumId = await ctx.db.insert("museums", museum);
-    await geospatial.insert(ctx, museumId, point, { category: museum.category });
+    const name = args.name.trim();
+    if (!name) throw new Error("Museum name is required");
+
+    const museumId = await ctx.db.insert("museums", {
+      name,
+      category: "uncategorized",
+      location: {},
+    });
     return museumId;
   },
 });
@@ -192,11 +199,18 @@ export const updateMuseumForAdmin = mutation({
     point: museumPointValidator,
     name: v.string(),
     description: v.optional(v.string()),
+    tagline: v.optional(v.string()),
+    publicEmail: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    primaryLanguage: v.optional(v.string()),
     category: v.string(),
     location: museumLocationValidator,
     imageUrl: v.optional(v.string()),
     website: v.optional(v.string()),
     phone: v.optional(v.string()),
+    operatingHours: v.optional(v.array(operatingHourValidator)),
+    accessibilityFeatures: v.optional(v.array(v.string())),
+    accessibilityNotes: v.optional(v.string()),
   },
   handler: async (ctx, { museumId, point, ...museum }) => {
     await requireAdmin(ctx);
@@ -235,6 +249,21 @@ export const deleteMuseumForAdmin = mutation({
       .collect();
     for (const follow of follows) {
       await ctx.db.delete(follow._id);
+    }
+
+    const museumImages = await ctx.db
+      .query("museumImages")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const image of museumImages) {
+      if (image.storageId) {
+        try {
+          await ctx.storage.delete(image.storageId);
+        } catch {
+          // Continue cleanup if underlying storage object was already removed.
+        }
+      }
+      await ctx.db.delete(image._id);
     }
 
     const events = await ctx.db
