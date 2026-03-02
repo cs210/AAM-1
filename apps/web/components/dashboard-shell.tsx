@@ -31,6 +31,8 @@ import { authClient } from "@/lib/auth-client"
 import { Building2Icon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
+const ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY = "dashboard:activeMuseumContextId"
+
 function slugify(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48)
 }
@@ -46,8 +48,12 @@ export function DashboardShell() {
   const [website, setWebsite] = React.useState("")
   const [staffRole, setStaffRole] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
+  const [museumContextWarning, setMuseumContextWarning] = React.useState<string | null>(null)
+  const [isMuseumContextHydrated, setIsMuseumContextHydrated] = React.useState(false)
+  const [activeMuseumContextId, setActiveMuseumContextId] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const user = useQuery(api.auth.getCurrentUser)
+  const museums = useQuery(api.museums.listMuseums)
   const isAdmin = (user as { role?: string } | null)?.role === "admin"
   const activeTabInfo =
     dashboardTabs.find((tab) => tab.id === activeTab) ??
@@ -55,6 +61,79 @@ export function DashboardShell() {
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
   const submitRequest = useMutation(api.organizationRequests.submitRequest)
+  const museumContextOptions = React.useMemo(
+    () =>
+      (museums ?? [])
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((museum) => ({
+          id: museum._id,
+          label: museum.name,
+        })),
+    [museums]
+  )
+  const activeMuseumContext = React.useMemo(
+    () => (museums ?? []).find((museum) => museum._id === activeMuseumContextId) ?? null,
+    [museums, activeMuseumContextId]
+  )
+  const nonAdminMuseumLabel =
+    activeOrganization?.name ?? pendingRequest?.museumName ?? "Museum context unavailable"
+  const museumContextLabel = isAdmin
+    ? museums === undefined
+      ? "Loading museums..."
+      : activeMuseumContext?.name ?? (museums.length > 0 ? "Select a museum" : "No museums available")
+    : nonAdminMuseumLabel
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const storedMuseumId = window.localStorage.getItem(ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY)
+    setActiveMuseumContextId(storedMuseumId)
+    setIsMuseumContextHydrated(true)
+  }, [])
+
+  React.useEffect(() => {
+    if (!isMuseumContextHydrated || museums === undefined) return
+
+    if (museums.length === 0) {
+      if (activeMuseumContextId) {
+        setActiveMuseumContextId(null)
+        setMuseumContextWarning("Museum context is invalid because no museums are available.")
+      }
+      return
+    }
+
+    if (activeMuseumContextId && museums.some((museum) => museum._id === activeMuseumContextId)) {
+      return
+    }
+
+    if (activeMuseumContextId) {
+      setMuseumContextWarning(
+        "Museum context is invalid (likely deleted). Switched to the first available museum."
+      )
+    }
+    setActiveMuseumContextId(museums[0]._id)
+  }, [isMuseumContextHydrated, museums, activeMuseumContextId])
+
+  React.useEffect(() => {
+    if (!isMuseumContextHydrated || typeof window === "undefined") return
+    if (activeMuseumContextId) {
+      window.localStorage.setItem(ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY, activeMuseumContextId)
+    } else {
+      window.localStorage.removeItem(ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY)
+    }
+  }, [isMuseumContextHydrated, activeMuseumContextId])
+
+  const handleSetMuseumContext = React.useCallback((museumId: string) => {
+    setActiveMuseumContextId(museumId)
+    setMuseumContextWarning(null)
+  }, [])
+
+  const handleEditMuseumContext = React.useCallback((museumId: string) => {
+    setActiveMuseumContextId(museumId)
+    setMuseumContextWarning(null)
+    setIsAdminMode(false)
+    setActiveTab("museum-details")
+  }, [])
 
   const createWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -293,6 +372,13 @@ export function DashboardShell() {
           isAdmin={isAdmin}
           isAdminMode={isAdminMode}
           onAdminModeToggle={() => setIsAdminMode((prev) => !prev)}
+          museumContextLabel={museumContextLabel}
+          museumContextWarning={isAdmin ? museumContextWarning : null}
+          museumContextLoading={isAdmin && museums === undefined}
+          showMuseumContextSelector={isAdmin}
+          museumContextOptions={isAdmin ? museumContextOptions : []}
+          activeMuseumContextId={isAdmin ? activeMuseumContextId : null}
+          onMuseumContextChange={handleSetMuseumContext}
         />
 
         <main className="flex-1 space-y-4 p-4 md:ml-76 md:p-6">
@@ -340,10 +426,12 @@ export function DashboardShell() {
           <section className="overflow-hidden rounded-2xl border bg-linear-to-br from-primary/14 via-primary/6 to-background p-6">
             <div className="text-muted-foreground inline-flex items-center gap-2 rounded-lg border bg-background/70 px-2.5 py-1 text-xs">
               <Building2Icon className="size-3.5" />
-              Workspace:{" "}
-              {activeOrganization
-                ? `${activeOrganization.name}${activeOrganization.id ? ` (${activeOrganization.id})` : ""}`
-                : pendingRequest?.museumName ?? "Personal Workspace"}
+              Museum Context:{" "}
+              {isAdmin
+                ? activeMuseumContext?.name ?? museumContextLabel
+                : activeOrganization
+                  ? `${activeOrganization.name}${activeOrganization.id ? ` (${activeOrganization.id})` : ""}`
+                  : pendingRequest?.museumName ?? "Personal Workspace"}
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>
             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">
@@ -353,7 +441,7 @@ export function DashboardShell() {
           </section>
 
           {activeTab === "museum-details" ? (
-            <MuseumDetailsForm />
+            <MuseumDetailsForm museumId={activeMuseumContextId} />
           ) : activeTab === "organizations" ? (
             <DashboardOrganizations />
           ) : activeTab === "org-requests" ? (
@@ -363,7 +451,10 @@ export function DashboardShell() {
           ) : activeTab === "invitations" ? (
             <AdminInvitations />
           ) : activeTab === "admin-museums" ? (
-            <AdminMuseums />
+            <AdminMuseums
+              activeMuseumContextId={activeMuseumContextId}
+              onEditMuseumContext={handleEditMuseumContext}
+            />
           ) : (
             <Card>
               <CardHeader>

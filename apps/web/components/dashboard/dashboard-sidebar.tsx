@@ -1,10 +1,18 @@
 "use client"
 
 import Link from "next/link"
-import { ShieldIcon } from "lucide-react"
+import { Building2Icon, ShieldIcon, TriangleAlertIcon } from "lucide-react"
 
 import { YamiLogo } from "@/components/yami-logo"
 import { Button } from "@/components/ui/button"
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
 import { cn } from "@/lib/utils"
 import {
   adminDashboardTabs,
@@ -19,6 +27,13 @@ type DashboardSidebarProps = {
   isAdmin?: boolean
   isAdminMode?: boolean
   onAdminModeToggle?: () => void
+  museumContextLabel: string
+  museumContextWarning?: string | null
+  museumContextLoading?: boolean
+  showMuseumContextSelector?: boolean
+  museumContextOptions?: { id: string; label: string }[]
+  activeMuseumContextId?: string | null
+  onMuseumContextChange?: (museumId: string) => void
 }
 
 export function DashboardSidebar({
@@ -27,14 +42,69 @@ export function DashboardSidebar({
   isAdmin,
   isAdminMode,
   onAdminModeToggle,
+  museumContextLabel,
+  museumContextWarning,
+  museumContextLoading,
+  showMuseumContextSelector,
+  museumContextOptions = [],
+  activeMuseumContextId,
+  onMuseumContextChange,
 }: DashboardSidebarProps) {
+  const museumOptionById = new Map(museumContextOptions.map((option) => [option.id, option]))
+  const comboboxItems = museumContextOptions.map((option) => option.label)
+  const activeMuseumOptionLabel = activeMuseumContextId
+    ? museumOptionById.get(activeMuseumContextId)?.label ?? ""
+    : ""
+  const labelToMuseumId = new Map(museumContextOptions.map((option) => [option.label, option.id]))
+
   return (
     <aside className="bg-card/85 fixed top-4 bottom-4 left-4 hidden w-72 flex-col rounded-2xl border p-4 shadow-xl shadow-black/5 backdrop-blur md:flex">
       <Link href="/" className="inline-flex">
         <YamiLogo />
       </Link>
 
-      <div className="mt-5">
+      <div className="mt-5 space-y-3">
+        <div className="rounded-xl border bg-background/70 p-3">
+          <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
+            <Building2Icon className="size-3.5" />
+            Museum Context
+          </div>
+          {showMuseumContextSelector ? (
+            <Combobox
+              items={comboboxItems}
+              value={activeMuseumOptionLabel || null}
+              onValueChange={(value) => {
+                const museumId = value ? labelToMuseumId.get(value) : undefined
+                if (museumId) onMuseumContextChange?.(museumId)
+              }}
+            >
+              <ComboboxInput
+                placeholder={museumContextLoading ? "Loading museums..." : "Search and select museum"}
+                disabled={museumContextLoading || museumContextOptions.length === 0}
+                showClear={false}
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>No museums found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item} value={item}>
+                      {item}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          ) : (
+            <p className="line-clamp-2 text-sm font-medium">{museumContextLabel}</p>
+          )}
+          {museumContextWarning && (
+            <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+              {museumContextWarning}
+            </p>
+          )}
+        </div>
+
         <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
           Navigation
         </p>

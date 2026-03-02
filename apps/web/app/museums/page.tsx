@@ -56,7 +56,7 @@ export default function MuseumsPage() {
               Museums
             </h1>
             <p className={`${body.className} max-w-2xl text-base text-muted-foreground`}>
-              Explore museums around the world and their current exhibitions.
+              Explore museums and see their latest profile descriptions from the dashboard.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -111,7 +111,7 @@ export default function MuseumsPage() {
                     </div>
                     <h2 className={`${display.className} text-2xl leading-tight`}>{museum.name}</h2>
                     <p className={`${body.className} line-clamp-3 text-sm text-muted-foreground`}>
-                      {museum.description || "No description yet. Click to add a narrative for this space."}
+                      {museum.description || museum.tagline || "No museum profile description yet."}
                     </p>
                   </div>
                   <div className="relative flex items-center justify-between text-xs text-muted-foreground">
@@ -145,7 +145,7 @@ export default function MuseumsPage() {
                         </div>
                         <h3 className={`${display.className} text-3xl`}>{museum.name}</h3>
                         <p className={`${body.className} text-base text-muted-foreground`}>
-                          {museum.description || "Add a description to spotlight what makes this museum unique."}
+                          {museum.description || museum.tagline || "No museum profile description yet."}
                         </p>
                       </div>
                     </div>

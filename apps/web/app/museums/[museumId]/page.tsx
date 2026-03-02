@@ -84,7 +84,7 @@ export default function MuseumDetailPage() {
                 </div>
                 <h1 className={`${display.className} text-4xl leading-tight sm:text-5xl`}>{museum.name}</h1>
                 <p className={`${body.className} max-w-3xl text-base text-muted-foreground`}>
-                  {museum.description || "No museum description yet."}
+                  {museum.description || museum.tagline || "No museum description yet."}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
@@ -94,6 +94,71 @@ export default function MuseumDetailPage() {
                     <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
                       {museum.phone}
                     </Badge>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 rounded-[28px] border border-border/60 bg-background/80 p-6">
+              <div className="flex items-center justify-between">
+                <h2 className={`${display.className} text-2xl`}>Museum Details</h2>
+                <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                  Profile
+                </Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 text-sm">
+                  {museum.tagline && (
+                    <p>
+                      <span className="text-muted-foreground">Tagline: </span>
+                      {museum.tagline}
+                    </p>
+                  )}
+                  {museum.publicEmail && (
+                    <p>
+                      <span className="text-muted-foreground">Email: </span>
+                      {museum.publicEmail}
+                    </p>
+                  )}
+                  {museum.phone && (
+                    <p>
+                      <span className="text-muted-foreground">Phone: </span>
+                      {museum.phone}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  {(museum.location.address || museum.location.city || museum.location.state || museum.location.postalCode) && (
+                    <p>
+                      <span className="text-muted-foreground">Address: </span>
+                      {[museum.location.address, museum.location.city, museum.location.state, museum.location.postalCode]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  )}
+                  {museum.operatingHours && museum.operatingHours.length > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">Operating hours:</p>
+                      <ul className="mt-1 space-y-1">
+                        {museum.operatingHours.map((entry) => (
+                          <li key={entry.day}>
+                            {entry.day}: {entry.isOpen ? `${entry.openTime} - ${entry.closeTime}` : "Closed"}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0 && (
+                    <p>
+                      <span className="text-muted-foreground">Accessibility: </span>
+                      {museum.accessibilityFeatures.join(", ")}
+                    </p>
+                  )}
+                  {museum.accessibilityNotes && (
+                    <p>
+                      <span className="text-muted-foreground">Accessibility notes: </span>
+                      {museum.accessibilityNotes}
+                    </p>
                   )}
                 </div>
               </div>
