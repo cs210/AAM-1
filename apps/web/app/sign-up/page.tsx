@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { useMutation } from "convex/react";
+import { api } from "@packages/backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +24,7 @@ import { Input } from "@/components/ui/input";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const saveProfile = useMutation(api.auth.saveUserProfile);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +46,20 @@ export default function SignUpPage() {
       setError(err.message ?? "Sign up failed");
       return;
     }
-    if (data) router.push("/dashboard");
+    if (data) {
+      try {
+        await saveProfile({
+          name: data.user.name || undefined,
+          email: data.user.email || undefined,
+          imageUrl: data.user.image || undefined,
+        });
+      } catch (profileError) {
+        console.error("Failed to save user profile:", profileError);
+        setError("Account created, but profile setup failed. Please try signing in again.");
+        return;
+      }
+      router.push("/dashboard");
+    }
   }
 
   return (
