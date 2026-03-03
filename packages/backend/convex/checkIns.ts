@@ -253,3 +253,59 @@ export const getMuseumCheckInStats = query({
     };
   },
 });
+
+// Get checkins from users the current user is following
+export const getFollowingCheckins = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return [];
+
+    // Get list of users being followed
+    const follows = await ctx.db
+      .query("userUserFollows")
+      .withIndex("by_follower", (q) => q.eq("followerId", user._id))
+      .collect();
+
+    const followingIds = follows.map((f) => f.followingId);
+
+    if (followingIds.length === 0) return [];
+
+    // Get checkins from followed users
+    const checkIns = await ctx.db
+      .query("museumCheckIns")
+      .collect();
+
+    // Filter for checkins from followed users and sort by most recent
+    const followingCheckIns = checkIns
+      .filter((ci) => followingIds.includes(ci.userId))
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 50); // Limit to 50 most recent
+
+    // Enrich with user and museum data
+    const enriched = await Promise.all(
+      followingCheckIns.map(async (ci) => {
+        const userProfile = await ctx.db
+          .query("userProfiles")
+          .withIndex("by_userId", (q) => q.eq("userId", ci.userId))
+          .first();
+
+        const museum = await ctx.db.get(ci.museumId);
+
+        return {
+          _id: ci._id,
+          userId: ci.userId,
+          userName: userProfile?.name || "Unknown User",
+          userImage: userProfile?.imageUrl,
+          museumId: ci.museumId,
+          museumName: museum?.name || "Unknown Museum",
+          rating: ci.rating,
+          review: ci.review,
+          createdAt: ci.createdAt,
+        };
+      })
+    );
+
+    return enriched;
+  },
+});
