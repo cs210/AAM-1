@@ -1,3 +1,4 @@
+
 import { components } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
@@ -31,20 +32,28 @@ function normalizeUrl(value: string) {
   return value.startsWith("http") ? value : `https://${value}`;
 }
 
+function readSiteUrl() {
+  const value = process.env.SITE_URL?.trim();
+  if (!value || value.includes("$")) return null;
+  return normalizeUrl(value);
+}
+
+function getAliasUrls() {
+  return (process.env.ALIAS_URL ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => Boolean(value) && !value.includes("$"))
+    .map((value) => normalizeUrl(value));
+}
+
 function resolveSiteUrl() {
-  const siteUrl = process.env.SITE_URL?.trim();
-  if (siteUrl) return normalizeUrl(siteUrl);
-
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-  if (vercelUrl) return normalizeUrl(vercelUrl);
-
-  return null;
+  return readSiteUrl();
 }
 
 function requireSiteUrl() {
   const value = resolveSiteUrl();
   if (!value) {
-    throw new Error("Missing SITE_URL or VERCEL_URL environment variable");
+    throw new Error("Missing SITE_URL environment variable");
   }
   return value;
 }
@@ -60,10 +69,13 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
   const siteUrl = resolveSiteUrl() ?? "";
+  const aliasUrls = getAliasUrls();
+  const trustedOrigins = [siteUrl, ...aliasUrls, "http://localhost:8081", "yami://", "exp://"]
+    .filter((origin): origin is string => Boolean(origin));
+
   return {
     baseURL: siteUrl,
-    trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"]
-      .filter(Boolean),
+    trustedOrigins,
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
