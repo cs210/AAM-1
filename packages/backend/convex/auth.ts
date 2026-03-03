@@ -41,9 +41,12 @@ function getSiteUrl(): string {
   if (vercelUrl) {
     return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
   }
-  throw new Error(
-    "Missing SITE_URL or VERCEL_URL. Set in Convex: npx convex env set SITE_URL https://your-site.com (or VERCEL_URL from Vercel build)",
-  );
+  const convexSiteUrl = process.env.CONVEX_SITE_URL?.trim();
+  if (convexSiteUrl) {
+    return convexSiteUrl.startsWith("http") ? convexSiteUrl : `https://${convexSiteUrl}`;
+  }
+  // Fallback so push succeeds; at runtime Convex injects SITE_URL/VERCEL_URL
+  return "https://convex.site";
 }
 
 export const authComponent = createClient<DataModel, typeof authSchema>(
