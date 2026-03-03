@@ -5,7 +5,7 @@ import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, MapPinIcon, HeartIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon } from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
 
 export default function MuseumDetailScreen() {
@@ -41,6 +41,14 @@ export default function MuseumDetailScreen() {
     } catch (error) {
       console.error('Follow action failed:', error);
     }
+  };
+
+  const handleCheckInPress = () => {
+    if (!museumId) return;
+    router.push({
+      pathname: '/(museums)/[museumId]/checkin',
+      params: { museumId },
+    });
   };
 
   // Loading state
@@ -125,6 +133,18 @@ export default function MuseumDetailScreen() {
           <Text style={styles.followButtonText}>
             {isFollowing ? 'Following' : 'Follow Museum'}
           </Text>
+        </Pressable>
+
+        {/* Check-In Button */}
+        <Pressable 
+          style={({ pressed }) => [
+            styles.checkInButton,
+            pressed && styles.checkInButtonPressed
+          ]}
+          onPress={handleCheckInPress}
+        >
+          <CheckCircle2Icon size={20} color="#222" />
+          <Text style={styles.checkInButtonText}>Check In</Text>
         </Pressable>
 
         {/* Upcoming Events Section */}
@@ -263,6 +283,26 @@ const styles = StyleSheet.create({
   },
   followButtonText: {
     color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  checkInButton: {
+    backgroundColor: '#F0F0F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginBottom: 24,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+  },
+  checkInButtonPressed: {
+    backgroundColor: '#E0E0E0',
+  },
+  checkInButtonText: {
+    color: '#222',
     fontSize: 16,
     fontWeight: '600',
   },
