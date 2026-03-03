@@ -2,21 +2,20 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 
 import {
   adminDashboardTabs,
+  adminPathToTabId,
+  dashboardPathToTabId,
   dashboardTabs,
+  type AdminDashboardTabId,
   type AllDashboardTabId,
+  type DashboardTabId,
 } from "@/components/dashboard/constants"
-import { AdminInvitations } from "./dashboard/admin-invitations"
-import { AdminOrgRequests } from "./dashboard/admin-org-requests"
-import { AdminUsers } from "./dashboard/admin-users"
-import { DashboardOrganizations } from "./dashboard/dashboard-organizations"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -34,11 +33,29 @@ function slugify(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48)
 }
 
-export function DashboardShell() {
+function parseDashboardPathname(pathname: string): {
+  activeTab: AllDashboardTabId
+  isAdminMode: boolean
+} {
+  const segments = pathname.replace(/^\/dashboard\/?/, "").split("/").filter(Boolean)
+  const first = segments[0] ?? ""
+  const second = segments[1] ?? ""
+
+  if (first === "admin") {
+    const tabId = adminPathToTabId[second] as AdminDashboardTabId | undefined
+    return { activeTab: tabId ?? "org-requests", isAdminMode: true }
+  }
+  const tabId = dashboardPathToTabId[first] as DashboardTabId | undefined
+  return { activeTab: tabId ?? "museum-details", isAdminMode: false }
+}
+
+type DashboardShellProps = { children?: React.ReactNode }
+
+export function DashboardShell({ children }: DashboardShellProps) {
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
-  const [activeTab, setActiveTab] = React.useState<AllDashboardTabId>("museum-details")
-  const [isAdminMode, setIsAdminMode] = React.useState(false)
+  const pathname = usePathname()
+  const { activeTab, isAdminMode } = parseDashboardPathname(pathname ?? "")
   const [museumName, setMuseumName] = React.useState("")
   const [city, setCity] = React.useState("")
   const [state, setState] = React.useState("")
@@ -288,10 +305,8 @@ export function DashboardShell() {
       <div className="flex min-h-screen w-full">
         <DashboardSidebar
           activeTab={activeTab}
-          onTabChange={setActiveTab}
           isAdmin={isAdmin}
           isAdminMode={isAdminMode}
-          onAdminModeToggle={() => setIsAdminMode((prev) => !prev)}
         />
 
         <main className="flex-1 space-y-4 p-4 md:ml-76 md:p-6">
@@ -304,10 +319,9 @@ export function DashboardShell() {
                 return (
                   <Button
                     key={tab.id}
-                    type="button"
                     variant={isActive ? "secondary" : "ghost"}
                     className="shrink-0 gap-2 rounded-xl"
-                    onClick={() => setActiveTab(tab.id)}
+                    render={<Link href={`/dashboard/${tab.path}`} />}
                   >
                     <Icon className="size-4" />
                     {tab.label}
@@ -323,10 +337,9 @@ export function DashboardShell() {
                   return (
                     <Button
                       key={tab.id}
-                      type="button"
                       variant={isActive ? "secondary" : "ghost"}
                       className="shrink-0 gap-2 rounded-xl"
-                      onClick={() => setActiveTab(tab.id)}
+                      render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -351,26 +364,7 @@ export function DashboardShell() {
             </p>
           </section>
 
-          {activeTab === "museum-details" ? (
-            <MuseumDetailsForm />
-          ) : activeTab === "organizations" ? (
-            <DashboardOrganizations />
-          ) : activeTab === "org-requests" ? (
-            <AdminOrgRequests />
-          ) : activeTab === "users" ? (
-            <AdminUsers />
-          ) : activeTab === "invitations" ? (
-            <AdminInvitations />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Coming Soon</CardTitle>
-                <CardDescription>
-                  The {activeTabInfo?.label} section will be part of the next iteration.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          )}
+          {children}
         </main>
       </div>
     </div>

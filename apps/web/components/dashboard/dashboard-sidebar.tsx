@@ -15,18 +15,14 @@ import { SidebarUserDetails } from "@/components/dashboard/sidebar-user-details"
 
 type DashboardSidebarProps = {
   activeTab: AllDashboardTabId
-  onTabChange: (tab: AllDashboardTabId) => void
   isAdmin?: boolean
   isAdminMode?: boolean
-  onAdminModeToggle?: () => void
 }
 
 export function DashboardSidebar({
   activeTab,
-  onTabChange,
   isAdmin,
   isAdminMode,
-  onAdminModeToggle,
 }: DashboardSidebarProps) {
   return (
     <aside className="bg-card/85 fixed top-4 bottom-4 left-4 hidden h-[calc(100vh-2rem)] w-72 flex-col rounded-2xl border p-4 shadow-xl shadow-black/5 backdrop-blur md:flex">
@@ -47,13 +43,12 @@ export function DashboardSidebar({
               return (
                 <Button
                   key={tab.id}
-                  type="button"
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "h-10 w-full justify-start gap-2 rounded-xl px-3",
                     isActive && "ring-border shadow-xs ring-1"
                   )}
-                  onClick={() => onTabChange(tab.id)}
+                  render={<Link href={`/dashboard/${tab.path}`} />}
                 >
                   <Icon className="size-4" />
                   {tab.label}
@@ -66,10 +61,13 @@ export function DashboardSidebar({
         {isAdmin && (
           <div className="mt-4">
             <Button
-              type="button"
               variant={isAdminMode ? "secondary" : "outline"}
               className="h-10 w-full justify-start gap-2 rounded-xl px-3"
-              onClick={onAdminModeToggle}
+              render={
+                <Link
+                  href={isAdminMode ? "/dashboard/details" : "/dashboard/admin/org-requests"}
+                />
+              }
             >
               <ShieldIcon className="size-4" />
               Admin mode {isAdminMode ? "on" : "off"}
@@ -86,13 +84,12 @@ export function DashboardSidebar({
                   return (
                     <Button
                       key={tab.id}
-                      type="button"
                       variant={isActive ? "secondary" : "ghost"}
                       className={cn(
                         "h-10 w-full justify-start gap-2 rounded-xl px-3",
                         isActive && "ring-border shadow-xs ring-1"
                       )}
-                      onClick={() => onTabChange(tab.id)}
+                      render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
                       {tab.label}
