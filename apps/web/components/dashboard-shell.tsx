@@ -16,6 +16,7 @@ import {
   type AllDashboardTabId,
   type DashboardTabId,
 } from "@/components/dashboard/constants"
+import { DashboardMuseumProvider } from "@/components/dashboard/dashboard-museum-context"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
 import {
@@ -476,10 +477,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const showWorkspaceNotConfiguredState = !isAdmin && isMuseumContextTab && !activeMuseumContextId
 
   return (
-    <div className="bg-background min-h-screen">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
-      <div className="flex min-h-screen w-full">
-        <DashboardSidebar
+    <DashboardMuseumProvider museumId={activeMuseumContextId}>
+      <div className="bg-background min-h-screen">
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
+        <div className="flex min-h-screen w-full">
+          <DashboardSidebar
           activeTab={activeTab}
           isAdmin={isAdmin}
           isAdminMode={isAdminMode}
@@ -594,7 +596,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <>{children}</>
           )}
         </main>
+        </div>
       </div>
-    </div>
+    </DashboardMuseumProvider>
   )
 }
