@@ -1522,10 +1522,24 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       >;
     };
     getOrganization: {
+      addMemberToOrganization: FunctionReference<
+        "mutation",
+        "internal",
+        { organizationId: string; role?: string; userId: string },
+        any,
+        Name
+      >;
       getOrganization: FunctionReference<
         "query",
         "internal",
         { id: string },
+        any,
+        Name
+      >;
+      listMembersByOrganization: FunctionReference<
+        "query",
+        "internal",
+        { organizationId: string },
         any,
         Name
       >;
@@ -1534,6 +1548,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "query",
         "internal",
         { userId: string },
+        any,
+        Name
+      >;
+      removeMemberFromOrganization: FunctionReference<
+        "mutation",
+        "internal",
+        { organizationId: string; userId: string },
         any,
         Name
       >;
@@ -1546,10 +1567,24 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         any,
         Name
       >;
+      getUserByEmail: FunctionReference<
+        "query",
+        "internal",
+        { email: string },
+        any,
+        Name
+      >;
       getUsers: FunctionReference<
         "query",
         "internal",
         { ids: Array<string> },
+        any,
+        Name
+      >;
+      searchUsersByEmail: FunctionReference<
+        "query",
+        "internal",
+        { emailQuery: string; limit?: number },
         any,
         Name
       >;
