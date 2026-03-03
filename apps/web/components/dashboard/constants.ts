@@ -47,6 +47,10 @@ export const dashboardPathToTabId: Record<string, DashboardTabId> = Object.fromE
   dashboardTabs.map((t) => [t.path, t.id])
 ) as Record<string, DashboardTabId>
 
+export const workspaceDashboardTabs = [
+  { id: "organizations", path: "organizations", label: "Organizations", icon: LayersIcon },
+] as const
+
 export const adminDashboardTabs = [
   { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
   { id: "users", path: "users", label: "Users", icon: UsersIcon },
@@ -59,5 +63,6 @@ export const adminPathToTabId: Record<string, AdminDashboardTabId> = Object.from
 ) as Record<string, AdminDashboardTabId>
 
 export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
+export type WorkspaceDashboardTabId = (typeof workspaceDashboardTabs)[number]["id"]
 export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
 export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId

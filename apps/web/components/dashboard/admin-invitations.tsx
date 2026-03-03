@@ -22,7 +22,7 @@ const ORG_ROLES = [
   { value: "owner", label: "Owner" },
 ] as const
 
-type OrgRow = { _id: string; name: string; slug: string }
+type OrgRow = { _id: string; name?: string; slug?: string }
 
 export function AdminInvitations() {
   const listOrgs = useAction(api.admin.listOrganizationsForAdmin)
@@ -36,7 +36,9 @@ export function AdminInvitations() {
 
   const loadOrgs = React.useCallback(() => {
     setOrgs(undefined)
-    listOrgs().then(setOrgs).catch(() => setOrgs(null))
+    listOrgs()
+      .then((rows) => setOrgs((rows as OrgRow[]) ?? []))
+      .catch(() => setOrgs(null))
   }, [listOrgs])
 
   React.useEffect(() => {
@@ -110,7 +112,7 @@ export function AdminInvitations() {
                   <SelectContent>
                     {orgList.map((org) => (
                       <SelectItem key={org._id} value={org._id}>
-                        {org.name} ({org._id})
+                        {org.name ?? org._id}
                       </SelectItem>
                     ))}
                   </SelectContent>

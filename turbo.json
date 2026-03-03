@@ -4,6 +4,10 @@
         "**/.env.*local"
     ],
     "globalEnv": [
+        "ALIAS_URL",
+        "SITE_URL",
+        "VERCEL_URL",
+        "VERCEL_BRANCH_URL",
         "CONVEX_URL",
         "CONVEX_SITE_URL",
         "CONVEX_DEPLOY_KEY",
