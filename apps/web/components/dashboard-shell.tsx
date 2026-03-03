@@ -14,6 +14,7 @@ import {
 import { AdminInvitations } from "./dashboard/admin-invitations"
 import { AdminOrgRequests } from "./dashboard/admin-org-requests"
 import { AdminUsers } from "./dashboard/admin-users"
+import { DashboardAnalytics } from "./dashboard/dashboard-analytics"
 import { DashboardOrganizations } from "./dashboard/dashboard-organizations"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
@@ -346,8 +347,9 @@ export function DashboardShell() {
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>
             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">
-              Keep your museum profile current so visitors always see accurate details in the mobile
-              app.
+              {activeTab === "analytics"
+                ? "Key engagement metrics for your museum — check-ins, ratings, and followers."
+                : "Keep your museum profile current so visitors always see accurate details in the mobile app."}
             </p>
           </section>
 
@@ -361,6 +363,8 @@ export function DashboardShell() {
             <AdminUsers />
           ) : activeTab === "invitations" ? (
             <AdminInvitations />
+          ) : activeTab === "analytics" ? (
+            <DashboardAnalytics />
           ) : (
             <Card>
               <CardHeader>
