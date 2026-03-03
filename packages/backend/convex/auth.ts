@@ -1,3 +1,4 @@
+
 import { components } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
@@ -27,23 +28,26 @@ export const listUsers = query({
   },
 });
 
-/**
- * Resolves the canonical site URL for auth (callbacks, emails, etc.).
- * Prefers SITE_URL. If running behind Vercel, falls back to VERCEL_URL (set in Convex
- * e.g. by a Vercel build step: npx convex env set VERCEL_URL $VERCEL_URL).
- */
-function getSiteUrl(): string {
+function normalizeUrl(value: string) {
+  return value.startsWith("http") ? value : `https://${value}`;
+}
+
+function resolveSiteUrl() {
   const siteUrl = process.env.SITE_URL?.trim();
-  if (siteUrl) {
-    return siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`;
-  }
+  if (siteUrl) return normalizeUrl(siteUrl);
+
   const vercelUrl = process.env.VERCEL_URL?.trim();
-  if (vercelUrl) {
-    return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+  if (vercelUrl) return normalizeUrl(vercelUrl);
+
+  return null;
+}
+
+function requireSiteUrl() {
+  const value = resolveSiteUrl();
+  if (!value) {
+    throw new Error("Missing SITE_URL or VERCEL_URL environment variable");
   }
-  throw new Error(
-    "Missing SITE_URL or VERCEL_URL. Set in Convex: npx convex env set SITE_URL https://your-site.com (or VERCEL_URL from Vercel build)",
-  );
+  return value;
 }
 
 export const authComponent = createClient<DataModel, typeof authSchema>(
@@ -56,7 +60,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 );
 
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = getSiteUrl();
+  const siteUrl = resolveSiteUrl() ?? "";
   return {
     baseURL: siteUrl,
     trustedOrigins: [siteUrl, "http://localhost:8081", "yami://", "exp://"]
@@ -96,7 +100,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
             email: data.email,
             organizationId: data.organization?.id,
           });
-          const siteUrl = getSiteUrl();
+          const siteUrl = requireSiteUrl();
           const inviteLink =
             `${siteUrl}/accept-invitation?invitationId=${data.id}`;
           const inviterName = data.inviter?.user?.name ??
@@ -172,3 +176,4 @@ export const saveUserProfile = mutation({
     }
   },
 });
+
