@@ -5,6 +5,27 @@ import { getSessionCookie } from "better-auth/cookies";
 const publicRoutes = ["/sign-in", "/sign-up"];
 
 export default async function proxy(request: NextRequest) {
+  const configuredSiteUrlRaw = process.env.SITE_URL?.trim();
+  const configuredSiteUrl =
+    configuredSiteUrlRaw && !configuredSiteUrlRaw.includes("$") ? configuredSiteUrlRaw : null;
+  if (configuredSiteUrl) {
+    try {
+      const canonicalUrl = new URL(
+        configuredSiteUrl.startsWith("http") ? configuredSiteUrl : `https://${configuredSiteUrl}`
+      );
+      const requestHost = request.headers.get("host");
+      const isGetLikeMethod = request.method === "GET" || request.method === "HEAD";
+      if (isGetLikeMethod && requestHost && requestHost !== canonicalUrl.host) {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.protocol = canonicalUrl.protocol;
+        redirectUrl.host = canonicalUrl.host;
+        return NextResponse.redirect(redirectUrl, 308);
+      }
+    } catch {
+      // Ignore invalid SITE_URL values and continue request handling.
+    }
+  }
+
   const sessionCookie = getSessionCookie(request);
   const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
 
