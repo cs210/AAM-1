@@ -152,10 +152,34 @@ export default defineSchema({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    museumData: v.optional(v.object({
+      totalCheckIns: v.number(),
+      totalMuseums: v.number(),
+      checkIns: v.record(
+        v.string(), // museumId as key
+        v.array(v.id("museumCheckIns")) // array of check-in IDs
+      ),
+    })),
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
     .index("by_name", ["name"]),
+
+  // Museum check-ins (individual records for reference)
+  museumCheckIns: defineTable({
+    userId: v.string(), // Better Auth user ID
+    museumId: v.id("museums"),
+    rating: v.optional(v.number()), // 1-5 stars
+    review: v.optional(v.string()),
+    imageUrls: v.array(v.string()),
+    friendUserIds: v.array(v.string()),
+    visitDate: v.number(), // timestamp of museum visit
+    createdAt: v.number(), // timestamp of check-in creation
+  })
+    .index("by_user", ["userId"])
+    .index("by_museum", ["museumId"])
+    .index("by_user_and_museum", ["userId", "museumId"])
+    .index("by_user_and_date", ["userId", "visitDate"]),
 
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.

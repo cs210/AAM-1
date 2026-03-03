@@ -154,15 +154,18 @@ export const getCurrentUser = query({
   },
 });
 
-// Mutation that ensures a row exists in `userProfiles` for the given user
+// Mutation that ensures a row exists in `userProfiles` for the authenticated user
 export const saveUserProfile = mutation({
   args: {
-    userId: v.string(),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, name, email, imageUrl }) => {
+  handler: async (ctx, { name, email, imageUrl }) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const userId = user._id;
     const now = Date.now();
     // try to find existing profile
     const existing = await ctx.db
