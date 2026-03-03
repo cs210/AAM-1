@@ -52,7 +52,6 @@ export function SignUpForm() {
       // Upsert user profile immediately after sign-up
       try {
         await saveProfile({
-          userId: data.user.id,
           name: data.user.name || undefined,
           email: data.user.email || undefined,
           imageUrl: data.user.image || undefined,

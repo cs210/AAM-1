@@ -49,7 +49,6 @@ export default function SignUpPage() {
     if (data) {
       try {
         await saveProfile({
-          userId: data.user.id,
           name: data.user.name || undefined,
           email: data.user.email || undefined,
           imageUrl: data.user.image || undefined,
