@@ -341,7 +341,7 @@ export function DashboardShell() {
               <Building2Icon className="size-3.5" />
               Workspace:{" "}
               {activeOrganization
-                ? `${activeOrganization.name}${activeOrganization.id ? ` (${activeOrganization.id})` : ""}`
+                ? `${activeOrganization.name}`
                 : pendingRequest?.museumName ?? "Personal Workspace"}
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>

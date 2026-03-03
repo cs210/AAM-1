@@ -54,8 +54,8 @@ export function SidebarUserDetails() {
           <Building2Icon className="size-4" />
           <span className="truncate">
             {activeOrganization
-              ? `${activeOrganization.name}${activeOrganization.id ? ` (${activeOrganization.id})` : ""}`
-              : pendingRequest?.museumName ?? "No workspace"}
+              ? `${activeOrganization.name}` : 
+              pendingRequest?.museumName ?? "No workspace"}
           </span>
         </div>
         {pendingRequest?.status === "pending" ? (
