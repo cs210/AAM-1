@@ -12,43 +12,57 @@ import {
 export const dashboardTabs = [
   {
     id: "museum-details",
+    path: "details",
     label: "Museum Details",
     icon: Building2Icon,
   },
   {
+    id: "organizations",
+    path: "organizations",
+    label: "Organizations",
+    icon: LayersIcon,
+  },
+  {
     id: "exhibitions",
+    path: "exhibitions",
     label: "Exhibitions",
     icon: CalendarDaysIcon,
   },
   {
     id: "interactions",
+    path: "interactions",
     label: "Interactions",
     icon: TicketIcon,
   },
   {
     id: "analytics",
+    path: "analytics",
     label: "Analytics",
     icon: ChartSplineIcon,
   },
 ] as const
 
+/** Path segment -> dashboard tab id for URL routing */
+export const dashboardPathToTabId: Record<string, DashboardTabId> = Object.fromEntries(
+  dashboardTabs.map((t) => [t.path, t.id])
+) as Record<string, DashboardTabId>
+
 export const workspaceDashboardTabs = [
-  {
-    id: "organizations",
-    label: "Organizations",
-    icon: LayersIcon,
-  },
+  { id: "organizations", path: "organizations", label: "Organizations", icon: LayersIcon },
 ] as const
 
 export const adminDashboardTabs = [
-  { id: "org-requests", label: "Organizations", icon: ShieldCheckIcon },
-  { id: "users", label: "Users", icon: UsersIcon },
-  { id: "invitations", label: "Invitations", icon: MailIcon },
-  { id: "admin-museums", label: "Museums", icon: Building2Icon },
+  { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
+  { id: "users", path: "users", label: "Users", icon: UsersIcon },
+  { id: "invitations", path: "invitations", label: "Invitations", icon: MailIcon },
 ] as const
 
-export type MuseumDashboardTabId = (typeof dashboardTabs)[number]["id"]
+/** Admin path segment -> admin tab id for URL routing (/dashboard/admin/...) */
+export const adminPathToTabId: Record<string, AdminDashboardTabId> = Object.fromEntries(
+  adminDashboardTabs.map((t) => [t.path, t.id])
+) as Record<string, AdminDashboardTabId>
+
+export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
 export type WorkspaceDashboardTabId = (typeof workspaceDashboardTabs)[number]["id"]
-export type DashboardTabId = MuseumDashboardTabId | WorkspaceDashboardTabId
 export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
 export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId

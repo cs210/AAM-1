@@ -2,23 +2,22 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 
 import {
   adminDashboardTabs,
+  adminPathToTabId,
+  dashboardPathToTabId,
   dashboardTabs,
   workspaceDashboardTabs,
+  type AdminDashboardTabId,
   type AllDashboardTabId,
+  type DashboardTabId,
 } from "@/components/dashboard/constants"
-import { AdminInvitations } from "./dashboard/admin-invitations"
-import { AdminMuseums } from "./dashboard/admin-museums"
-import { AdminOrgRequests } from "./dashboard/admin-org-requests"
-import { AdminUsers } from "./dashboard/admin-users"
-import { DashboardOrganizations } from "./dashboard/dashboard-organizations"
+import { DashboardMuseumProvider } from "@/components/dashboard/dashboard-museum-context"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -50,11 +49,29 @@ type MuseumContextRow = {
   name: string
 }
 
-export function DashboardShell() {
+function parseDashboardPathname(pathname: string): {
+  activeTab: AllDashboardTabId
+  isAdminMode: boolean
+} {
+  const segments = pathname.replace(/^\/dashboard\/?/, "").split("/").filter(Boolean)
+  const first = segments[0] ?? ""
+  const second = segments[1] ?? ""
+
+  if (first === "admin") {
+    const tabId = adminPathToTabId[second] as AdminDashboardTabId | undefined
+    return { activeTab: tabId ?? "org-requests", isAdminMode: true }
+  }
+  const tabId = dashboardPathToTabId[first] as DashboardTabId | undefined
+  return { activeTab: tabId ?? "museum-details", isAdminMode: false }
+}
+
+type DashboardShellProps = { children?: React.ReactNode }
+
+export function DashboardShell({ children }: DashboardShellProps) {
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
-  const [activeTab, setActiveTab] = React.useState<AllDashboardTabId>("museum-details")
-  const [isAdminMode, setIsAdminMode] = React.useState(false)
+  const pathname = usePathname()
+  const { activeTab, isAdminMode } = parseDashboardPathname(pathname ?? "")
   const [museumName, setMuseumName] = React.useState("")
   const [city, setCity] = React.useState("")
   const [state, setState] = React.useState("")
@@ -180,12 +197,14 @@ export function DashboardShell() {
     setMuseumContextWarning(null)
   }, [])
 
-  const handleEditMuseumContext = React.useCallback((museumId: string) => {
-    setAdminMuseumContextId(museumId)
-    setMuseumContextWarning(null)
-    setIsAdminMode(false)
-    setActiveTab("museum-details")
-  }, [])
+  const handleEditMuseumContext = React.useCallback(
+    (museumId: string) => {
+      setAdminMuseumContextId(museumId)
+      setMuseumContextWarning(null)
+      router.push("/dashboard/details")
+    },
+    [router]
+  )
 
   const handleWorkspaceChange = React.useCallback(
     (workspaceId: string) => {
@@ -458,15 +477,17 @@ export function DashboardShell() {
   const showWorkspaceNotConfiguredState = !isAdmin && isMuseumContextTab && !activeMuseumContextId
 
   return (
-    <div className="bg-background min-h-screen">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
-      <div className="flex min-h-screen w-full">
-        <DashboardSidebar
+    <DashboardMuseumProvider museumId={activeMuseumContextId}>
+      <div className="bg-background min-h-screen">
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
+        <div className="flex min-h-screen w-full">
+          <DashboardSidebar
           activeTab={activeTab}
-          onTabChange={setActiveTab}
           isAdmin={isAdmin}
           isAdminMode={isAdminMode}
-          onAdminModeToggle={() => setIsAdminMode((prev) => !prev)}
+          onAdminModeToggle={() =>
+            router.push(isAdminMode ? "/dashboard/details" : "/dashboard/admin/org-requests")
+          }
           museumContextLabel={museumContextLabel}
           museumContextWarning={isAdmin ? museumContextWarning : null}
           museumContextLoading={isAdmin && museums === undefined}
@@ -492,10 +513,9 @@ export function DashboardShell() {
                 return (
                   <Button
                     key={tab.id}
-                    type="button"
                     variant={isActive ? "secondary" : "ghost"}
                     className="shrink-0 gap-2 rounded-xl"
-                    onClick={() => setActiveTab(tab.id)}
+                    render={<Link href={`/dashboard/${tab.path}`} />}
                   >
                     <Icon className="size-4" />
                     {tab.label}
@@ -510,10 +530,9 @@ export function DashboardShell() {
                   return (
                     <Button
                       key={tab.id}
-                      type="button"
                       variant={isActive ? "secondary" : "ghost"}
                       className="shrink-0 gap-2 rounded-xl"
-                      onClick={() => setActiveTab(tab.id)}
+                      render={<Link href={`/dashboard/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -529,10 +548,9 @@ export function DashboardShell() {
                   return (
                     <Button
                       key={tab.id}
-                      type="button"
                       variant={isActive ? "secondary" : "ghost"}
                       className="shrink-0 gap-2 rounded-xl"
-                      onClick={() => setActiveTab(tab.id)}
+                      render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -574,33 +592,12 @@ export function DashboardShell() {
                 </CardDescription>
               </CardHeader>
             </Card>
-          ) : activeTab === "museum-details" ? (
-            <MuseumDetailsForm museumId={activeMuseumContextId} />
-          ) : activeTab === "organizations" ? (
-            <DashboardOrganizations />
-          ) : activeTab === "org-requests" ? (
-            <AdminOrgRequests />
-          ) : activeTab === "users" ? (
-            <AdminUsers />
-          ) : activeTab === "invitations" ? (
-            <AdminInvitations />
-          ) : activeTab === "admin-museums" ? (
-            <AdminMuseums
-              activeMuseumContextId={activeMuseumContextId}
-              onEditMuseumContext={handleEditMuseumContext}
-            />
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Coming Soon</CardTitle>
-                <CardDescription>
-                  The {activeTabInfo?.label} section will be part of the next iteration.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <>{children}</>
           )}
         </main>
+        </div>
       </div>
-    </div>
+    </DashboardMuseumProvider>
   )
 }
