@@ -16,6 +16,7 @@ import { AdminInvitations } from "./dashboard/admin-invitations"
 import { AdminMuseums } from "./dashboard/admin-museums"
 import { AdminOrgRequests } from "./dashboard/admin-org-requests"
 import { AdminUsers } from "./dashboard/admin-users"
+import { DashboardAnalytics } from "./dashboard/dashboard-analytics"
 import { DashboardOrganizations } from "./dashboard/dashboard-organizations"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
@@ -578,6 +579,8 @@ export function DashboardShell() {
             <MuseumDetailsForm museumId={activeMuseumContextId} />
           ) : activeTab === "organizations" ? (
             <DashboardOrganizations />
+          ) : activeTab === "analytics" ? (
+            <DashboardAnalytics />
           ) : activeTab === "org-requests" ? (
             <AdminOrgRequests />
           ) : activeTab === "users" ? (
