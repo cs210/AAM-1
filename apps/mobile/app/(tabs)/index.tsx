@@ -5,12 +5,13 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { router } from 'expo-router';
 import { EventCard, EventCardData } from '../../components/event-card';
+import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 
 const EmptyState = () => (
   <View style={styles.emptyContainer}>
-    <Text style={styles.emptyTitle}>No events yet</Text>
+    <Text style={styles.emptyTitle}>No feed yet</Text>
     <Text style={styles.emptyText}>
-      Follow some museums to see their events here!
+      Follow museums and users to see their events and check-ins here!
     </Text>
     <Pressable 
       style={styles.exploreButton}
@@ -23,9 +24,10 @@ const EmptyState = () => (
 
 export default function HomeScreen() {
   const events = useQuery(api.events.getUnifiedFeed);
+  const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
 
   // Loading state
-  if (events === undefined) {
+  if (events === undefined || followingCheckins === undefined) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -39,17 +41,33 @@ export default function HomeScreen() {
     );
   }
 
+  // Merge and sort events and checkins by date
+  const feedItems = [
+    ...events.map((e) => ({ type: 'event' as const, data: e })),
+    ...followingCheckins.map((c) => ({ type: 'checkin' as const, data: c })),
+  ].sort((a, b) => {
+    const dateA = a.type === 'event' ? a.data._creationTime : a.data.createdAt;
+    const dateB = b.type === 'event' ? b.data._creationTime : b.data.createdAt;
+    return dateB - dateA;
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Your Feed</Text>
       </View>
       <FlatList
-        data={events}
-        renderItem={({ item }) => <EventCard event={item as EventCardData} />}
-        keyExtractor={(item) => item._id}
+        data={feedItems}
+        renderItem={({ item }) =>
+          item.type === 'event' ? (
+            <EventCard event={item.data as EventCardData} />
+          ) : (
+            <CheckinPost checkin={item.data as CheckinPostData} />
+          )
+        }
+        keyExtractor={(item, index) => `${item.type}-${item.data._id}-${index}`}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={events.length === 0 ? styles.emptyList : styles.listContent}
+        contentContainerStyle={feedItems.length === 0 ? styles.emptyList : styles.listContent}
         ListEmptyComponent={<EmptyState />}
       />
     </SafeAreaView>
