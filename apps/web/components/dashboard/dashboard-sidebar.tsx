@@ -24,22 +24,23 @@ import {
 import { SidebarUserDetails } from "@/components/dashboard/sidebar-user-details"
 import { authClient } from "@/lib/auth-client"
 
+type MuseumContextOption = { id: string; label: string }
+
 type DashboardSidebarProps = {
   activeTab: AllDashboardTabId
-  onTabChange: (tab: AllDashboardTabId) => void
   isAdmin?: boolean
   isAdminMode?: boolean
   onAdminModeToggle?: () => void
-  museumContextLabel: string
+  museumContextLabel?: string
   museumContextWarning?: string | null
   museumContextLoading?: boolean
   showMuseumContextSelector?: boolean
-  museumContextOptions?: { id: string; label: string }[]
+  museumContextOptions?: MuseumContextOption[]
   activeMuseumContextId?: string | null
   onMuseumContextChange?: (museumId: string) => void
   showWorkspaceSwitcher?: boolean
   workspaceLoading?: boolean
-  workspaceOptions?: { id: string; label: string; museumLabel?: string | null }[]
+  workspaceOptions?: { id: string; label: string; museumLabel?: string }[]
   activeWorkspaceId?: string | null
   onWorkspaceChange?: (workspaceId: string) => void
   workspaceWarning?: string | null
@@ -47,23 +48,22 @@ type DashboardSidebarProps = {
 
 export function DashboardSidebar({
   activeTab,
-  onTabChange,
   isAdmin,
   isAdminMode,
   onAdminModeToggle,
-  museumContextLabel,
-  museumContextWarning,
-  museumContextLoading,
-  showMuseumContextSelector,
+  museumContextLabel = "",
+  museumContextWarning = null,
+  museumContextLoading = false,
+  showMuseumContextSelector = false,
   museumContextOptions = [],
-  activeMuseumContextId,
+  activeMuseumContextId = null,
   onMuseumContextChange,
-  showWorkspaceSwitcher,
-  workspaceLoading,
+  showWorkspaceSwitcher = false,
+  workspaceLoading = false,
   workspaceOptions = [],
-  activeWorkspaceId,
+  activeWorkspaceId = null,
   onWorkspaceChange,
-  workspaceWarning,
+  workspaceWarning = null,
 }: DashboardSidebarProps) {
   const router = useRouter()
   const museumOptionById = new Map(museumContextOptions.map((option) => [option.id, option]))
@@ -133,13 +133,12 @@ export function DashboardSidebar({
               return (
                 <Button
                   key={tab.id}
-                  type="button"
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "h-10 w-full justify-start gap-2 rounded-xl px-3",
                     isActive && "ring-border shadow-xs ring-1"
                   )}
-                  onClick={() => onTabChange(tab.id)}
+                  render={<Link href={`/dashboard/${tab.path}`} />}
                 >
                   <Icon className="size-4" />
                   {tab.label}
@@ -152,10 +151,13 @@ export function DashboardSidebar({
         {isAdmin && (
           <div className="mt-4">
             <Button
-              type="button"
               variant={isAdminMode ? "secondary" : "outline"}
               className="h-10 w-full justify-start gap-2 rounded-xl px-3"
-              onClick={onAdminModeToggle}
+              render={
+                <Link
+                  href={isAdminMode ? "/dashboard/details" : "/dashboard/admin/org-requests"}
+                />
+              }
             >
               <ShieldIcon className="size-4" />
               Admin mode {isAdminMode ? "on" : "off"}
@@ -172,13 +174,12 @@ export function DashboardSidebar({
                   return (
                     <Button
                       key={tab.id}
-                      type="button"
                       variant={isActive ? "secondary" : "ghost"}
                       className={cn(
                         "h-10 w-full justify-start gap-2 rounded-xl px-3",
                         isActive && "ring-border shadow-xs ring-1"
                       )}
-                      onClick={() => onTabChange(tab.id)}
+                      render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -214,13 +215,12 @@ export function DashboardSidebar({
               return (
                 <Button
                   key={tab.id}
-                  type="button"
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "h-10 w-full justify-start gap-2 rounded-xl px-3",
                     isActive && "ring-border shadow-xs ring-1"
                   )}
-                  onClick={() => onTabChange(tab.id)}
+                  render={<Link href={`/dashboard/${tab.path}`} />}
                 >
                   <Icon className="size-4" />
                   {tab.label}

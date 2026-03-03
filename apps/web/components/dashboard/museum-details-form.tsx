@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useDashboardMuseumId } from "@/components/dashboard/dashboard-museum-context"
 import { MuseumImageManager } from "@/components/dashboard/museum-image-manager"
 import {
   Select,
@@ -21,7 +22,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 
 type MuseumDetailsFormProps = {
-  museumId: string | null
+  /** When omitted, the form uses the active museum from dashboard context. */
+  museumId?: string | null
 }
 
 type OperatingHour = {
@@ -179,7 +181,10 @@ function toFormState(row: MuseumDetailsRow): FormState {
   }
 }
 
-export function MuseumDetailsForm({ museumId }: MuseumDetailsFormProps) {
+export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormProps) {
+  const museumIdFromContext = useDashboardMuseumId()
+  const museumId = museumIdProp ?? museumIdFromContext
+
   const details = useQuery(
     api.museums.getMuseumDetailsForDashboard,
     museumId ? { id: museumId as Id<"museums"> } : "skip"
