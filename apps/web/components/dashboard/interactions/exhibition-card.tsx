@@ -27,7 +27,13 @@ import { AddHallForm } from "@/components/dashboard/interactions/add-hall-form"
 import { HallRow } from "@/components/dashboard/interactions/hall-row"
 import { formatDate, type ExhibitionRow } from "@/components/dashboard/interactions/types"
 
-export function ExhibitionCard({ exhibition }: { exhibition: ExhibitionRow }) {
+export function ExhibitionCard({
+  exhibition,
+  showInteractions = true,
+}: {
+  exhibition: ExhibitionRow
+  showInteractions?: boolean
+}) {
   const [expanded, setExpanded] = React.useState(false)
   const [showAddHall, setShowAddHall] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
@@ -108,7 +114,7 @@ export function ExhibitionCard({ exhibition }: { exhibition: ExhibitionRow }) {
             )}
 
             {halls?.map((hall) => (
-              <HallRow key={hall._id} hall={hall} />
+              <HallRow key={hall._id} hall={hall} showInteractions={showInteractions} />
             ))}
 
             <div className="flex justify-end">

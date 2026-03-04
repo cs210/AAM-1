@@ -3,6 +3,7 @@ import { AdminInvitations } from "@/components/dashboard/admin-invitations"
 import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
 import { AdminUsers } from "@/components/dashboard/admin-users"
 import { dashboardPathToTabId } from "@/components/dashboard/constants"
+import { DashboardExhibitions } from "@/components/dashboard/dashboard-exhibitions"
 import { DashboardInteractions } from "@/components/dashboard/dashboard-interactions"
 import { DashboardOrganizations } from "@/components/dashboard/dashboard-organizations"
 import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
@@ -40,6 +41,9 @@ export default async function DashboardSectionPage({
   }
   if (tabId === "organizations") {
     return <DashboardOrganizations />
+  }
+  if (tabId === "exhibitions") {
+    return <DashboardExhibitions />
   }
   if (tabId === "interactions") {
     return <DashboardInteractions />
