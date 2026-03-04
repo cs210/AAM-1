@@ -1,8 +1,10 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { useMutation } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
 import * as React from 'react';
 import {
   KeyboardAvoidingView,
@@ -125,8 +127,14 @@ const CARD_SHADOW = {
 
 export default function IntakeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
+  const redirect =
+    typeof params.redirect === 'string' && params.redirect.length > 0
+      ? params.redirect
+      : undefined;
   const [step, setStep] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, string | number>>({});
+  const [hasSubmitted, setHasSubmitted] = React.useState(false);
   const currentQuestion = QUESTIONS[step];
   const isComplete = step >= QUESTIONS.length;
   const progress =
@@ -140,6 +148,20 @@ export default function IntakeScreen() {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const saveUserInterests = useMutation(api.userInterests.saveForCurrentAccount);
+
+  const submitAnswers = React.useCallback(async () => {
+    if (hasSubmitted) return;
+    setHasSubmitted(true);
+    try {
+      await saveUserInterests({
+        userInfo: answers,
+      });
+    } catch (error) {
+      console.error("Failed to save user interests", error);
+    }
+  }, [answers, hasSubmitted, saveUserInterests]);
+
   const goNext = React.useCallback(() => {
     if (step < QUESTIONS.length - 1) {
       setStep((s) => s + 1);
@@ -152,6 +174,20 @@ export default function IntakeScreen() {
     if (step > 0) setStep((s) => s - 1);
     else router.back();
   }, [step, router]);
+
+  React.useEffect(() => {
+    if (isComplete && !hasSubmitted) {
+      void submitAnswers();
+    }
+  }, [isComplete, hasSubmitted, submitAnswers]);
+
+  const handleDone = React.useCallback(() => {
+    if (redirect) {
+      router.replace(redirect);
+    } else {
+      router.back();
+    }
+  }, [redirect, router]);
 
   if (isComplete) {
     return (
@@ -169,7 +205,7 @@ export default function IntakeScreen() {
                 We'll use your answers to tailor what we show you and to improve our programs.
               </Text>
               <Pressable
-                onPress={() => router.back()}
+                onPress={handleDone}
                 style={({ pressed }) => [
                   styles.doneButton,
                   pressed && styles.pressed,
