@@ -20,6 +20,7 @@ import type * as museums from "../museums.js";
 import type * as organizationRequests from "../organizationRequests.js";
 import type * as ratings from "../ratings.js";
 import type * as recsys from "../recsys.js";
+import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
 
 import type {
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   organizationRequests: typeof organizationRequests;
   ratings: typeof ratings;
   recsys: typeof recsys;
+  userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
 }>;
 
