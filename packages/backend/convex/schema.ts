@@ -178,8 +178,19 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_museum", ["museumId"])
-    .index("by_user_and_museum", ["userId", "museumId"])
-    .index("by_user_and_date", ["userId", "visitDate"]),
+      .index("by_user_and_museum", ["userId", "museumId"])
+      .index("by_user_and_date", ["userId", "visitDate"]),
+
+  // Per-user museum interest survey responses
+  userInterests: defineTable({
+    accountId: v.string(), // Better Auth account/user ID
+    userInfo: v.record(
+      v.string(), // question id
+      v.union(v.string(), v.number()), // answer (choice/text or scale)
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_accountId", ["accountId"]),
 
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.

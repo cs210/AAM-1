@@ -132,6 +132,15 @@ export default function WrappedScreen() {
             <Text style={styles.countLabel}>Following</Text>
           </View>
         </View>
+        {!isViewingOtherProfile && (
+          <TouchableOpacity
+            style={styles.updatePreferencesButton}
+            onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.updatePreferencesText}>Update Preferences</Text>
+          </TouchableOpacity>
+        )}
         {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
         {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
           <TouchableOpacity
@@ -242,6 +251,19 @@ const styles = StyleSheet.create({
   countLabel: {
     fontSize: 14,
     color: '#888',
+  },
+  updatePreferencesButton: {
+    marginTop: 12,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#0f172a',
+  },
+  updatePreferencesText: {
+    color: '#f9fafb',
+    fontSize: 14,
+    fontWeight: '600',
   },
   followButtonBase: {
     paddingHorizontal: 24,
