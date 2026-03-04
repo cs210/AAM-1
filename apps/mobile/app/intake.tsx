@@ -42,7 +42,7 @@ interface Question {
   type: QuestionType;
   choices?: string[];
   scaleMax?: number;
-  scaleLabels?: { start: string; mid: string; end: string };
+  scaleLabels?: { start: string; mid?: string; end: string };
   placeholder?: string;
 }
 
@@ -84,8 +84,7 @@ const QUESTIONS: Question[] = [
     type: 'scale',
     scaleMax: 5,
     scaleLabels: {
-      start: 'Not very',
-      mid: 'Somewhat',
+      start: 'Not interested',
       end: 'Very interested',
     },
   },
@@ -297,7 +296,10 @@ export default function IntakeScreen() {
                       return (
                         <Pressable
                           key={n}
-                          onPress={() => setAnswer(currentQuestion.id, n)}
+                          onPress={() => {
+                            setAnswer(currentQuestion.id, n);
+                            setTimeout(goNext, 280);
+                          }}
                           style={({ pressed }) => [
                             styles.scaleSquare,
                             isSelected && styles.scaleSquareSelected,
@@ -320,9 +322,11 @@ export default function IntakeScreen() {
                     <Text style={styles.scaleLabelText}>
                       {currentQuestion.scaleLabels.start}
                     </Text>
-                    <Text style={[styles.scaleLabelText, styles.scaleLabelMid]}>
-                      {currentQuestion.scaleLabels.mid}
-                    </Text>
+                    {currentQuestion.scaleLabels.mid ? (
+                      <Text style={[styles.scaleLabelText, styles.scaleLabelMid]}>
+                        {currentQuestion.scaleLabels.mid}
+                      </Text>
+                    ) : null}
                     <Text style={[styles.scaleLabelText, styles.scaleLabelEnd]}>
                       {currentQuestion.scaleLabels.end}
                     </Text>
@@ -554,7 +558,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingTop: 60,
+    paddingBottom: 32,
   },
   pressed: {
     opacity: 0.92,
