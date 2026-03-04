@@ -50,7 +50,6 @@ const QUESTIONS: Question[] = [
   {
     id: 'visit_frequency',
     question: 'How often do you visit museums?',
-    subtext: 'Roughly is just fine.',
     type: 'choice',
     choices: ['Rarely or never', 'Once a year', 'A few times a year', 'Monthly or more'],
   },
@@ -109,7 +108,7 @@ const QUESTIONS: Question[] = [
   {
     id: 'anything_else',
     question: "Anything else you'd like us to know about your museum interests?",
-    subtext: 'Optional — a few words or a sentence is great.',
+    subtext: 'Few words or a sentence is great!',
     type: 'text',
     placeholder: 'e.g. I love outdoor sculpture gardens…',
   },
