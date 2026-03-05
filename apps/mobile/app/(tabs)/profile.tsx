@@ -224,7 +224,6 @@ export default function WrappedScreen() {
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View style={styles.passportSectionHeader}>
-                <Text style={styles.passportSectionTitle}>Cultural passport</Text>
                 <Text style={styles.passportSectionSub}>{profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}</Text>
               </View>
             }
@@ -375,12 +374,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     backgroundColor: '#f8fafc',
-  },
-  passportSectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    letterSpacing: 0.5,
   },
   passportSectionSub: {
     fontSize: 13,
