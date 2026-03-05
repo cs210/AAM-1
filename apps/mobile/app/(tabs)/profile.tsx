@@ -1,51 +1,71 @@
 
 
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, StarIcon, MapPinIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { authClient } from '@/lib/auth-client';
 
-const { width, height } = Dimensions.get('window');
-// Pane height fits the area below the profile header so content isn't shifted down
-const PROFILE_HEADER_APPROX = 220;
-const CARD_HEIGHT = Math.max(height - PROFILE_HEADER_APPROX, 400);
+const { width } = Dimensions.get('window');
 
-const stats = [
-  { title: 'You visited', value: '12 museums this year', icon: '🏛️' },
-  { title: 'Cities explored', value: '5 cities through art', icon: '🌆' },
-  { title: 'Artworks favorited', value: '34 artworks', icon: '❤️' },
-  { title: 'Hours browsing', value: '18 hours', icon: '⏰' },
-  { title: 'Most visited museum', value: 'Modern Art Gallery', icon: '🎨' },
-  { title: 'Events attended', value: '3 events', icon: '🎟️' },
-  { title: 'Artworks shared', value: '7 artworks', icon: '🔗' },
-  { title: 'New artists discovered', value: '9 artists', icon: '🧑‍🎨' },
-  { title: 'Reviews written', value: '4 reviews', icon: '✍️' },
-  { title: 'Badges earned', value: '2 badges', icon: '🏅' },
-];
-
-const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      delay: index * 100,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
-  return (
-    <Animated.View style={[styles.pane, { opacity: fadeAnim }]}>
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{item.icon}</Text>
-      </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.value}>{item.value}</Text>
-    </Animated.View>
-  );
+type ProfileVisit = {
+  checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string };
+  museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
+
+function formatVisitDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function PassportCard({ visit, isOwnProfile }: { visit: ProfileVisit; isOwnProfile: boolean }) {
+  const { checkIn, museum } = visit;
+  const onPress = () => router.push(`/(museums)/${museum._id}` as any);
+
+  return (
+    <Pressable style={({ pressed }) => [styles.passportCard, pressed && styles.passportCardPressed]} onPress={onPress}>
+      <View style={styles.passportCardInner}>
+        <View style={styles.passportImageWrap}>
+          {museum.imageUrl ? (
+            <Image source={{ uri: museum.imageUrl }} style={styles.passportImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.passportImage, styles.passportImagePlaceholder]}>
+              <Text style={styles.passportImageLetter}>{museum.name ? museum.name[0].toUpperCase() : '?'}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.passportBody}>
+          <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
+          {museum.city ? (
+            <View style={styles.passportLocationRow}>
+              <MapPinIcon size={12} color="#6b7280" />
+              <Text style={styles.passportLocation}>{museum.city}</Text>
+            </View>
+          ) : null}
+          <View style={styles.passportDateStamp}>
+            <Text style={styles.passportDateText}>{formatVisitDate(checkIn.visitDate)}</Text>
+          </View>
+          {checkIn.rating != null ? (
+            <View style={styles.passportStarsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <StarIcon
+                  key={star}
+                  size={14}
+                  color={star <= checkIn.rating! ? '#FFB800' : '#D0D0D0'}
+                  fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
+                />
+              ))}
+              <Text style={styles.passportRatingNum}>{checkIn.rating.toFixed(1)}</Text>
+            </View>
+          ) : null}
+          {checkIn.review ? (
+            <Text style={styles.passportReview} numberOfLines={2}>{checkIn.review}</Text>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
 
 
 export default function WrappedScreen() {
@@ -71,6 +91,12 @@ export default function WrappedScreen() {
   const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
   const following = useQuery(api.follows.getFollowing, viewedUserId ? { userId: viewedUserId } : 'skip');
   const isFollowing = useQuery(api.follows.isFollowingUser, viewedUserId && currentUserId && viewedUserId !== currentUserId ? { userId: viewedUserId } : 'skip');
+
+  // Cultural passport: visits for the profile being viewed
+  const profileVisits = useQuery(
+    api.checkIns.getProfileVisits,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
 
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
@@ -133,13 +159,22 @@ export default function WrappedScreen() {
           </View>
         </View>
         {!isViewingOtherProfile && (
-          <TouchableOpacity
-            style={styles.updatePreferencesButton}
-            onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.updatePreferencesText}>Update Preferences</Text>
-          </TouchableOpacity>
+          <View style={styles.profileActionsRow}>
+            <TouchableOpacity
+              style={styles.updatePreferencesButton}
+              onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.updatePreferencesText}>Update Preferences</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.viewWrappedButton}
+              onPress={() => router.push('/wrapped')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.viewWrappedButtonText}>View Wrapped</Text>
+            </TouchableOpacity>
+          </View>
         )}
         {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
         {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
@@ -153,19 +188,48 @@ export default function WrappedScreen() {
           </TouchableOpacity>
         ) : null}
       </View>
-      {/* Wrapped is only visible on your own profile */}
-      {viewedUserId === currentUserId ? (
-        <FlatList
-          data={stats}
-          renderItem={({ item, index }) => <Pane item={item} index={index} />}
-          keyExtractor={(_, idx) => idx.toString()}
-          showsVerticalScrollIndicator={false}
-          pagingEnabled
-          snapToInterval={CARD_HEIGHT}
-          decelerationRate="fast"
-          disableIntervalMomentum={true}
-          contentContainerStyle={{}}
-        />
+      {/* Cultural passport: own profile or when viewing another user's visits */}
+      {viewedUserId ? (
+        profileVisits === undefined ? (
+          <View style={styles.passportLoading}>
+            <Text style={styles.passportLoadingText}>Loading visits...</Text>
+          </View>
+        ) : profileVisits.length === 0 ? (
+          <View style={styles.passportEmpty}>
+            <Text style={styles.passportEmptyTitle}>
+              {viewedUserId === currentUserId ? 'No visits yet' : 'No visits'}
+            </Text>
+            <Text style={styles.passportEmptySub}>
+              {viewedUserId === currentUserId
+                ? 'Check in at a museum to start your passport.'
+                : 'This user has not checked in anywhere yet.'}
+            </Text>
+            {viewedUserId === currentUserId && (
+              <TouchableOpacity
+                style={styles.passportEmptyButton}
+                onPress={() => router.push('/(tabs)/explore')}
+              >
+                <Text style={styles.passportEmptyButtonText}>Explore museums</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <FlatList
+            data={profileVisits}
+            keyExtractor={(item) => item.checkIn._id}
+            renderItem={({ item }) => (
+              <PassportCard visit={item} isOwnProfile={viewedUserId === currentUserId} />
+            )}
+            contentContainerStyle={styles.passportListContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View style={styles.passportSectionHeader}>
+                <Text style={styles.passportSectionTitle}>Cultural passport</Text>
+                <Text style={styles.passportSectionSub}>{profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}</Text>
+              </View>
+            }
+          />
+        )
       ) : null}
     </View>
   );
@@ -252,9 +316,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
   },
-  updatePreferencesButton: {
+  profileActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
     marginTop: 12,
-    alignSelf: 'center',
+  },
+  updatePreferencesButton: {
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,
@@ -262,6 +331,17 @@ const styles = StyleSheet.create({
   },
   updatePreferencesText: {
     color: '#f9fafb',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  viewWrappedButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+  },
+  viewWrappedButtonText: {
+    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -290,41 +370,159 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  pane: {
-    width,
-    height: CARD_HEIGHT,
+  passportSectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: '#f8fafc',
+  },
+  passportSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: 0.5,
+  },
+  passportSectionSub: {
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  passportListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    backgroundColor: '#f8fafc',
+  },
+  passportCard: {
+    marginBottom: 14,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  passportCardPressed: {
+    opacity: 0.95,
+  },
+  passportCardInner: {
+    flexDirection: 'row',
+    padding: 12,
+  },
+  passportImageWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 14,
+  },
+  passportImage: {
+    width: '100%',
+    height: '100%',
+  },
+  passportImagePlaceholder: {
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passportImageLetter: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  passportBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 96,
+  },
+  passportMuseumName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  passportLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  passportLocation: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  passportDateStamp: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  passportDateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    letterSpacing: 0.3,
+  },
+  passportStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  passportRatingNum: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFB800',
+  },
+  passportReview: {
+    fontSize: 13,
+    color: '#64748b',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  passportLoading: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
     backgroundColor: '#f8fafc',
-    marginTop: 0,
   },
-  iconContainer: {
-    backgroundColor: '#e0e7ef',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
+  passportLoadingText: {
+    fontSize: 15,
+    color: '#64748b',
   },
-  icon: {
-    fontSize: 48,
-    fontFamily: 'PublicSans',
+  passportEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#f8fafc',
+  },
+  passportEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  passportEmptySub: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  passportEmptyButton: {
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  passportEmptyButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
-    color: '#222',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '900',
-    fontFamily: 'PublicSans',
-    marginBottom: 8,
-    color: '#222',
-    letterSpacing: 1.2,
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: '400',
-    fontFamily: 'PublicSans',
-    color: '#555',
-    letterSpacing: 0.3,
   },
 });
