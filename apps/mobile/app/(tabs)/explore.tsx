@@ -27,7 +27,7 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
       </View>
       {museums === undefined ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#A67C52" />
           <Text style={styles.loadingText}>Loading museums...</Text>
         </View>
       ) : (
@@ -64,7 +64,7 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
       </View>
       {users === undefined ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#A67C52" />
           <Text style={styles.loadingText}>Loading people...</Text>
         </View>
       ) : (
@@ -185,7 +185,7 @@ export default function SearchScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <TabView
         navigationState={{ index, routes }}
         renderScene={renderScene}
@@ -194,10 +194,11 @@ export default function SearchScreen() {
         renderTabBar={props => (
           <TabBar
             {...props}
-            indicatorStyle={{ backgroundColor: '#007AFF' }}
-            style={{ backgroundColor: '#fff' }}
-            activeColor="#007AFF"
-            inactiveColor="#888"
+            indicatorStyle={{ backgroundColor: '#A67C52', height: 2 }}
+            style={{ backgroundColor: '#FFFFFF', elevation: 0, shadowOpacity: 0, marginTop: 0 }}
+            activeColor="#1A1A1A"
+            inactiveColor="#999"
+            labelStyle={{ fontSize: 16, fontWeight: '500', textTransform: 'none' }}
           />
         )}
       />
@@ -208,74 +209,43 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  toggleButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#eee',
-    marginHorizontal: 8,
-  },
-  toggleButtonActive: {
-    backgroundColor: '#007AFF',
-  },
-  toggleText: {
-    color: '#888',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  toggleTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    backgroundColor: '#FFFFFF',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#222',
+    color: '#1A1A1A',
   },
   userCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
+    padding: 20,
+    marginHorizontal: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: '#E8E8E8',
   },
   userName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#888',
+    fontWeight: '500',
+    color: '#1A1A1A',
   },
   listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,
@@ -283,26 +253,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 8,
-    color: '#888',
+    marginTop: 12,
+    color: '#666',
     fontSize: 16,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#888',
-    marginBottom: 4,
-  },
   noResultsContainer: {
-    padding: 32,
+    padding: 48,
     alignItems: 'center',
   },
   noResultsText: {
     fontSize: 16,
     color: '#8E8E93',
+    textAlign: 'center',
   },
 });

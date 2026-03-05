@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, ImageBackground } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeftIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
@@ -109,49 +109,74 @@ export default function WrappedScreen() {
         </View>
       ) : null}
       <View style={styles.profileHeader}>
-        <View style={styles.avatarRow}>
-          {profile?.imageUrl ? (
-            <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
+        {/* Banner Image */}
+        <ImageBackground
+          source={require('@/assets/images/login-background.png')}
+          style={styles.bannerImage}
+          imageStyle={styles.bannerImageStyle}
+          resizeMode="cover"
+        >
+          <View style={styles.bannerOverlay} />
+        </ImageBackground>
+        
+        {/* Profile Content */}
+        <View style={styles.profileContent}>
+          <View style={styles.topRow}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              {profile?.imageUrl ? (
+                <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
+                </View>
+              )}
             </View>
-          )}
-          <Text style={styles.profileNameNextToAvatar} numberOfLines={1}>{displayName}</Text>
-        </View>
-        {viewedUserId === currentUserId && profile?.email && (
-          <Text style={styles.profileEmail}>{profile.email}</Text>
-        )}
-        <View style={styles.countsRow}>
-          <View style={styles.countBox}>
-            <Text style={styles.countNumber}>{followers ? followers.length : '-'}</Text>
-            <Text style={styles.countLabel}>Followers</Text>
+            
+            {/* Preferences Button - Top Right */}
+            {!isViewingOtherProfile && (
+              <TouchableOpacity
+                style={styles.updatePreferencesButton}
+                onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.updatePreferencesText}>Preferences</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={styles.countBox}>
-            <Text style={styles.countNumber}>{following ? following.length : '-'}</Text>
-            <Text style={styles.countLabel}>Following</Text>
+          
+          {/* Name and Email */}
+          <View style={styles.nameSection}>
+            <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+            {viewedUserId === currentUserId && profile?.email && (
+              <Text style={styles.profileEmail}>{profile.email}</Text>
+            )}
+            
+            {/* Followers/Following Row */}
+            <View style={styles.countsRow}>
+              <Text style={styles.countText}>
+                <Text style={styles.countNumber}>{followers ? followers.length : '0'}</Text>
+                <Text style={styles.countLabel}> Followers</Text>
+              </Text>
+              <Text style={styles.countText}>
+                <Text style={styles.countNumber}>{following ? following.length : '0'}</Text>
+                <Text style={styles.countLabel}> Following</Text>
+              </Text>
+            </View>
           </View>
+          
+          {/* When viewing someone else's profile: show Follow/Unfollow */}
+          {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
+            <TouchableOpacity
+              style={[styles.followButtonBase, isFollowing ? styles.unfollowButton : styles.followButton]}
+              onPress={isFollowing ? handleUnfollow : handleFollow}
+            >
+              <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
+                {isFollowing ? 'Unfollow' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
-        {!isViewingOtherProfile && (
-          <TouchableOpacity
-            style={styles.updatePreferencesButton}
-            onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.updatePreferencesText}>Update Preferences</Text>
-          </TouchableOpacity>
-        )}
-        {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
-        {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
-          <TouchableOpacity
-            style={[styles.followButtonBase, isFollowing ? styles.unfollowButton : styles.followButton]}
-            onPress={isFollowing ? handleUnfollow : handleFollow}
-          >
-            <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
-              {isFollowing ? 'Unfollow' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
       {/* Wrapped is only visible on your own profile */}
       {viewedUserId === currentUserId ? (
@@ -174,157 +199,172 @@ export default function WrappedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
   backBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 4,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
     padding: 8,
   },
   profileHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#F0F0F0',
   },
-  avatarRow: {
+  bannerImage: {
+    width: '100%',
+    height: 120,
+  },
+  bannerImageStyle: {
+    resizeMode: 'cover',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  profileContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 0,
+  },
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginTop: -40,
     marginBottom: 12,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 14,
-    backgroundColor: '#e0e7ef',
+  avatarContainer: {
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    borderRadius: 44,
   },
-  profileNameNextToAvatar: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#222',
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8D5C4',
   },
   avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 14,
-    backgroundColor: '#e0e7ef',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#A67C52',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#888',
+    fontSize: 36,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  updatePreferencesButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+    marginTop: 48,
+  },
+  updatePreferencesText: {
+    color: '#1A1A1A',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  nameSection: {
+    marginBottom: 16,
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 2,
   },
   profileEmail: {
-    fontSize: 16,
-    color: '#888',
-    marginBottom: 4,
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
   },
   countsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 8,
+    gap: 16,
+    marginTop: 4,
   },
-  countBox: {
-    alignItems: 'center',
-    marginHorizontal: 16,
+  countText: {
+    fontSize: 13,
   },
   countNumber: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
   countLabel: {
-    fontSize: 14,
-    color: '#888',
-  },
-  updatePreferencesButton: {
-    marginTop: 12,
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#0f172a',
-  },
-  updatePreferencesText: {
-    color: '#f9fafb',
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
+    color: '#666',
   },
   followButtonBase: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 12,
-    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
   followButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#A67C52',
   },
   unfollowButton: {
-    backgroundColor: '#eee',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#D0D0D0',
   },
   followButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
   unfollowButtonText: {
-    color: '#555',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 14,
   },
   pane: {
     width,
     height: CARD_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#f8fafc',
+    padding: 32,
+    backgroundColor: '#FFFFFF',
     marginTop: 0,
   },
   iconContainer: {
-    backgroundColor: '#e0e7ef',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
   },
   icon: {
-    fontSize: 48,
-    fontFamily: 'PublicSans',
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 8,
+    fontSize: 56,
+    fontWeight: '400',
+    color: '#1A1A1A',
+    marginBottom: 0,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
-    fontFamily: 'PublicSans',
-    marginBottom: 8,
-    color: '#222',
-    letterSpacing: 1.2,
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#1A1A1A',
+    textAlign: 'center',
   },
   value: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '400',
-    fontFamily: 'PublicSans',
-    color: '#555',
-    letterSpacing: 0.3,
+    color: '#666',
+    textAlign: 'center',
   },
 });
