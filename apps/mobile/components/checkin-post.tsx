@@ -70,10 +70,10 @@ export const CheckinPost = ({ checkin, isOwnCheckin, onEditPress }: CheckinPostP
             </View>
             <Text style={styles.museumName} numberOfLines={1}>
               {checkin.museumName}
+              {checkin.editedAt != null ? (
+                <Text style={styles.editedLabel}> · Edited</Text>
+              ) : null}
             </Text>
-            {checkin.editedAt != null ? (
-              <Text style={styles.editedLabel}>Edited</Text>
-            ) : null}
           </View>
         </View>
 
@@ -143,10 +143,9 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   editedLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
+    fontSize: 12,
+    color: '#64748b',
     fontStyle: 'italic',
-    marginBottom: 2,
   },
   museumName: {
     fontSize: 13,

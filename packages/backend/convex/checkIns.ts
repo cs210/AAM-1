@@ -234,7 +234,10 @@ export const updateCheckIn = mutation({
     if (args.imageUrls !== undefined) updateData.imageUrls = args.imageUrls;
     if (args.friendUserIds !== undefined)
       updateData.friendUserIds = args.friendUserIds;
-    updateData.editedAt = Date.now();
+    // Only mark as edited when something actually changed
+    if (Object.keys(updateData).length > 0) {
+      updateData.editedAt = Date.now();
+    }
 
     await ctx.db.patch(args.checkInId, updateData);
 

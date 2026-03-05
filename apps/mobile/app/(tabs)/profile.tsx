@@ -55,9 +55,6 @@ function PassportCard({
                 </Pressable>
               ) : null}
             </View>
-            {checkIn.editedAt != null ? (
-              <Text style={styles.editedLabel}>Edited</Text>
-            ) : null}
             {museum.city ? (
               <View style={styles.passportLocationRow}>
                 <MapPinIcon size={12} color="#6b7280" />
@@ -66,6 +63,9 @@ function PassportCard({
             ) : null}
             <View style={styles.passportDateStamp}>
               <Text style={styles.passportDateText}>{formatVisitDate(checkIn.visitDate)}</Text>
+              {checkIn.editedAt != null ? (
+                <Text style={styles.editedLabel}> · Edited</Text>
+              ) : null}
             </View>
             {checkIn.rating != null ? (
               <View style={styles.passportStarsRow}>
@@ -494,10 +494,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   editedLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
+    fontSize: 12,
+    color: '#64748b',
     fontStyle: 'italic',
-    marginBottom: 4,
   },
   passportLocationRow: {
     flexDirection: 'row',
@@ -510,6 +509,8 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   passportDateStamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 4,
