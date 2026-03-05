@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon } from 'lucide-react-native';
+import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon } from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
+import { EditCheckinModal } from '../../components/edit-checkin-modal';
+import { useCheckInActions } from '../../hooks/useCheckInActions';
 
 export default function MuseumDetailScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
@@ -25,6 +27,22 @@ export default function MuseumDetailScreen() {
   const isFollowing = useQuery(api.follows.isFollowing, 
     museumId ? { museumId: museumId as Id<"museums"> } : "skip"
   );
+
+  // Current user and their existing check-in at this museum (if any)
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const userCheckIns = useQuery(
+    api.checkIns.getUserMuseumCheckIns,
+    museumId && currentUser ? { userId: currentUser._id, museumId: museumId as Id<'museums'> } : 'skip'
+  );
+  const existingCheckIn = useMemo(() => {
+    if (!userCheckIns || userCheckIns.length === 0) return null;
+    return userCheckIns.reduce((latest, c) =>
+      (c.createdAt > latest.createdAt ? c : latest)
+    );
+  }, [userCheckIns]);
+
+  const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
+  const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
   
   // Follow/unfollow mutations
   const followMuseum = useMutation(api.follows.followMuseum);
@@ -45,10 +63,14 @@ export default function MuseumDetailScreen() {
 
   const handleCheckInPress = () => {
     if (!museumId) return;
-    router.push({
-      pathname: '/(museums)/[museumId]/checkin',
-      params: { museumId },
-    });
+    if (existingCheckIn) {
+      setEditingCheckIn(existingCheckIn);
+    } else {
+      router.push({
+        pathname: '/(museums)/[museumId]/checkin',
+        params: { museumId },
+      });
+    }
   };
 
   // Loading state
@@ -135,7 +157,7 @@ export default function MuseumDetailScreen() {
           </Text>
         </Pressable>
 
-        {/* Check-In Button */}
+        {/* Check-In / Edit Check-In Button */}
         <Pressable 
           style={({ pressed }) => [
             styles.checkInButton,
@@ -143,8 +165,17 @@ export default function MuseumDetailScreen() {
           ]}
           onPress={handleCheckInPress}
         >
-          <CheckCircle2Icon size={20} color="#222" />
-          <Text style={styles.checkInButtonText}>Check In</Text>
+          {existingCheckIn ? (
+            <>
+              <PencilIcon size={20} color="#222" />
+              <Text style={styles.checkInButtonText}>Edit your check-in</Text>
+            </>
+          ) : (
+            <>
+              <CheckCircle2Icon size={20} color="#222" />
+              <Text style={styles.checkInButtonText}>Check In</Text>
+            </>
+          )}
         </Pressable>
 
         {/* Upcoming Events Section */}
@@ -167,6 +198,20 @@ export default function MuseumDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      <EditCheckinModal
+        visible={editingCheckIn != null}
+        initialRating={editingCheckIn?.rating ?? null}
+        initialReview={editingCheckIn?.review}
+        onSave={(rating, review) =>
+          editingCheckIn &&
+          saveCheckIn(editingCheckIn._id, rating, review)
+        }
+        onDelete={() =>
+          editingCheckIn && deleteCheckIn(editingCheckIn._id)
+        }
+        onClose={() => setEditingCheckIn(null)}
+      />
     </SafeAreaView>
   );
 }
