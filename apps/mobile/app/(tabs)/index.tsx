@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
+import { EditCheckinModal } from '../../components/edit-checkin-modal';
+import { useCheckInActions } from '../../hooks/useCheckInActions';
 
 const EmptyState = () => (
   <View style={styles.emptyContainer}>
@@ -23,8 +26,12 @@ const EmptyState = () => (
 );
 
 export default function HomeScreen() {
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const currentUserId = currentUser?._id ?? null;
   const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
+  const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
+  const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
   // Loading state
   if (events === undefined || followingCheckins === undefined) {
@@ -62,13 +69,29 @@ export default function HomeScreen() {
           item.type === 'event' ? (
             <EventCard event={item.data as EventCardData} />
           ) : (
-            <CheckinPost checkin={item.data as CheckinPostData} />
+            <CheckinPost
+              checkin={item.data as CheckinPostData}
+              isOwnCheckin={currentUserId != null && (item.data as CheckinPostData).userId === currentUserId}
+              onEditPress={currentUserId != null && (item.data as CheckinPostData).userId === currentUserId ? () => setEditingCheckin(item.data as CheckinPostData) : undefined}
+            />
           )
         }
         keyExtractor={(item, index) => `${item.type}-${item.data._id}-${index}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={feedItems.length === 0 ? styles.emptyList : styles.listContent}
         ListEmptyComponent={<EmptyState />}
+      />
+      <EditCheckinModal
+        visible={editingCheckin != null}
+        initialRating={editingCheckin?.rating ?? null}
+        initialReview={editingCheckin?.review}
+        onSave={(rating, review) =>
+          editingCheckin && saveCheckIn(editingCheckin._id as Id<'museumCheckIns'>, rating, review)
+        }
+        onDelete={() =>
+          editingCheckin && deleteCheckIn(editingCheckin._id as Id<'museumCheckIns'>)
+        }
+        onClose={() => setEditingCheckin(null)}
       />
     </SafeAreaView>
   );

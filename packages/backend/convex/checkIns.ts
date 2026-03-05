@@ -167,6 +167,7 @@ export const getProfileVisits = query({
             visitDate: ci.visitDate,
             createdAt: ci.createdAt,
             review: ci.review,
+            editedAt: ci.editedAt,
           },
           museum: museum
             ? {
@@ -182,7 +183,7 @@ export const getProfileVisits = query({
     );
 
     const valid = visits.filter((entry) => entry.museum != null) as {
-      checkIn: { _id: Id<"museumCheckIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string };
+      checkIn: { _id: Id<"museumCheckIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
       museum: { _id: Id<"museums">; name: string; imageUrl?: string; category: string; city?: string };
     }[];
 
@@ -227,12 +228,13 @@ export const updateCheckIn = mutation({
     if (checkIn.userId !== user._id)
       throw new ConvexError("Error thrown in updateCheckIn(): Unauthorized to update this check-in");
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (args.rating !== undefined) updateData.rating = args.rating;
     if (args.review !== undefined) updateData.review = args.review;
     if (args.imageUrls !== undefined) updateData.imageUrls = args.imageUrls;
     if (args.friendUserIds !== undefined)
       updateData.friendUserIds = args.friendUserIds;
+    updateData.editedAt = Date.now();
 
     await ctx.db.patch(args.checkInId, updateData);
 
@@ -363,6 +365,7 @@ export const getFollowingCheckins = query({
           rating: ci.rating,
           review: ci.review,
           createdAt: ci.createdAt,
+          editedAt: ci.editedAt,
         };
       })
     );

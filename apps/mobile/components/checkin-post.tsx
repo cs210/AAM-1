@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { StarIcon } from 'lucide-react-native';
+import { StarIcon, PencilIcon } from 'lucide-react-native';
 
 export interface CheckinPostData {
   _id: string;
@@ -13,9 +13,16 @@ export interface CheckinPostData {
   rating?: number;
   review?: string;
   createdAt: number;
+  editedAt?: number;
 }
 
-export const CheckinPost = ({ checkin }: { checkin: CheckinPostData }) => {
+type CheckinPostProps = {
+  checkin: CheckinPostData;
+  isOwnCheckin?: boolean;
+  onEditPress?: () => void;
+};
+
+export const CheckinPost = ({ checkin, isOwnCheckin, onEditPress }: CheckinPostProps) => {
   const handlePress = () => {
     router.push(`/(museums)/${checkin.museumId}`);
   };
@@ -51,12 +58,22 @@ export const CheckinPost = ({ checkin }: { checkin: CheckinPostData }) => {
             />
           )}
           <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {checkin.userName}
-            </Text>
+            <View style={styles.userNameRow}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {checkin.userName}
+              </Text>
+              {isOwnCheckin && onEditPress && (
+                <Pressable onPress={(e) => { e.stopPropagation(); onEditPress(); }} style={styles.editIcon} hitSlop={8}>
+                  <PencilIcon size={16} color="#007AFF" />
+                </Pressable>
+              )}
+            </View>
             <Text style={styles.museumName} numberOfLines={1}>
               {checkin.museumName}
             </Text>
+            {checkin.editedAt != null ? (
+              <Text style={styles.editedLabel}>Edited</Text>
+            ) : null}
           </View>
         </View>
 
@@ -110,10 +127,25 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
+  userNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   userName: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
     color: '#222',
+  },
+  editIcon: {
+    padding: 2,
+  },
+  editedLabel: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontStyle: 'italic',
     marginBottom: 2,
   },
   museumName: {
