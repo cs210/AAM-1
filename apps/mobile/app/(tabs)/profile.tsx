@@ -111,7 +111,7 @@ export default function WrappedScreen() {
       <View style={styles.profileHeader}>
         {/* Banner Image */}
         <ImageBackground
-          source={require('@/assets/images/login-background.png')}
+          source={require('@/assets/images/login-background.jpg')}
           style={styles.bannerImage}
           imageStyle={styles.bannerImageStyle}
           resizeMode="cover"

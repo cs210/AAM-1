@@ -57,7 +57,7 @@ export default function SignInScreen() {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require('@/assets/images/login-background.png')}
+        source={require('@/assets/images/login-background.jpg')}
         style={styles.background}
         imageStyle={styles.backgroundImage}
         resizeMode="cover">
