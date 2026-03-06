@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Doc } from '@packages/backend/convex/_generated/dataModel';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
 
 export type MuseumCardData = Doc<"museums"> & {
   averageRating?: number | null;
@@ -10,10 +13,10 @@ export type MuseumCardData = Doc<"museums"> & {
 
 type Props = {
   museum: MuseumCardData;
-  style?: ViewStyle;
+  className?: string;
 };
 
-export function MuseumCard({ museum, style }: Props) {
+export function MuseumCard({ museum, className }: Props) {
   const displayRating = museum.averageRating 
     ? museum.averageRating.toFixed(1) 
     : '—';
@@ -23,77 +26,31 @@ export function MuseumCard({ museum, style }: Props) {
 
   return (
     <Pressable 
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed, style]}
+      className={cn('mx-5 mb-3 active:opacity-90', className)}
       onPress={() => router.push(`/${museum._id}`)}
     >
-      <View style={styles.cardHeader}>
-        <Text style={styles.museumName} numberOfLines={2}>{museum.name}</Text>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{museum.category}</Text>
-        </View>
-      </View>
-      <Text style={styles.museumLocation}>
-        {museum.location?.city || 'Unknown'}, {museum.location?.state || ''}
-      </Text>
-      <View style={styles.detailsContainer}>
-        <Text style={styles.detailText}>{ratingLabel}</Text>
-      </View>
+      <Card className="border-[#E8E8E8]">
+        <CardHeader className="pb-2">
+          <View className="flex-row justify-between items-start">
+            <Text className="text-lg font-semibold text-[#1A1A1A] flex-1 leading-6" numberOfLines={2}>
+              {museum.name}
+            </Text>
+            <View className="bg-[#A67C52]/15 px-2.5 py-1 rounded-lg ml-3">
+              <Text className="text-[11px] text-[#A67C52] font-semibold capitalize">
+                {museum.category}
+              </Text>
+            </View>
+          </View>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Text className="text-sm text-[#666] mb-3">
+            {museum.location?.city || 'Unknown'}, {museum.location?.state || ''}
+          </Text>
+          <Text className="text-[13px] text-[#A67C52] font-medium">
+            {ratingLabel}
+          </Text>
+        </CardContent>
+      </Card>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  cardPressed: {
-    backgroundColor: '#F5F5F5',
-    transform: [{ scale: 0.98 }],
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
-  categoryBadge: {
-    backgroundColor: '#007AFF15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  categoryText: {
-    fontSize: 11,
-    color: '#007AFF',
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  museumName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#222',
-    fontFamily: 'PublicSans',
-    flex: 1,
-  },
-  museumLocation: {
-    fontSize: 14,
-    color: '#8E8E93',
-    fontFamily: 'PublicSans',
-    marginBottom: 12,
-  },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailText: {
-    fontSize: 12,
-    color: '#555',
-    fontFamily: 'PublicSans',
-  },
-});
