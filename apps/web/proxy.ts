@@ -11,8 +11,8 @@ const publicRoutes = ["/sign-in", "/sign-up", "/accept-invitation"];
 /** Pathname without the locale prefix (e.g. /en/dashboard -> /dashboard) */
 function pathnameWithoutLocale(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  // First segment is locale (en, ja, es)
-  if (segments.length > 0 && ["en", "ja", "es"].includes(segments[0]!)) {
+  // First segment is locale
+  if (segments.length > 0 && routing.locales.includes(segments[0] as (typeof routing.locales)[number])) {
     return "/" + segments.slice(1).join("/") || "/";
   }
   return pathname;
@@ -21,8 +21,8 @@ function pathnameWithoutLocale(pathname: string): string {
 /** Locale from pathname (e.g. /en/dashboard -> en) */
 function localeFromPathname(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments.length > 0 && ["en", "ja", "es"].includes(segments[0]!)) {
-    return segments[0]!;
+  if (segments.length > 0 && routing.locales.includes(segments[0] as (typeof routing.locales)[number])) {
+    return segments[0] as (typeof routing.locales)[number];
   }
   return routing.defaultLocale;
 }
