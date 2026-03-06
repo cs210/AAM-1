@@ -1,8 +1,9 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
+import { Link, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,8 @@ import {
 } from "@/components/ui/card";
 
 function AcceptInvitationContent() {
+  const t = useTranslations("acceptInvitation");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const router = useRouter();
   const invitationId = searchParams.get("invitationId");
@@ -24,7 +27,7 @@ function AcceptInvitationContent() {
   useEffect(() => {
     if (!invitationId) {
       setStatus("error");
-      setMessage("Missing invitation link.");
+      setMessage(t("missingLink"));
       return;
     }
 
@@ -46,12 +49,12 @@ function AcceptInvitationContent() {
           return;
         }
         setStatus("error");
-        setMessage(error.message ?? "Could not accept invitation.");
+        setMessage(error.message ?? t("couldNotAccept"));
         return;
       }
 
       setStatus("success");
-      setMessage("You have joined the organization.");
+      setMessage(t("joined"));
       setTimeout(() => router.push("/dashboard"), 2000);
     }
 
@@ -66,12 +69,12 @@ function AcceptInvitationContent() {
       <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle>Invalid link</CardTitle>
-            <CardDescription>This invitation link is invalid or missing an ID.</CardDescription>
+            <CardTitle>{t("invalidLink")}</CardTitle>
+            <CardDescription>{t("invalidLinkDescription")}</CardDescription>
           </CardHeader>
           <CardFooter>
             <Button variant="outline" className="w-full" render={<Link href="/" />}>
-              Go home
+              {tCommon("goHome")}
             </Button>
           </CardFooter>
         </Card>
@@ -83,9 +86,9 @@ function AcceptInvitationContent() {
     <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Organization invitation</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
           <CardDescription>
-            {status === "loading" && "Accepting invitation…"}
+            {status === "loading" && t("accepting")}
             {status === "success" && message}
             {status === "error" && message}
           </CardDescription>
@@ -93,7 +96,7 @@ function AcceptInvitationContent() {
         {(status === "error" || status === "success") && (
           <CardFooter>
             <Button className="w-full" variant={status === "success" ? "default" : "outline"} render={<Link href="/dashboard" />}>
-              Go to dashboard
+              {t("goToDashboard")}
             </Button>
           </CardFooter>
         )}
@@ -103,14 +106,16 @@ function AcceptInvitationContent() {
 }
 
 export default function AcceptInvitationPage() {
+  const t = useTranslations("acceptInvitation");
+  const tCommon = useTranslations("common");
   return (
     <Suspense
       fallback={
         <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
           <Card className="w-full max-w-sm">
             <CardHeader>
-              <CardTitle>Organization invitation</CardTitle>
-              <CardDescription>Loading…</CardDescription>
+              <CardTitle>{t("title")}</CardTitle>
+              <CardDescription>{tCommon("loading")}</CardDescription>
             </CardHeader>
           </Card>
         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { Link } from "@/i18n/navigation"
 import { useQuery } from "convex/react"
 import { Building2Icon, TriangleAlertIcon, UserIcon } from "lucide-react"
 

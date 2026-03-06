@@ -1,0 +1,115 @@
+{
+  "common": {
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "logOut": "Cerrar sesión",
+    "loading": "Cargando…",
+    "account": "Cuenta",
+    "dashboard": "Panel",
+    "backToLanding": "Volver al inicio",
+    "goHome": "Ir al inicio",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "metadata": {
+    "title": "YAMI — Tu arte, museo e identidad",
+    "description": "El primer registro social y automatizado del engagement cultural humano. Descubre museos como visitante o gestiona tu institución desde el panel de personal."
+  },
+  "landing": {
+    "visitor": "Para visitantes",
+    "museum": "Para museos",
+    "hero": {
+      "your": "Tu",
+      "cultural": "cultural",
+      "passport": "pasaporte",
+      "the": "El",
+      "museum": "Museo",
+      "os": "OS",
+      "visitorSubline": "El primer registro social y automatizado del engagement cultural humano. Cada visita, cada obra maestra, cada hora en la galería — tuyas para siempre.",
+      "museumSubline": "YAMI aporta a tu museo una capa de engagement con visitantes que se sincroniza con TMS, muestra análisis y lleva el descubrimiento interactivo a cada galería, con un coste de implementación casi nulo.",
+      "getEarlyAccess": "Acceso anticipado",
+      "createAccount": "Crear cuenta",
+      "openDashboard": "Abrir panel",
+      "staffSignIn": "Inicio de sesión personal"
+    },
+    "footer": {
+      "tagline": "YAMI está revolucionando la experiencia social de nuestra cultura y arte compartidos. Las pruebas beta comienzan pronto. Código abierto en el lanzamiento."
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "Iniciar sesión",
+      "description": "Introduce tu correo y contraseña para iniciar sesión en tu cuenta.",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "submit": "Iniciar sesión",
+      "signingIn": "Iniciando sesión…",
+      "noAccount": "¿No tienes cuenta?",
+      "signInFailed": "Error al iniciar sesión"
+    },
+    "signUp": {
+      "title": "Crear una cuenta",
+      "description": "Introduce tus datos para crear una nueva cuenta.",
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "submit": "Registrarse",
+      "creating": "Creando cuenta…",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "signUpFailed": "Error al registrarse",
+      "profileFailed": "Cuenta creada, pero falló la configuración del perfil. Intenta iniciar sesión de nuevo."
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "museumDetails": "Detalles del museo",
+      "organizations": "Organizaciones",
+      "exhibitions": "Exposiciones",
+      "interactions": "Interacciones",
+      "analytics": "Analíticas",
+      "orgRequests": "Solicitudes de org.",
+      "users": "Usuarios",
+      "invitations": "Invitaciones"
+    },
+    "sidebar": {
+      "museumContext": "Contexto del museo",
+      "loadingMuseums": "Cargando museos...",
+      "searchSelectMuseum": "Buscar y seleccionar museo",
+      "noMuseumsFound": "No se encontraron museos.",
+      "navigation": "Navegación",
+      "adminMode": "Modo administrador",
+      "adminModeOn": "activado",
+      "adminModeOff": "desactivado",
+      "admin": "Admin",
+      "account": "Cuenta",
+      "logOut": "Cerrar sesión"
+    },
+    "shell": {
+      "loadingMuseums": "Cargando museos...",
+      "signInRequired": "Inicio de sesión requerido",
+      "signInRequiredDescription": "Necesitas una cuenta y un espacio de trabajo para acceder al panel.",
+      "museumStaffOnly": "Solo personal de museo",
+      "museumStaffOnlyDescription": "Necesitas estar en al menos un espacio de trabajo de organización para usar este panel. Solicita acceso abajo o espera una invitación. Si no eres personal de museo, usa la app de visitantes.",
+      "invalidMuseumContext": "Contexto de museo no válido",
+      "invalidMuseumContextNoMuseums": "El contexto de museo no es válido porque no hay museos disponibles.",
+      "invalidMuseumContextSwitched": "El contexto de museo no es válido (probablemente eliminado). Se cambió al primer museo disponible.",
+      "museumNotAssigned": "Museo aún no asignado",
+      "selectMuseum": "Seleccionar museo",
+      "noMuseumsAvailable": "No hay museos disponibles",
+      "workspaceWarning": "El museo asignado no es válido (probablemente eliminado). Pide a un administrador que reasigne este espacio.",
+      "comingSoon": "Próximamente",
+      "comingSoonDescription": "La sección {section} estará disponible en la próxima versión."
+    }
+  },
+  "acceptInvitation": {
+    "invalidLink": "Enlace no válido",
+    "invalidLinkDescription": "Este enlace de invitación no es válido o no contiene un ID.",
+    "title": "Invitación a organización",
+    "accepting": "Aceptando invitación…",
+    "joined": "Te has unido a la organización.",
+    "goToDashboard": "Ir al panel",
+    "missingLink": "Falta el enlace de invitación.",
+    "couldNotAccept": "No se pudo aceptar la invitación."
+  }
+}

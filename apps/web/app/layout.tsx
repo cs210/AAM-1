@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Public_Sans, Instrument_Serif } from "next/font/goog
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
-import { AppToolbar } from "@/components/app-toolbar";
 import { getToken } from "@/lib/auth-server";
 
 const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-sans" });
@@ -36,7 +35,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const token = await getToken();
-  const isSignedIn = Boolean(token);
   return (
     <html lang="en" className={`${publicSans.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
       <body
@@ -45,8 +43,7 @@ export default async function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ConvexClientProvider initialToken={token}>
-            {!isSignedIn && <AppToolbar />}
-            <main className={isSignedIn ? "pt-0" : "pt-20"}>{children}</main>
+            {children}
           </ConvexClientProvider>
         </ThemeProvider>
       </body>

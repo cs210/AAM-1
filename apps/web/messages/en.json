@@ -1,0 +1,115 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "logOut": "Log out",
+    "loading": "Loading…",
+    "account": "Account",
+    "dashboard": "Dashboard",
+    "backToLanding": "Back to landing",
+    "goHome": "Go home",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "metadata": {
+    "title": "YAMI — Your Art, Museum & Identity",
+    "description": "The first social, automated record of human cultural engagement. Discover museums as a visitor or manage your institution through the staff dashboard."
+  },
+  "landing": {
+    "visitor": "For Visitors",
+    "museum": "For Museums",
+    "hero": {
+      "your": "Your",
+      "cultural": "Cultural",
+      "passport": "Passport",
+      "the": "The",
+      "museum": "Museum",
+      "os": "OS",
+      "visitorSubline": "The first social, automated record of human cultural engagement. Every visit, every masterpiece, every hour in the gallery — yours forever.",
+      "museumSubline": "YAMI gives your museum a visitor engagement layer that syncs with TMS, surfaces analytics, and brings interactive discovery to every gallery — with near-zero overhead to implement.",
+      "getEarlyAccess": "Get early access",
+      "createAccount": "Create account",
+      "openDashboard": "Open dashboard",
+      "staffSignIn": "Staff sign in"
+    },
+    "footer": {
+      "tagline": "YAMI is revolutionizing the social experience of our shared culture and art. Beta testing begins soon. Open source on release."
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "description": "Enter your email and password to sign in to your account.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "signingIn": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "signInFailed": "Sign in failed"
+    },
+    "signUp": {
+      "title": "Create an account",
+      "description": "Enter your details to create a new account.",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign up",
+      "creating": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "signUpFailed": "Sign up failed",
+      "profileFailed": "Account created, but profile setup failed. Please try signing in again."
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "museumDetails": "Museum Details",
+      "organizations": "Organizations",
+      "exhibitions": "Exhibitions",
+      "interactions": "Interactions",
+      "analytics": "Analytics",
+      "orgRequests": "Org requests",
+      "users": "Users",
+      "invitations": "Invitations"
+    },
+    "sidebar": {
+      "museumContext": "Museum Context",
+      "loadingMuseums": "Loading museums...",
+      "searchSelectMuseum": "Search and select museum",
+      "noMuseumsFound": "No museums found.",
+      "navigation": "Navigation",
+      "adminMode": "Admin mode",
+      "adminModeOn": "on",
+      "adminModeOff": "off",
+      "admin": "Admin",
+      "account": "Account",
+      "logOut": "Log out"
+    },
+    "shell": {
+      "loadingMuseums": "Loading museums...",
+      "signInRequired": "Sign in required",
+      "signInRequiredDescription": "You need an account and workspace to access the dashboard.",
+      "museumStaffOnly": "Museum staff access only",
+      "museumStaffOnlyDescription": "You need to be in at least one organization workspace to use this dashboard. Request access below or wait for an invite. If you are not museum staff, use the visitor app instead.",
+      "invalidMuseumContext": "Invalid museum context",
+      "invalidMuseumContextNoMuseums": "Museum context is invalid because no museums are available.",
+      "invalidMuseumContextSwitched": "Museum context is invalid (likely deleted). Switched to the first available museum.",
+      "museumNotAssigned": "Museum not assigned yet",
+      "selectMuseum": "Select a museum",
+      "noMuseumsAvailable": "No museums available",
+      "workspaceWarning": "Assigned museum is invalid (likely deleted). Ask an admin to reassign this workspace.",
+      "comingSoon": "Coming Soon",
+      "comingSoonDescription": "The {section} section will be part of the next iteration."
+    }
+  },
+  "acceptInvitation": {
+    "invalidLink": "Invalid link",
+    "invalidLinkDescription": "This invitation link is invalid or missing an ID.",
+    "title": "Organization invitation",
+    "accepting": "Accepting invitation…",
+    "joined": "You have joined the organization.",
+    "goToDashboard": "Go to dashboard",
+    "missingLink": "Missing invitation link.",
+    "couldNotAccept": "Could not accept invitation."
+  }
+}

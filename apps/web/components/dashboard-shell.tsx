@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { Link, useRouter, usePathname } from "@/i18n/navigation"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 
@@ -68,6 +68,8 @@ function parseDashboardPathname(pathname: string): {
 type DashboardShellProps = { children?: React.ReactNode }
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  const t = useTranslations("dashboard.shell")
+  const tCommon = useTranslations("common")
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
   const pathname = usePathname()
@@ -124,15 +126,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
     [museums, activeMuseumContextId]
   )
   const nonAdminMuseumLabel = activeWorkspace?.hasInvalidMuseumContext
-    ? "Invalid museum context"
-    : activeWorkspace?.linkedMuseumName ?? "Museum not assigned yet"
+    ? t("invalidMuseumContext")
+    : activeWorkspace?.linkedMuseumName ?? t("museumNotAssigned")
   const museumContextLabel = isAdmin
     ? museums === undefined
-      ? "Loading museums..."
-      : activeMuseumContext?.name ?? (museums.length > 0 ? "Select a museum" : "No museums available")
+      ? t("loadingMuseums")
+      : activeMuseumContext?.name ?? (museums.length > 0 ? t("selectMuseum") : t("noMuseumsAvailable"))
     : nonAdminMuseumLabel
   const workspaceWarning = !isAdmin && activeWorkspace?.hasInvalidMuseumContext
-    ? "Assigned museum is invalid (likely deleted). Ask an admin to reassign this workspace."
+    ? t("workspaceWarning")
     : null
 
   React.useEffect(() => {
@@ -166,7 +168,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     if (museums.length === 0) {
       if (adminMuseumContextId) {
         setAdminMuseumContextId(null)
-        setMuseumContextWarning("Museum context is invalid because no museums are available.")
+        setMuseumContextWarning(t("invalidMuseumContextNoMuseums"))
       }
       return
     }
@@ -176,9 +178,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     }
 
     if (adminMuseumContextId) {
-      setMuseumContextWarning(
-        "Museum context is invalid (likely deleted). Switched to the first available museum."
-      )
+      setMuseumContextWarning(t("invalidMuseumContextSwitched"))
     }
     setAdminMuseumContextId(museums[0]._id)
   }, [isAdmin, isMuseumContextHydrated, museums, adminMuseumContextId])
@@ -295,19 +295,19 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <div className="bg-background flex min-h-screen items-center justify-center p-6">
         <Card className="w-full max-w-xl">
           <CardHeader>
-            <CardTitle>Sign in required</CardTitle>
+            <CardTitle>{t("signInRequired")}</CardTitle>
             <CardDescription>
-              You need an account and workspace to access the dashboard.
+              {t("signInRequiredDescription")}
             </CardDescription>
           </CardHeader>
           <CardFooter className="gap-2">
             <Button variant="ghost" render={<Link href="/" />}>
-              Back to landing
+              {tCommon("backToLanding")}
             </Button>
             <Button variant="outline" render={<Link href="/sign-in" />}>
-              Sign in
+              {tCommon("signIn")}
             </Button>
-            <Button render={<Link href="/sign-up" />}>Sign up</Button>
+            <Button render={<Link href="/sign-up" />}>{tCommon("signUp")}</Button>
           </CardFooter>
         </Card>
       </div>
@@ -329,11 +329,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8 md:px-6">
           <Card className="w-full">
             <CardHeader>
-              <CardTitle>Museum staff access only</CardTitle>
+              <CardTitle>{t("museumStaffOnly")}</CardTitle>
               <CardDescription>
-                You need to be in at least one organization workspace to use this dashboard.
-                Request access below or wait for an invite. If you are not museum staff, use the
-                visitor app instead.
+                {t("museumStaffOnlyDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

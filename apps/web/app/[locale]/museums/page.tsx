@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Syne, Newsreader } from "next/font/google";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Dialog } from "@base-ui/react/dialog";
 import { api } from "@packages/backend/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";

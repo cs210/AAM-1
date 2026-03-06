@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { Link, useRouter } from "@/i18n/navigation"
 import { Building2Icon, LogOutIcon, ShieldIcon, TriangleAlertIcon } from "lucide-react"
 
 import { YamiLogo } from "@/components/yami-logo"
@@ -65,7 +65,14 @@ export function DashboardSidebar({
   onWorkspaceChange,
   workspaceWarning = null,
 }: DashboardSidebarProps) {
+  const t = useTranslations("dashboard.sidebar")
+  const tTabs = useTranslations("dashboard.tabs")
   const router = useRouter()
+  const tabLabelKey: Record<string, string> = {
+    "museum-details": "museumDetails",
+    "org-requests": "orgRequests",
+  }
+  const getTabLabel = (id: string) => tTabs(tabLabelKey[id] ?? id)
   const museumOptionById = new Map(museumContextOptions.map((option) => [option.id, option]))
   const comboboxItems = museumContextOptions.map((option) => option.label)
   const activeMuseumOptionLabel = activeMuseumContextId
@@ -84,7 +91,7 @@ export function DashboardSidebar({
           <div className="rounded-xl border bg-background/70 p-3">
             <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
               <Building2Icon className="size-3.5" />
-              Museum Context
+              {t("museumContext")}
             </div>
             {showMuseumContextSelector ? (
               <Combobox
@@ -96,12 +103,12 @@ export function DashboardSidebar({
                 }}
               >
                 <ComboboxInput
-                  placeholder={museumContextLoading ? "Loading museums..." : "Search and select museum"}
+                  placeholder={museumContextLoading ? t("loadingMuseums") : t("searchSelectMuseum")}
                   disabled={museumContextLoading || museumContextOptions.length === 0}
                   showClear={false}
                 />
                 <ComboboxContent>
-                  <ComboboxEmpty>No museums found.</ComboboxEmpty>
+                  <ComboboxEmpty>{t("noMuseumsFound")}</ComboboxEmpty>
                   <ComboboxList>
                     {(item) => (
                       <ComboboxItem key={item} value={item}>
@@ -123,7 +130,7 @@ export function DashboardSidebar({
           </div>
 
           <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
-            Navigation
+            {t("navigation")}
           </p>
           <nav className="mt-2 space-y-1">
             {dashboardTabs.map((tab) => {
@@ -141,7 +148,7 @@ export function DashboardSidebar({
                   render={<Link href={`/dashboard/${tab.path}`} />}
                 >
                   <Icon className="size-4" />
-                  {tab.label}
+                  {getTabLabel(tab.id)}
                 </Button>
               )
             })}
@@ -160,12 +167,12 @@ export function DashboardSidebar({
               }
             >
               <ShieldIcon className="size-4" />
-              Admin mode {isAdminMode ? "on" : "off"}
+              {t("adminMode")} {isAdminMode ? t("adminModeOn") : t("adminModeOff")}
             </Button>
             {isAdminMode && (
               <nav className="mt-2 space-y-1">
                 <p className="text-muted-foreground px-2 text-xs font-medium tracking-wide uppercase">
-                  Admin
+                  {t("admin")}
                 </p>
                 {adminDashboardTabs.map((tab) => {
                   const Icon = tab.icon
@@ -182,7 +189,7 @@ export function DashboardSidebar({
                       render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
-                      {tab.label}
+                      {getTabLabel(tab.id)}
                     </Button>
                   )
                 })}
@@ -194,7 +201,7 @@ export function DashboardSidebar({
 
       <div className="shrink-0 rounded-xl border bg-background/80 p-3">
         <p className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
-          Account
+          {t("account")}
         </p>
         <SidebarUserDetails
           isAdmin={Boolean(isAdmin)}
@@ -223,7 +230,7 @@ export function DashboardSidebar({
                   render={<Link href={`/dashboard/${tab.path}`} />}
                 >
                   <Icon className="size-4" />
-                  {tab.label}
+                  {getTabLabel(tab.id)}
                 </Button>
               )
             })}
@@ -242,7 +249,7 @@ export function DashboardSidebar({
           }}
         >
           <LogOutIcon className="size-4" />
-          Log out
+          {t("logOut")}
         </Button>
       </div>
     </aside>

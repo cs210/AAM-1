@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
+import { redirect } from "@/i18n/navigation"
 import { AdminInvitations } from "@/components/dashboard/admin-invitations"
 import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
 import { AdminUsers } from "@/components/dashboard/admin-users"
@@ -12,16 +13,16 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-const sectionLabels: Record<string, string> = {
-  exhibitions: "Exhibitions",
-  interactions: "Interactions",
-  analytics: "Analytics",
+const sectionLabelKeys: Record<string, string> = {
+  exhibitions: "exhibitions",
+  interactions: "interactions",
+  analytics: "analytics",
 }
 
 export default async function DashboardSectionPage({
   params,
 }: {
-  params: Promise<{ section: string }>
+  params: Promise<{ locale: string; section: string }>
 }) {
   const { section } = await params
 
@@ -41,13 +42,16 @@ export default async function DashboardSectionPage({
     return <DashboardOrganizations />
   }
 
-  const label = sectionLabels[section] ?? section
+  const t = await getTranslations("dashboard.shell")
+  const tTabs = await getTranslations("dashboard.tabs")
+  const labelKey = sectionLabelKeys[section]
+  const label = labelKey ? tTabs(labelKey) : section
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Coming Soon</CardTitle>
+        <CardTitle>{t("comingSoon")}</CardTitle>
         <CardDescription>
-          The {label} section will be part of the next iteration.
+          {t("comingSoonDescription", { section: label })}
         </CardDescription>
       </CardHeader>
     </Card>

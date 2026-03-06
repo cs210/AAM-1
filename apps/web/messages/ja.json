@@ -1,0 +1,115 @@
+{
+  "common": {
+    "signIn": "サインイン",
+    "signUp": "新規登録",
+    "logOut": "ログアウト",
+    "loading": "読み込み中…",
+    "account": "アカウント",
+    "dashboard": "ダッシュボード",
+    "backToLanding": "トップに戻る",
+    "goHome": "ホームへ",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "metadata": {
+    "title": "YAMI — あなたのアート、ミュージアム、アイデンティティ",
+    "description": "人類の文化的関与の初の社会的・自動記録。訪問者としてミュージアムを発見するか、スタッフダッシュボードで施設を運営できます。"
+  },
+  "landing": {
+    "visitor": "訪問者の方へ",
+    "museum": "ミュージアムの方へ",
+    "hero": {
+      "your": "あなたの",
+      "cultural": "文化",
+      "passport": "パスポート",
+      "the": "ザ",
+      "museum": "ミュージアム",
+      "os": "OS",
+      "visitorSubline": "人類の文化的関与の初の社会的・自動記録。すべての来館、すべての名作、ギャラリーで過ごした時間が、ずっとあなたのものに。",
+      "museumSubline": "YAMIは、TMSと同期し、分析を可視化し、すべてのギャラリーにインタラクティブな発見をもたらす訪問者エンゲージメント層をミュージアムに提供します。導入の手間はほぼゼロです。",
+      "getEarlyAccess": "早期アクセスを申し込む",
+      "createAccount": "アカウント作成",
+      "openDashboard": "ダッシュボードを開く",
+      "staffSignIn": "スタッフサインイン"
+    },
+    "footer": {
+      "tagline": "YAMIは、私たちの共有文化とアートの社会的体験を革新しています。ベータテストはまもなく開始。リリース時にオープンソース化予定。"
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "サインイン",
+      "description": "メールアドレスとパスワードを入力してアカウントにサインインしてください。",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "submit": "サインイン",
+      "signingIn": "サインイン中…",
+      "noAccount": "アカウントをお持ちでない場合",
+      "signInFailed": "サインインに失敗しました"
+    },
+    "signUp": {
+      "title": "アカウント作成",
+      "description": "新しいアカウントを作成するための情報を入力してください。",
+      "name": "名前",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "submit": "新規登録",
+      "creating": "アカウント作成中…",
+      "hasAccount": "すでにアカウントをお持ちの場合",
+      "signUpFailed": "新規登録に失敗しました",
+      "profileFailed": "アカウントは作成されましたが、プロフィールの設定に失敗しました。再度サインインをお試しください。"
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "museumDetails": "ミュージアム詳細",
+      "organizations": "組織",
+      "exhibitions": "展覧会",
+      "interactions": "インタラクション",
+      "analytics": "分析",
+      "orgRequests": "組織リクエスト",
+      "users": "ユーザー",
+      "invitations": "招待"
+    },
+    "sidebar": {
+      "museumContext": "ミュージアムコンテキスト",
+      "loadingMuseums": "ミュージアムを読み込み中...",
+      "searchSelectMuseum": "ミュージアムを検索して選択",
+      "noMuseumsFound": "ミュージアムが見つかりません。",
+      "navigation": "ナビゲーション",
+      "adminMode": "管理者モード",
+      "adminModeOn": "オン",
+      "adminModeOff": "オフ",
+      "admin": "管理者",
+      "account": "アカウント",
+      "logOut": "ログアウト"
+    },
+    "shell": {
+      "loadingMuseums": "ミュージアムを読み込み中...",
+      "signInRequired": "サインインが必要です",
+      "signInRequiredDescription": "ダッシュボードにアクセスするにはアカウントとワークスペースが必要です。",
+      "museumStaffOnly": "ミュージアムスタッフ専用",
+      "museumStaffOnlyDescription": "このダッシュボードを使用するには、少なくとも1つの組織ワークスペースに所属している必要があります。以下からアクセスをリクエストするか、招待をお待ちください。ミュージアムスタッフでない場合は、訪問者向けアプリをご利用ください。",
+      "invalidMuseumContext": "無効なミュージアムコンテキスト",
+      "invalidMuseumContextNoMuseums": "ミュージアムが利用できないため、ミュージアムコンテキストは無効です。",
+      "invalidMuseumContextSwitched": "ミュージアムコンテキストが無効です（削除された可能性があります）。利用可能な最初のミュージアムに切り替えました。",
+      "museumNotAssigned": "ミュージアムはまだ割り当てられていません",
+      "selectMuseum": "ミュージアムを選択",
+      "noMuseumsAvailable": "利用可能なミュージアムがありません",
+      "workspaceWarning": "割り当てられたミュージアムが無効です（削除された可能性があります）。管理者にワークスペースの再割り当てを依頼してください。",
+      "comingSoon": "近日公開",
+      "comingSoonDescription": "{section}セクションは次のバージョンで提供されます。"
+    }
+  },
+  "acceptInvitation": {
+    "invalidLink": "無効なリンク",
+    "invalidLinkDescription": "この招待リンクは無効であるか、IDが含まれていません。",
+    "title": "組織への招待",
+    "accepting": "招待を承諾中…",
+    "joined": "組織に参加しました。",
+    "goToDashboard": "ダッシュボードへ",
+    "missingLink": "招待リンクがありません。",
+    "couldNotAccept": "招待を承諾できませんでした。"
+  }
+}
