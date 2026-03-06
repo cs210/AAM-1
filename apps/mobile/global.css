@@ -11,6 +11,9 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --spacing-hairline: hairlineWidth();
+  
+  --font-family-sans: Georgia, serif;
+  --font-family-serif: Georgia, serif;
 }
 
 @layer theme {
