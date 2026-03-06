@@ -53,7 +53,9 @@ function parseDashboardPathname(pathname: string): {
   activeTab: AllDashboardTabId
   isAdminMode: boolean
 } {
-  const segments = pathname.replace(/^\/dashboard\/?/, "").split("/").filter(Boolean)
+  // Pathname can be locale-prefixed (e.g. /en/dashboard/details)
+  const withoutLocale = pathname.replace(/^\/(en|ja|es)(?=\/|$)/, "")
+  const segments = withoutLocale.replace(/^\/dashboard\/?/, "").split("/").filter(Boolean)
   const first = segments[0] ?? ""
   const second = segments[1] ?? ""
 

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server"
-import { redirect } from "@/i18n/navigation"
+import { redirect } from "next/navigation"
 import { AdminInvitations } from "@/components/dashboard/admin-invitations"
 import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
 import { AdminUsers } from "@/components/dashboard/admin-users"
@@ -24,15 +24,15 @@ export default async function DashboardSectionPage({
 }: {
   params: Promise<{ locale: string; section: string }>
 }) {
-  const { section } = await params
+  const { locale, section } = await params
 
   if (section === "admin") {
-    redirect("/dashboard/admin/org-requests")
+    redirect(`/${locale}/dashboard/admin/org-requests`)
   }
 
   const tabId = dashboardPathToTabId[section]
   if (!tabId) {
-    redirect("/dashboard/details")
+    redirect(`/${locale}/dashboard/details`)
   }
 
   if (tabId === "museum-details") {

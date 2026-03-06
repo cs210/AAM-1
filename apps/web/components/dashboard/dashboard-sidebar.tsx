@@ -1,8 +1,15 @@
 "use client"
 
+import * as React from "react"
 import { useTranslations } from "next-intl"
 import { Link, useRouter } from "@/i18n/navigation"
-import { Building2Icon, LogOutIcon, ShieldIcon, TriangleAlertIcon } from "lucide-react"
+import {
+  Building2Icon,
+  ChevronDownIcon,
+  LogOutIcon,
+  ShieldIcon,
+  TriangleAlertIcon,
+} from "lucide-react"
 
 import { YamiLogo } from "@/components/yami-logo"
 import { Button } from "@/components/ui/button"
@@ -22,6 +29,7 @@ import {
   type AllDashboardTabId,
 } from "@/components/dashboard/constants"
 import { SidebarUserDetails } from "@/components/dashboard/sidebar-user-details"
+import { LocaleSwitcher } from "@/components/locale-switcher"
 import { authClient } from "@/lib/auth-client"
 
 type MuseumContextOption = { id: string; label: string }
@@ -67,7 +75,9 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const t = useTranslations("dashboard.sidebar")
   const tTabs = useTranslations("dashboard.tabs")
+  const tCommon = useTranslations("common")
   const router = useRouter()
+  const [isLanguageOpen, setIsLanguageOpen] = React.useState(false)
   const tabLabelKey: Record<string, string> = {
     "museum-details": "museumDetails",
     "org-requests": "orgRequests",
@@ -213,6 +223,48 @@ export function DashboardSidebar({
           onWorkspaceChange={onWorkspaceChange}
           workspaceWarning={workspaceWarning}
         />
+        <div
+          className={cn(
+            "mt-3 rounded-lg border bg-muted/20",
+            isLanguageOpen ? "p-2" : "px-2 py-1"
+          )}
+        >
+          <button
+            type="button"
+            className={cn(
+              "flex w-full items-center justify-between gap-2 rounded-md px-1 text-left",
+              isLanguageOpen ? "py-1" : "py-0.5"
+            )}
+            onClick={() => setIsLanguageOpen((v) => !v)}
+            aria-expanded={isLanguageOpen}
+            aria-controls="sidebar-account-language"
+          >
+            <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+              {tCommon("language")}
+            </span>
+            <ChevronDownIcon
+              className={cn(
+                "text-muted-foreground transition-transform duration-200",
+                isLanguageOpen ? "size-4" : "size-3.5",
+                isLanguageOpen ? "rotate-180" : "rotate-0"
+              )}
+            />
+          </button>
+          <div
+            id="sidebar-account-language"
+            className={cn(
+              "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+              isLanguageOpen
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0 pointer-events-none"
+            )}
+            aria-hidden={!isLanguageOpen}
+          >
+            <div className={cn("overflow-hidden", isLanguageOpen ? "pt-2" : "pt-0")}>
+              <LocaleSwitcher />
+            </div>
+          </div>
+        </div>
         {!isAdmin && (
           <nav className="mt-3 space-y-1">
             {workspaceDashboardTabs.map((tab) => {

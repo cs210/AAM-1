@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 import { useQuery } from "convex/react";
 import { api } from "@packages/backend/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -10,6 +11,12 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
     DropdownMenuPortal,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -17,6 +24,12 @@ import { LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserIcon } from "lucide-rea
 import { YamiLogo } from "@/components/yami-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useTheme } from "next-themes";
+
+const localeNames: Record<string, string> = {
+    en: "English",
+    ja: "日本語",
+    es: "Español",
+};
 
 function ThemeToggle() {
     const t = useTranslations("common");
@@ -65,8 +78,15 @@ function ThemeToggle() {
 
 export function AppToolbar() {
     const t = useTranslations("common");
+    const locale = useLocale();
     const user = useQuery(api.auth.getCurrentUser);
     const router = useRouter();
+    const pathname = usePathname();
+
+    function onSelectLocale(nextLocale: string) {
+        if (nextLocale === locale) return;
+        router.replace(pathname || "/", { locale: nextLocale as (typeof routing.locales)[number] });
+    }
 
     return (
         <header className="fixed left-1/2 top-4 z-50 w-full max-w-5xl -translate-x-1/2 px-4">
@@ -100,6 +120,26 @@ export function AppToolbar() {
                             />
                             <DropdownMenuPortal>
                                 <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                            {t("language")}
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent align="end">
+                                            <DropdownMenuRadioGroup
+                                                value={locale}
+                                                onValueChange={(value) => {
+                                                    if (typeof value === "string") onSelectLocale(value);
+                                                }}
+                                            >
+                                                {routing.locales.map((loc) => (
+                                                    <DropdownMenuRadioItem key={loc} value={loc}>
+                                                        {localeNames[loc] ?? loc}
+                                                    </DropdownMenuRadioItem>
+                                                ))}
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuSub>
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                         variant="destructive"
                                         onClick={async () => {
