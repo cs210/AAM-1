@@ -1,16 +1,19 @@
 
 
-import React from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, ImageBackground, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon, StarIcon, MapPinIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
+import { EditCheckinModal } from '@/components/edit-checkin-modal';
+import { useCheckInActions } from '@/hooks/useCheckInActions';
 
 const { width } = Dimensions.get('window');
 
 type ProfileVisit = {
-  checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string };
+  checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
   museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
 
@@ -18,52 +21,72 @@ function formatVisitDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function PassportCard({ visit, isOwnProfile }: { visit: ProfileVisit; isOwnProfile: boolean }) {
+function PassportCard({
+  visit,
+  isOwnProfile,
+  onEditPress,
+}: {
+  visit: ProfileVisit;
+  isOwnProfile: boolean;
+  onEditPress?: () => void;
+}) {
   const { checkIn, museum } = visit;
-  const onPress = () => router.push(`/(museums)/${museum._id}` as any);
+  const onCardPress = () => router.push(`/(museums)/${museum._id}` as any);
 
   return (
-    <Pressable style={({ pressed }) => [styles.passportCard, pressed && styles.passportCardPressed]} onPress={onPress}>
-      <View style={styles.passportCardInner}>
-        <View style={styles.passportImageWrap}>
-          {museum.imageUrl ? (
-            <Image source={{ uri: museum.imageUrl }} style={styles.passportImage} resizeMode="cover" />
-          ) : (
-            <View style={[styles.passportImage, styles.passportImagePlaceholder]}>
-              <Text style={styles.passportImageLetter}>{museum.name ? museum.name[0].toUpperCase() : '?'}</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.passportBody}>
-          <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
-          {museum.city ? (
-            <View style={styles.passportLocationRow}>
-              <MapPinIcon size={12} color="#6b7280" />
-              <Text style={styles.passportLocation}>{museum.city}</Text>
-            </View>
-          ) : null}
-          <View style={styles.passportDateStamp}>
-            <Text style={styles.passportDateText}>{formatVisitDate(checkIn.visitDate)}</Text>
+    <View style={styles.passportCardWrapper}>
+      <Pressable style={({ pressed }) => [styles.passportCard, pressed && styles.passportCardPressed]} onPress={onCardPress}>
+        <View style={styles.passportCardInner}>
+          <View style={styles.passportImageWrap}>
+            {museum.imageUrl ? (
+              <Image source={{ uri: museum.imageUrl }} style={styles.passportImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.passportImage, styles.passportImagePlaceholder]}>
+                <Text style={styles.passportImageLetter}>{museum.name ? museum.name[0].toUpperCase() : '?'}</Text>
+              </View>
+            )}
           </View>
-          {checkIn.rating != null ? (
-            <View style={styles.passportStarsRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <StarIcon
-                  key={star}
-                  size={14}
-                  color={star <= checkIn.rating! ? '#FFB800' : '#D0D0D0'}
-                  fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
-                />
-              ))}
-              <Text style={styles.passportRatingNum}>{checkIn.rating.toFixed(1)}</Text>
+          <View style={styles.passportBody}>
+            <View style={styles.passportTitleRow}>
+              <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
+              {isOwnProfile && onEditPress ? (
+                <Pressable onPress={(e) => { e.stopPropagation(); onEditPress(); }} style={styles.editButton} hitSlop={8}>
+                  <PencilIcon size={18} color="#007AFF" />
+                </Pressable>
+              ) : null}
             </View>
-          ) : null}
-          {checkIn.review ? (
-            <Text style={styles.passportReview} numberOfLines={2}>{checkIn.review}</Text>
-          ) : null}
+            {museum.city ? (
+              <View style={styles.passportLocationRow}>
+                <MapPinIcon size={12} color="#6b7280" />
+                <Text style={styles.passportLocation}>{museum.city}</Text>
+              </View>
+            ) : null}
+            <View style={styles.passportDateStamp}>
+              <Text style={styles.passportDateText}>{formatVisitDate(checkIn.visitDate)}</Text>
+              {checkIn.editedAt != null ? (
+                <Text style={styles.editedLabel}> · Edited</Text>
+              ) : null}
+            </View>
+            {checkIn.rating != null ? (
+              <View style={styles.passportStarsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <StarIcon
+                    key={star}
+                    size={14}
+                    color={star <= checkIn.rating! ? '#FFB800' : '#D0D0D0'}
+                    fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
+                  />
+                ))}
+                <Text style={styles.passportRatingNum}>{checkIn.rating.toFixed(1)}</Text>
+              </View>
+            ) : null}
+            {checkIn.review ? (
+              <Text style={styles.passportReview} numberOfLines={2}>{checkIn.review}</Text>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
@@ -100,6 +123,9 @@ export default function WrappedScreen() {
 
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
+
+  const [editingVisit, setEditingVisit] = useState<ProfileVisit | null>(null);
+  const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
   const handleFollow = async () => {
     if (!viewedUserId) return;
@@ -263,7 +289,11 @@ export default function WrappedScreen() {
             data={profileVisits}
             keyExtractor={(item) => item.checkIn._id}
             renderItem={({ item }) => (
-              <PassportCard visit={item} isOwnProfile={viewedUserId === currentUserId} />
+              <PassportCard
+                visit={item}
+                isOwnProfile={viewedUserId === currentUserId}
+                onEditPress={viewedUserId === currentUserId ? () => setEditingVisit(item) : undefined}
+              />
             )}
             contentContainerStyle={styles.passportListContent}
             showsVerticalScrollIndicator={false}
@@ -275,6 +305,20 @@ export default function WrappedScreen() {
           />
         )
       ) : null}
+
+      <EditCheckinModal
+        visible={editingVisit != null}
+        initialRating={editingVisit?.checkIn.rating ?? null}
+        initialReview={editingVisit?.checkIn.review}
+        onSave={(rating, review) =>
+          editingVisit &&
+          saveCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>, rating, review)
+        }
+        onDelete={() =>
+          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>)
+        }
+        onClose={() => setEditingVisit(null)}
+      />
     </View>
   );
 }
@@ -421,6 +465,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   followButtonBase: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+  },
+  viewWrappedButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  followButtonBase: {
     paddingHorizontal: 32,
     paddingVertical: 10,
     borderRadius: 8,
@@ -461,8 +516,10 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     backgroundColor: '#f8fafc',
   },
-  passportCard: {
+  passportCardWrapper: {
     marginBottom: 14,
+  },
+  passportCard: {
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#fff',
@@ -507,11 +564,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 96,
   },
+  passportTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
+  },
   passportMuseumName: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '700',
     color: '#1e293b',
-    marginBottom: 4,
+  },
+  editButton: {
+    padding: 4,
+  },
+  editedLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
   },
   passportLocationRow: {
     flexDirection: 'row',
@@ -524,6 +596,8 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   passportDateStamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 4,

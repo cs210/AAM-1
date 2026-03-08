@@ -175,6 +175,7 @@ export default defineSchema({
     friendUserIds: v.array(v.string()),
     visitDate: v.number(), // timestamp of museum visit
     createdAt: v.number(), // timestamp of check-in creation
+    editedAt: v.optional(v.number()), // set when user edits rating/review
   })
     .index("by_user", ["userId"])
     .index("by_museum", ["museumId"])
