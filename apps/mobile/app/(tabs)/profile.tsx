@@ -1,15 +1,7 @@
 
 
-<<<<<<< HEAD
 import React, { useState } from 'react';
-=======
-import React from 'react';
-<<<<<<< HEAD
->>>>>>> main
-import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable } from 'react-native';
-=======
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, ImageBackground, Pressable } from 'react-native';
->>>>>>> f45e219a76f8931966e4c73dbb5e78338eb05f69
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';

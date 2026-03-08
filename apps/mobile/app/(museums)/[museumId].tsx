@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
@@ -10,29 +10,42 @@ import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 
+const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
+
 export default function MuseumDetailScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
-  
-  // Fetch museum from Convex
+  const id = typeof museumId === 'string' ? museumId : Array.isArray(museumId) ? museumId[0] : undefined;
+
+  // If this route was hit with a tab segment (e.g. from redirect), go to home
+  useEffect(() => {
+    if (id && TAB_ROUTE_SEGMENTS.has(id)) {
+      router.replace('/(tabs)/home');
+    }
+  }, [id]);
+
+  const isTabSegment = id != null && TAB_ROUTE_SEGMENTS.has(id);
+  const effectiveId = isTabSegment ? undefined : id;
+
+  // Fetch museum from Convex (skip when param is a tab segment)
   const museum = useQuery(api.museums.getMuseum, 
-    museumId ? { id: museumId as Id<"museums"> } : "skip"
+    effectiveId ? { id: effectiveId as Id<"museums"> } : "skip"
   );
   
   // Fetch events for this museum
   const events = useQuery(api.events.getEventsByMuseum, 
-    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
+    effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
-    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
+    effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
 
   // Current user and their existing check-in at this museum (if any)
   const currentUser = useQuery(api.auth.getCurrentUser);
   const userCheckIns = useQuery(
     api.checkIns.getUserMuseumCheckIns,
-    museumId && currentUser ? { userId: currentUser._id, museumId: museumId as Id<'museums'> } : 'skip'
+    effectiveId && currentUser ? { userId: currentUser._id, museumId: effectiveId as Id<'museums'> } : 'skip'
   );
   const existingCheckIn = useMemo(() => {
     if (!userCheckIns || userCheckIns.length === 0) return null;
@@ -49,12 +62,12 @@ export default function MuseumDetailScreen() {
   const unfollowMuseum = useMutation(api.follows.unfollowMuseum);
 
   const handleFollowPress = async () => {
-    if (!museumId) return;
+    if (!effectiveId) return;
     try {
       if (isFollowing) {
-        await unfollowMuseum({ museumId: museumId as Id<"museums"> });
+        await unfollowMuseum({ museumId: effectiveId as Id<"museums"> });
       } else {
-        await followMuseum({ museumId: museumId as Id<"museums"> });
+        await followMuseum({ museumId: effectiveId as Id<"museums"> });
       }
     } catch (error) {
       console.error('Follow action failed:', error);
@@ -62,13 +75,13 @@ export default function MuseumDetailScreen() {
   };
 
   const handleCheckInPress = () => {
-    if (!museumId) return;
+    if (!effectiveId) return;
     if (existingCheckIn) {
       setEditingCheckIn(existingCheckIn);
     } else {
       router.push({
         pathname: '/(museums)/[museumId]/checkin',
-        params: { museumId },
+        params: { museumId: effectiveId },
       });
     }
   };
@@ -186,7 +199,7 @@ export default function MuseumDetailScreen() {
             events.map((event) => (
               <EventCard
                 key={event._id}
-                event={{ ...event, museumId } as EventCardData}
+                event={{ ...event, museumId: id } as EventCardData}
                 showMuseum={false}
                 compactDate={false}
               />
