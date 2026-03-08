@@ -75,7 +75,16 @@ export const createCheckIn = mutation({
       
 
     if (!userProfile) {
-      throw new ConvexError("Error thrown during createCheckIn(): User profile doesn't exist.")
+      // Auto-create user profile if it doesn't exist
+      const profileData = {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        ...(user.image && { imageUrl: user.image }),
+        updatedAt: Date.now(),
+      };
+      const profileId = await ctx.db.insert("userProfiles", profileData);
+      userProfile = { _id: profileId, ...profileData };
     }
 
     // Update existing profile
