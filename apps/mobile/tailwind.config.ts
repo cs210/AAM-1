@@ -9,7 +9,12 @@ export default {
   ],
   presets: [uniwindPreset],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Georgia', 'serif'],
+        serif: ['Georgia', 'serif'],
+      },
+    },
   },
   plugins: [],
 } satisfies Config;

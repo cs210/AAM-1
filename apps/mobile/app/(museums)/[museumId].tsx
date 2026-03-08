@@ -79,7 +79,7 @@ export default function MuseumDetailScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#A67C52" />
           <Text style={styles.loadingText}>Loading museum...</Text>
         </View>
       </SafeAreaView>
@@ -219,7 +219,7 @@ export default function MuseumDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFF',
+    borderBottomColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
   },
   backIcon: {
     width: 40,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#222',
+    color: '#1A1A1A',
     flex: 1,
     textAlign: 'center',
   },
@@ -258,16 +258,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 32,
   },
   infoCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    marginBottom: 16,
+    borderColor: '#E8E8E8',
+    marginBottom: 20,
   },
   titleRow: {
     flexDirection: 'row',
@@ -276,27 +276,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   museumName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#222',
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1A1A1A',
     flex: 1,
-    marginRight: 8,
+    marginRight: 12,
   },
   categoryBadge: {
-    backgroundColor: '#007AFF15',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    backgroundColor: 'rgba(166, 124, 82, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   categoryText: {
     fontSize: 12,
-    color: '#007AFF',
+    color: '#A67C52',
     fontWeight: '600',
     textTransform: 'capitalize',
   },
   description: {
     fontSize: 15,
-    color: '#555',
+    color: '#666',
     lineHeight: 22,
     marginBottom: 16,
   },
@@ -311,43 +311,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   followButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#A67C52',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 10,
-    marginBottom: 24,
+    borderRadius: 12,
+    marginBottom: 12,
   },
   followingButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#7FB87F',
   },
   followButtonPressed: {
-    backgroundColor: '#0056CC',
+    opacity: 0.8,
   },
   followButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   checkInButton: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 24,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
   },
   checkInButtonPressed: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#F5F5F5',
   },
   checkInButtonText: {
-    color: '#222',
+    color: '#1A1A1A',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -355,21 +355,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 16,
   },
   emptyEvents: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 24,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 32,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
   },
   emptyEventsText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#8E8E93',
   },
   errorContainer: {
@@ -380,17 +378,17 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: '#222',
+    color: '#1A1A1A',
     marginBottom: 16,
   },
   backButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: '#A67C52',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   backButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
