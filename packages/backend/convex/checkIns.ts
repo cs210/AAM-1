@@ -84,7 +84,10 @@ export const createCheckIn = mutation({
         updatedAt: Date.now(),
       };
       const profileId = await ctx.db.insert("userProfiles", profileData);
-      userProfile = { _id: profileId, ...profileData };
+      userProfile = await ctx.db.get(profileId);
+      if (!userProfile) {
+        throw new Error("Failed to create user profile");
+      }
     }
 
     // Update existing profile
