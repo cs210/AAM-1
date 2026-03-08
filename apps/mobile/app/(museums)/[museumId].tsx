@@ -196,12 +196,13 @@ export default function MuseumDetailScreen() {
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
           
           {events && events.length > 0 ? (
-            events.map((event) => (
+            events.map((event, index) => (
               <EventCard
                 key={event._id}
                 event={{ ...event, museumId: id } as EventCardData}
                 showMuseum={false}
                 compactDate={false}
+                cardIndex={index}
               />
             ))
           ) : (
