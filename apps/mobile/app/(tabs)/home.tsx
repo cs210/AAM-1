@@ -1,11 +1,14 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Image, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
+import { EditCheckinModal } from '../../components/edit-checkin-modal';
+import { useCheckInActions } from '../../hooks/useCheckInActions';
 
 const EmptyState = () => (
   <View style={styles.emptyContainer}>
@@ -23,9 +26,12 @@ const EmptyState = () => (
 );
 
 export default function HomeScreen() {
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const currentUserId = currentUser?._id ?? null;
   const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
-  const currentUser = useQuery(api.auth.getCurrentUser);
+  const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
+  const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
   // Loading state
   if (events === undefined || followingCheckins === undefined || currentUser === undefined) {
@@ -65,8 +71,8 @@ export default function HomeScreen() {
             style={styles.profileButton}
             onPress={() => router.push('/(tabs)/profile')}
           >
-            {currentUser?.imageUrl ? (
-              <Image source={{ uri: currentUser.imageUrl }} style={styles.profileImage} />
+            {(currentUser as { imageUrl?: string; image?: string })?.imageUrl ?? (currentUser as { image?: string })?.image ? (
+              <Image source={{ uri: ((currentUser as { imageUrl?: string; image?: string })?.imageUrl ?? (currentUser as { image?: string })?.image)! }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileImagePlaceholder}>
                 <Text style={styles.profileInitial}>
@@ -90,13 +96,35 @@ export default function HomeScreen() {
                 item.type === 'event' ? (
                   <EventCard key={`event-${item.data._id}`} event={item.data as EventCardData} cardIndex={index} />
                 ) : (
-                  <CheckinPost key={`checkin-${item.data._id}`} checkin={item.data as CheckinPostData} cardIndex={index} />
+                  <CheckinPost
+                    key={`checkin-${item.data._id}`}
+                    checkin={item.data as CheckinPostData}
+                    cardIndex={index}
+                    isOwnCheckin={currentUserId != null && (item.data as CheckinPostData).userId === currentUserId}
+                    onEditPress={
+                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                        ? () => setEditingCheckin(item.data as CheckinPostData)
+                        : undefined
+                    }
+                  />
                 )
               )}
             </View>
           )}
         </View>
       </ScrollView>
+      <EditCheckinModal
+        visible={editingCheckin != null}
+        initialRating={editingCheckin?.rating ?? null}
+        initialReview={editingCheckin?.review}
+        onSave={(rating, review) =>
+          editingCheckin && saveCheckIn(editingCheckin._id as Id<'museumCheckIns'>, rating, review)
+        }
+        onDelete={() =>
+          editingCheckin && deleteCheckIn(editingCheckin._id as Id<'museumCheckIns'>)
+        }
+        onClose={() => setEditingCheckin(null)}
+      />
     </SafeAreaView>
   );
 }

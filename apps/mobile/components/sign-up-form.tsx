@@ -61,7 +61,7 @@ export function SignUpForm() {
         setError('Failed to save user profile. Please try again.');
         return;
       }
-      router.replace('/');
+      router.replace('/home');
     }
   }
 
