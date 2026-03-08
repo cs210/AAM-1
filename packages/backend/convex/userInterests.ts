@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { authComponent, getAuthUser } from "./auth";
+import { authComponent } from "./auth";
 
 export const getForCurrentAccount = query({
   args: {},
@@ -23,7 +23,7 @@ export const saveForCurrentAccount = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
     const accountId = user._id as string;

@@ -1,6 +1,36 @@
 import { ConvexError, v } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
+import { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+
+/** Shared query: get check-ins by optional userId and/or museumId. */
+async function getCheckInsRaw(
+  ctx: QueryCtx,
+  filters: { userId?: string; museumId?: Id<"museums"> }
+): Promise<Doc<"museumCheckIns">[]> {
+  if (filters.userId && filters.museumId) {
+    return await ctx.db
+      .query("museumCheckIns")
+      .withIndex("by_user_and_museum", (q) =>
+        q.eq("userId", filters.userId!).eq("museumId", filters.museumId!)
+      )
+      .collect();
+  }
+  if (filters.userId) {
+    return await ctx.db
+      .query("museumCheckIns")
+      .withIndex("by_user", (q) => q.eq("userId", filters.userId!))
+      .collect();
+  }
+  if (filters.museumId) {
+    return await ctx.db
+      .query("museumCheckIns")
+      .withIndex("by_museum", (q) => q.eq("museumId", filters.museumId!))
+      .collect();
+  }
+  return [];
+}
 
 // Create a museum check-in
 export const createCheckIn = mutation({
@@ -54,7 +84,10 @@ export const createCheckIn = mutation({
         updatedAt: Date.now(),
       };
       const profileId = await ctx.db.insert("userProfiles", profileData);
-      userProfile = { _id: profileId, ...profileData };
+      userProfile = await ctx.db.get(profileId);
+      if (!userProfile) {
+        throw new Error("Failed to create user profile");
+      }
     }
 
     // Update existing profile
@@ -124,32 +157,63 @@ export const getUserCheckIns = query({
   },
 });
 
+// Get check-ins with museum details for profile "cultural passport" (own or another user)
+export const getProfileVisits = query({
+  args: { userId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const currentUser = await authComponent.safeGetAuthUser(ctx);
+    const targetUserId = args.userId ?? currentUser?._id;
+    if (!targetUserId) return [];
+
+    const checkIns = await getCheckInsRaw(ctx, { userId: targetUserId });
+
+    const visits = await Promise.all(
+      checkIns.map(async (ci) => {
+        const museum = await ctx.db.get(ci.museumId);
+        const city = museum?.location?.city;
+        return {
+          checkIn: {
+            _id: ci._id,
+            museumId: ci.museumId,
+            rating: ci.rating,
+            visitDate: ci.visitDate,
+            createdAt: ci.createdAt,
+            review: ci.review,
+          },
+          museum: museum
+            ? {
+                _id: museum._id,
+                name: museum.name,
+                imageUrl: museum.imageUrl,
+                category: museum.category,
+                city,
+              }
+            : null,
+        };
+      })
+    );
+
+    const valid = visits.filter((entry) => entry.museum != null) as {
+      checkIn: { _id: Id<"museumCheckIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string };
+      museum: { _id: Id<"museums">; name: string; imageUrl?: string; category: string; city?: string };
+    }[];
+
+    valid.sort((a, b) => b.checkIn.visitDate - a.checkIn.visitDate);
+    return valid;
+  },
+});
+
 // Get all check-ins for a museum
 export const getMuseumCheckIns = query({
   args: { museumId: v.id("museums") },
-  handler: async (ctx, args) => {
-    const checkIns = await ctx.db
-      .query("museumCheckIns")
-      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
-      .collect();
-
-    return checkIns;
-  },
+  handler: async (ctx, args) => getCheckInsRaw(ctx, { museumId: args.museumId }),
 });
 
 // Get check-ins for a user at a specific museum
 export const getUserMuseumCheckIns = query({
   args: { userId: v.string(), museumId: v.id("museums") },
-  handler: async (ctx, args) => {
-    const checkIns = await ctx.db
-      .query("museumCheckIns")
-      .withIndex("by_user_and_museum", (q) =>
-        q.eq("userId", args.userId).eq("museumId", args.museumId)
-      )
-      .collect();
-
-    return checkIns;
-  },
+  handler: async (ctx, args) =>
+    getCheckInsRaw(ctx, { userId: args.userId, museumId: args.museumId }),
 });
 
 // Update a check-in
