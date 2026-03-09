@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { StarIcon, PencilIcon } from 'lucide-react-native';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -20,12 +20,12 @@ export interface CheckinPostData {
 }
 
 const CARD_COLORS = [
-  { bg: 'bg-[#E8D5C4]', text: 'text-[#5C4033]', accent: '#A67C52', accentClass: 'text-[#A67C52]' },
-  { bg: 'bg-[#D4E4F7]', text: 'text-[#2C5282]', accent: '#4A90E2', accentClass: 'text-[#4A90E2]' },
-  { bg: 'bg-[#F5E6D3]', text: 'text-[#8B6F47]', accent: '#C9A96E', accentClass: 'text-[#C9A96E]' },
-  { bg: 'bg-[#E8F4E8]', text: 'text-[#2D5F2D]', accent: '#5FA85F', accentClass: 'text-[#5FA85F]' },
-  { bg: 'bg-[#F4E4E8]', text: 'text-[#6B3E4E]', accent: '#B87891', accentClass: 'text-[#B87891]' },
-  { bg: 'bg-[#E6E6FA]', text: 'text-[#4B4B7E]', accent: '#7B7BAF', accentClass: 'text-[#7B7BAF]' },
+  { bg: 'bg-white', text: 'text-[#1A1A1A]', accent: '#D4915A', accentClass: 'text-[#D4915A]', shadowColor: '#D4915A' },
+  { bg: 'bg-white', text: 'text-[#1A1A1A]', accent: '#4A90E2', accentClass: 'text-[#4A90E2]', shadowColor: '#4A90E2' },
+  { bg: 'bg-white', text: 'text-[#1A1A1A]', accent: '#C9A96E', accentClass: 'text-[#C9A96E]', shadowColor: '#C9A96E' },
+  { bg: 'bg-white', text: 'text-[#1A1A1A]', accent: '#5FA85F', accentClass: 'text-[#5FA85F]', shadowColor: '#5FA85F' },
+  { bg: 'bg-white', text: 'text-[#1A1A1A]', accent: '#B87891', accentClass: 'text-[#B87891]', shadowColor: '#B87891' },
+  { bg: 'bg-white', text: 'text-[#1A1A1A]', accent: '#7B7BAF', accentClass: 'text-[#7B7BAF]', shadowColor: '#7B7BAF' },
 ];
 
 type CheckinPostProps = {
@@ -59,7 +59,17 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
 
   return (
     <Pressable
-      className={cn('rounded-2xl p-5 mb-4 shadow-sm shadow-black/5 active:opacity-95', colorScheme.bg)}
+      className={cn('rounded-2xl p-5 mb-4 active:opacity-95', colorScheme.bg)}
+      style={[
+        styles.card,
+        {
+          shadowColor: colorScheme.shadowColor,
+          borderLeftColor: colorScheme.accent,
+          borderTopColor: `${colorScheme.accent}15`,
+          borderRightColor: `${colorScheme.accent}15`,
+          borderBottomColor: `${colorScheme.accent}15`,
+        }
+      ]}
       onPress={handlePress}
       android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
     >
@@ -70,8 +80,8 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
             {checkin.userImage ? (
               <AvatarImage source={{ uri: checkin.userImage }} />
             ) : (
-              <AvatarFallback className="bg-[#A67C52]">
-                <Text className="text-lg font-bold text-white">
+              <AvatarFallback className="bg-[#D4915A]">
+                <Text className="text-base font-bold text-white">
                   {checkin.userName.charAt(0).toUpperCase()}
                 </Text>
               </AvatarFallback>
@@ -79,7 +89,7 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
           </Avatar>
           <View className="flex-1">
             <View className="flex-row items-center gap-1.5 mb-0.5">
-              <Text className={cn('text-[17px] font-bold', colorScheme.text)} numberOfLines={1}>
+              <Text className={cn('text-base font-bold', colorScheme.text)} numberOfLines={1}>
                 {checkin.userName}
               </Text>
               {isOwnCheckin && onEditPress && (
@@ -91,7 +101,7 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
             <Text className={cn('text-sm font-medium opacity-70', colorScheme.text)} numberOfLines={1}>
               {checkin.museumName}
               {checkin.editedAt != null ? (
-                <Text className="text-xs italic opacity-70"> · Edited</Text>
+                <Text className="text-sm italic opacity-70"> · Edited</Text>
               ) : null}
             </Text>
           </View>
@@ -100,7 +110,7 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
         {checkin.rating && (
           <View className="items-end gap-1.5">
             {renderStars(checkin.rating)}
-            <Text className={cn('text-[15px] font-bold', colorScheme.accentClass)}>
+            <Text className={cn('text-base font-bold', colorScheme.accentClass)}>
               {checkin.rating.toFixed(1)}
             </Text>
           </View>
@@ -108,10 +118,23 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
       </View>
 
       {checkin.review && (
-        <Text className={cn('text-[15px] leading-[22px]', colorScheme.text)} numberOfLines={3}>
+        <Text className={cn('text-sm leading-[22px]', colorScheme.text)} numberOfLines={3}>
           {checkin.review}
         </Text>
       )}
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  card: {
+    borderLeftWidth: 3,
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+});
