@@ -92,7 +92,7 @@ export default function MuseumDetailScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A67C52" />
+          <ActivityIndicator size="large" color="#D4915A" />
           <Text style={styles.loadingText}>Loading museum...</Text>
         </View>
       </SafeAreaView>
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#A67C52',
+    color: '#D4915A',
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   followButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,

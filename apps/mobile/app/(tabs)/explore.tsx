@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SearchIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
@@ -27,7 +28,7 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
       </View>
       {museums === undefined ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A67C52" />
+          <ActivityIndicator size="large" color="#D4915A" />
           <Text style={styles.loadingText}>Loading museums...</Text>
         </View>
       ) : (
@@ -64,7 +65,7 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
       </View>
       {users === undefined ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A67C52" />
+          <ActivityIndicator size="large" color="#D4915A" />
           <Text style={styles.loadingText}>Loading people...</Text>
         </View>
       ) : (
@@ -186,6 +187,26 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      {/* Top right bubble gradient */}
+      <View style={styles.topRightBubble} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
+          style={styles.bubbleGradient}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+      </View>
+      
+      {/* Bottom left bubble gradient */}
+      <View style={styles.bottomLeftBubble} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
+          style={styles.bubbleGradient}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+      </View>
+      
       <TabView
         navigationState={{ index, routes }}
         renderScene={renderScene}
@@ -194,7 +215,7 @@ export default function SearchScreen() {
         renderTabBar={props => (
           <TabBar
             {...props}
-            indicatorStyle={{ backgroundColor: '#A67C52', height: 2 }}
+            indicatorStyle={{ backgroundColor: '#D4915A', height: 2 }}
             style={{ backgroundColor: '#FFFFFF', elevation: 0, shadowOpacity: 0, marginTop: 0 }}
             activeColor="#1A1A1A"
             inactiveColor="#999"
@@ -210,6 +231,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  topRightBubble: {
+    position: 'absolute',
+    top: -200,
+    right: -150,
+    width: 550,
+    height: 400,
+    borderRadius: 200,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  bottomLeftBubble: {
+    position: 'absolute',
+    bottom: -200,
+    left: -150,
+    width: 550,
+    height: 400,
+    borderRadius: 200,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  bubbleGradient: {
+    width: '100%',
+    height: '100%',
   },
   searchContainer: {
     flexDirection: 'row',
