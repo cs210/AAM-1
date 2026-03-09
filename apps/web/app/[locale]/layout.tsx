@@ -1,7 +1,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { routing } from "@/i18n/routing";
+import { isValidLocale, routing } from "@/i18n/routing";
 import { AppToolbar } from "@/components/app-toolbar";
 import { getToken } from "@/lib/auth-server";
 
@@ -16,7 +16,7 @@ export function generateStaticParams() {
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
-  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+  if (!isValidLocale(locale)) {
     notFound();
   }
   setRequestLocale(locale);

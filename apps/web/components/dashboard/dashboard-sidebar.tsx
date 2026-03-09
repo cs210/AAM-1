@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils"
 import {
   adminDashboardTabs,
+  dashboardTabMessageKeys,
   dashboardTabs,
   workspaceDashboardTabs,
   type AllDashboardTabId,
@@ -78,11 +79,7 @@ export function DashboardSidebar({
   const tCommon = useTranslations("common")
   const router = useRouter()
   const [isLanguageOpen, setIsLanguageOpen] = React.useState(false)
-  const tabLabelKey: Record<string, string> = {
-    "museum-details": "museumDetails",
-    "org-requests": "orgRequests",
-  }
-  const getTabLabel = (id: string) => tTabs(tabLabelKey[id] ?? id)
+  const getTabLabel = (id: AllDashboardTabId) => tTabs(dashboardTabMessageKeys[id])
   const museumOptionById = new Map(museumContextOptions.map((option) => [option.id, option]))
   const comboboxItems = museumContextOptions.map((option) => option.label)
   const activeMuseumOptionLabel = activeMuseumContextId

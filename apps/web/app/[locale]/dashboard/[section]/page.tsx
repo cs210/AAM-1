@@ -1,9 +1,6 @@
 import { getTranslations } from "next-intl/server"
 import { redirect } from "next/navigation"
-import { AdminInvitations } from "@/components/dashboard/admin-invitations"
-import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
-import { AdminUsers } from "@/components/dashboard/admin-users"
-import { dashboardPathToTabId } from "@/components/dashboard/constants"
+import { dashboardPathToTabId, dashboardTabMessageKeys } from "@/components/dashboard/constants"
 import { DashboardOrganizations } from "@/components/dashboard/dashboard-organizations"
 import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
 import {
@@ -12,12 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-const sectionLabelKeys: Record<string, string> = {
-  exhibitions: "exhibitions",
-  interactions: "interactions",
-  analytics: "analytics",
-}
 
 export default async function DashboardSectionPage({
   params,
@@ -44,8 +35,7 @@ export default async function DashboardSectionPage({
 
   const t = await getTranslations("dashboard.shell")
   const tTabs = await getTranslations("dashboard.tabs")
-  const labelKey = sectionLabelKeys[section]
-  const label = labelKey ? tTabs(labelKey) : section
+  const label = tTabs(dashboardTabMessageKeys[tabId])
   return (
     <Card>
       <CardHeader>

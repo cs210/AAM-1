@@ -2,9 +2,9 @@
 
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
+import { routing, type Locale } from "@/i18n/routing";
 
-const localeNames: Record<string, string> = {
+const localeNames: Record<Locale, string> = {
   en: "English",
   ja: "日本語",
   es: "Español",
@@ -15,9 +15,8 @@ export function LocaleSwitcher() {
   const router = useRouter();
   const pathname = usePathname();
 
-  function onSelect(newLocale: string) {
+  function onSelect(newLocale: Locale) {
     if (newLocale === locale) return;
-    // Guard against transient undefined values during hydration/navigation.
     router.replace(pathname || "/", { locale: newLocale });
   }
 

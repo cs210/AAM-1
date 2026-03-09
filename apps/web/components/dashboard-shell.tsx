@@ -9,6 +9,7 @@ import { api } from "@packages/backend/convex/_generated/api"
 import {
   adminDashboardTabs,
   adminPathToTabId,
+  dashboardTabMessageKeys,
   dashboardPathToTabId,
   dashboardTabs,
   workspaceDashboardTabs,
@@ -72,6 +73,7 @@ type DashboardShellProps = { children?: React.ReactNode }
 export function DashboardShell({ children }: DashboardShellProps) {
   const t = useTranslations("dashboard.shell")
   const tCommon = useTranslations("common")
+  const tTabs = useTranslations("dashboard.tabs")
   const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
   const router = useRouter()
   const pathname = usePathname()
@@ -95,6 +97,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
     dashboardTabs.find((tab) => tab.id === activeTab) ??
     workspaceDashboardTabs.find((tab) => tab.id === activeTab) ??
     adminDashboardTabs.find((tab) => tab.id === activeTab)
+  const getTabLabel = React.useCallback(
+    (tabId: AllDashboardTabId) => tTabs(dashboardTabMessageKeys[tabId]),
+    [tTabs]
+  )
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
   const submitRequest = useMutation(api.organizationRequests.submitRequest)
@@ -183,7 +189,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       setMuseumContextWarning(t("invalidMuseumContextSwitched"))
     }
     setAdminMuseumContextId(museums[0]._id)
-  }, [isAdmin, isMuseumContextHydrated, museums, adminMuseumContextId])
+  }, [isAdmin, isMuseumContextHydrated, museums, adminMuseumContextId, t])
 
   React.useEffect(() => {
     if (!isAdmin || !isMuseumContextHydrated || typeof window === "undefined") return
@@ -198,15 +204,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
     setAdminMuseumContextId(museumId)
     setMuseumContextWarning(null)
   }, [])
-
-  const handleEditMuseumContext = React.useCallback(
-    (museumId: string) => {
-      setAdminMuseumContextId(museumId)
-      setMuseumContextWarning(null)
-      router.push("/dashboard/details")
-    },
-    [router]
-  )
 
   const handleWorkspaceChange = React.useCallback(
     (workspaceId: string) => {
@@ -226,7 +223,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     const orgSlug = slugify(name)
 
     if (!name || !locationCity || !locationState || !orgSlug) {
-      setError("Please complete all required museum details.")
+      setError(t("completeRequiredMuseumDetails"))
       return
     }
 
@@ -245,7 +242,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       })
 
       if (orgError) {
-        setError(orgError.message ?? "Unable to create workspace.")
+        setError(orgError.message ?? t("unableToCreateWorkspace"))
         return
       }
 
@@ -268,7 +265,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       setWebsite("")
       setStaffRole("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.")
+      setError(err instanceof Error ? err.message : t("somethingWentWrong"))
     } finally {
       setIsSubmitting(false)
     }
@@ -347,14 +344,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
               ) : null}
               {pendingRequest?.status === "pending" ? (
                 <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
-                  Your most recent workspace request is pending approval.
+                  {t("pendingApproval")}
                 </div>
               ) : null}
 
               <form id="museum-access-request-form" className="space-y-4" onSubmit={createWorkspace}>
                 <Input
                   id="museum-name"
-                  placeholder="Museum name"
+                  placeholder={t("museumNamePlaceholder")}
                   value={museumName}
                   onChange={(e) => setMuseumName(e.target.value)}
                   disabled={isSubmitting}
@@ -363,7 +360,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <Input
                     id="museum-city"
-                    placeholder="City"
+                    placeholder={t("cityPlaceholder")}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     disabled={isSubmitting}
@@ -371,7 +368,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   />
                   <Input
                     id="museum-state"
-                    placeholder="State"
+                    placeholder={t("statePlaceholder")}
                     value={state}
                     onChange={(e) => setState(e.target.value)}
                     disabled={isSubmitting}
@@ -380,14 +377,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 </div>
                 <Input
                   id="museum-website"
-                  placeholder="Museum website (optional)"
+                  placeholder={t("websitePlaceholder")}
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   disabled={isSubmitting}
                 />
                 <Input
                   id="staff-role"
-                  placeholder="Your role (optional)"
+                  placeholder={t("staffRolePlaceholder")}
                   value={staffRole}
                   onChange={(e) => setStaffRole(e.target.value)}
                   disabled={isSubmitting}
@@ -396,21 +393,21 @@ export function DashboardShell({ children }: DashboardShellProps) {
             </CardContent>
             <CardFooter className="flex-col gap-3">
               <Button className="w-full" type="submit" form="museum-access-request-form" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting request..." : "Request museum access"}
+                {isSubmitting ? t("submittingRequest") : t("requestMuseumAccess")}
               </Button>
               <div className="flex w-full items-center justify-center gap-1 text-sm">
-                <span className="text-muted-foreground">Not museum staff?</span>
+                <span className="text-muted-foreground">{t("notMuseumStaff")}</span>
                 <Button variant="link" className="h-auto p-0" render={<a href={consumerAppUrl} target="_blank" rel="noreferrer" />}>
-                  Open visitor app
+                  {t("openVisitorApp")}
                 </Button>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Button variant="link" className="text-muted-foreground h-auto p-0" render={<Link href="/" />}>
-                  Back to landing
+                  {tCommon("backToLanding")}
                 </Button>
                 <span className="text-muted-foreground/40">·</span>
                 <Button variant="link" className="text-muted-foreground h-auto p-0" onClick={signOutToLanding}>
-                  Log out
+                  {tCommon("logOut")}
                 </Button>
               </div>
             </CardFooter>
@@ -428,10 +425,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8 md:px-6">
           <Card className="w-full">
             <CardHeader>
-              <CardTitle>Workspace pending activation</CardTitle>
+              <CardTitle>{t("workspacePendingActivation")}</CardTitle>
               <CardDescription>
-                Your request for <span className="font-medium">{requestName}</span> has been
-                submitted. You can access the dashboard after an admin approves this organization.
+                {t("workspacePendingActivationDescription", { name: requestName })}
               </CardDescription>
             </CardHeader>
             <CardFooter className="flex-col gap-3">
@@ -440,7 +436,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 variant="outline"
                 render={<a href={consumerAppUrl} target="_blank" rel="noreferrer" />}
               >
-                Open visitor app while you wait
+                {t("openVisitorAppWhileWaiting")}
               </Button>
               <div className="flex items-center gap-3 text-sm">
                 <Button
@@ -448,7 +444,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   className="text-muted-foreground h-auto p-0"
                   render={<Link href="/" />}
                 >
-                  Back to landing
+                  {tCommon("backToLanding")}
                 </Button>
                 <span className="text-muted-foreground/40">·</span>
                 <Button
@@ -456,7 +452,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   className="text-muted-foreground h-auto p-0"
                   onClick={signOutToLanding}
                 >
-                  Log out
+                  {tCommon("logOut")}
                 </Button>
               </div>
             </CardFooter>
@@ -468,10 +464,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   const workspaceSelectorOptions = workspaceOptions.map((workspace) => ({
     id: workspace._id,
-    label: workspace.name ?? "Unnamed organization",
+    label: workspace.name ?? t("unnamedOrganization"),
     museumLabel: workspace.hasInvalidMuseumContext
-      ? "Invalid museum context"
-      : workspace.linkedMuseumName ?? "Museum not assigned yet",
+      ? t("invalidMuseumContext")
+      : workspace.linkedMuseumName ?? t("museumNotAssigned"),
   }))
   const isMuseumContextTab = dashboardTabs.some((tab) => tab.id === activeTab)
   const showWorkspaceNotConfiguredState = !isAdmin && isMuseumContextTab && !activeMuseumContextId
@@ -518,7 +514,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     render={<Link href={`/dashboard/${tab.path}`} />}
                   >
                     <Icon className="size-4" />
-                    {tab.label}
+                    {getTabLabel(tab.id)}
                   </Button>
                 )
               })}
@@ -535,7 +531,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                       render={<Link href={`/dashboard/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
-                      {tab.label}
+                      {getTabLabel(tab.id)}
                     </Button>
                   )
                 })}
@@ -553,7 +549,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                       render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
                       <Icon className="size-4" />
-                      {tab.label}
+                      {getTabLabel(tab.id)}
                     </Button>
                   )
                 })}
@@ -575,20 +571,20 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 Workspace: {activeWorkspace?.name ?? "No workspace selected"}
               </p>
             ) : null} */}
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{activeTabInfo?.label}</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+              {activeTabInfo ? getTabLabel(activeTabInfo.id) : ""}
+            </h1>
             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">
-              Keep your museum profile current so visitors always see accurate details in the mobile
-              app.
+              {t("heroDescription")}
             </p>
           </section>
 
           {showWorkspaceNotConfiguredState ? (
             <Card>
               <CardHeader>
-                <CardTitle>Workspace setup incomplete</CardTitle>
+                <CardTitle>{t("workspaceSetupIncomplete")}</CardTitle>
                 <CardDescription>
-                  This workspace is not linked to a museum yet. Ask an admin to assign a museum in
-                  the admin Organizations section.
+                  {t("workspaceSetupIncompleteDescription")}
                 </CardDescription>
               </CardHeader>
             </Card>

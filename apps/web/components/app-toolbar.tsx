@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
+import { isValidLocale, routing, type Locale } from "@/i18n/routing";
 import { useQuery } from "convex/react";
 import { api } from "@packages/backend/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -25,7 +25,7 @@ import { YamiLogo } from "@/components/yami-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useTheme } from "next-themes";
 
-const localeNames: Record<string, string> = {
+const localeNames: Record<Locale, string> = {
     en: "English",
     ja: "日本語",
     es: "Español",
@@ -83,9 +83,9 @@ export function AppToolbar() {
     const router = useRouter();
     const pathname = usePathname();
 
-    function onSelectLocale(nextLocale: string) {
+    function onSelectLocale(nextLocale: Locale) {
         if (nextLocale === locale) return;
-        router.replace(pathname || "/", { locale: nextLocale as (typeof routing.locales)[number] });
+        router.replace(pathname || "/", { locale: nextLocale });
     }
 
     return (
@@ -128,7 +128,7 @@ export function AppToolbar() {
                                             <DropdownMenuRadioGroup
                                                 value={locale}
                                                 onValueChange={(value) => {
-                                                    if (typeof value === "string") onSelectLocale(value);
+                                                    if (isValidLocale(value)) onSelectLocale(value);
                                                 }}
                                             >
                                                 {routing.locales.map((loc) => (
