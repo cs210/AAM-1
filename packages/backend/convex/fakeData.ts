@@ -161,7 +161,7 @@ export const populateFakeRatings = mutation({
       for (const userId of usersToRate) {
         // Check if rating already exists
         const existing = await ctx.db
-          .query("userRatings")
+          .query("checkIns")
           .withIndex("by_user_and_content", (q) =>
             q.eq("userId", userId).eq("contentType", "museum").eq("contentId", museum._id)
           )
@@ -171,13 +171,14 @@ export const populateFakeRatings = mutation({
           // Random rating between 3.0 and 5.0 (museums tend to be rated well)
           const rating = 3 + Math.floor(Math.random() * 3);
           
-          await ctx.db.insert("userRatings", {
+          await ctx.db.insert("checkIns", {
             userId,
             contentType: "museum",
             contentId: museum._id,
             rating,
+            imageUrls: [],
+            friendUserIds: [],
             createdAt: now,
-            updatedAt: now,
           });
           insertedCount++;
         }
