@@ -1,9 +1,9 @@
 
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
@@ -125,6 +125,7 @@ export default function WrappedScreen() {
   const unfollowUser = useMutation(api.follows.unfollowUser);
 
   const [editingVisit, setEditingVisit] = useState<ProfileVisit | null>(null);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
   const handleFollow = async () => {
@@ -152,7 +153,7 @@ export default function WrappedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
       {isViewingOtherProfile ? (
         <View style={styles.backBar}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -185,15 +186,32 @@ export default function WrappedScreen() {
               )}
             </View>
             
-            {/* Preferences Button - Top Right */}
+            {/* Settings Icon - Top Right */}
             {!isViewingOtherProfile && (
-              <TouchableOpacity
-                style={styles.updatePreferencesButton}
-                onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.updatePreferencesText}>Preferences</Text>
-              </TouchableOpacity>
+              <View>
+                <TouchableOpacity
+                  style={styles.settingsButton}
+                  onPress={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <SettingsIcon size={20} color="#1A1A1A" />
+                </TouchableOpacity>
+                
+                {/* Settings Dropdown */}
+                {showSettingsDropdown && (
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setShowSettingsDropdown(false);
+                        router.push('/intake?redirect=/(tabs)/profile');
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>Preferences</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             )}
           </View>
           
@@ -229,24 +247,7 @@ export default function WrappedScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-        {!isViewingOtherProfile && (
-          <View style={styles.profileActionsRow}>
-            <TouchableOpacity
-              style={styles.updatePreferencesButton}
-              onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.updatePreferencesText}>Update Preferences</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.viewWrappedButton}
-              onPress={() => router.push('/wrapped')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.viewWrappedButtonText}>View Wrapped</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        
         {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
         {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
           <TouchableOpacity
@@ -259,6 +260,21 @@ export default function WrappedScreen() {
           </TouchableOpacity>
         ) : null}
       </View>
+      
+      {/* Wrapped Section - Only show for own profile */}
+      {!isViewingOtherProfile && (
+        <TouchableOpacity 
+          style={styles.wrappedSection}
+          onPress={() => router.push('/wrapped')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.wrappedContent}>
+            <Sparkles size={18} color="#A67C52" />
+            <Text style={styles.wrappedText}>Wrapped</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      
       {/* Cultural passport: own profile or when viewing another user's visits */}
       {viewedUserId ? (
         profileVisits === undefined ? (
@@ -319,7 +335,7 @@ export default function WrappedScreen() {
         }
         onClose={() => setEditingVisit(null)}
       />
-    </View>
+    </Pressable>
   );
 }
 
@@ -357,7 +373,7 @@ const styles = StyleSheet.create({
   },
   profileContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 12,
     paddingTop: 0,
   },
   topRow: {
@@ -391,22 +407,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  updatePreferencesButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  settingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D0D0D0',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 48,
   },
-  updatePreferencesText: {
+  dropdownContainer: {
+    position: 'absolute',
+    top: 88,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 160,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dropdownItemText: {
+    fontSize: 14,
     color: '#1A1A1A',
-    fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   nameSection: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   profileName: {
     fontSize: 22,
@@ -435,46 +473,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
   },
-  profileActionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 12,
-  },
-  updatePreferencesButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#0f172a',
-  },
-  updatePreferencesText: {
-    color: '#f9fafb',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  viewWrappedButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
-  },
-  viewWrappedButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  followButtonBase: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
-  },
-  viewWrappedButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   followButtonBase: {
     paddingHorizontal: 32,
     paddingVertical: 10,
@@ -499,6 +497,31 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '600',
     fontSize: 14,
+  },
+  wrappedSection: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  wrappedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  wrappedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#A67C52',
   },
   passportSectionHeader: {
     paddingHorizontal: 20,
