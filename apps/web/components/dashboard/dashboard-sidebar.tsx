@@ -59,7 +59,7 @@ export function DashboardSidebar({
   activeTab,
   isAdmin,
   isAdminMode,
-  onAdminModeToggle,
+  onAdminModeToggle: _onAdminModeToggle,
   museumContextLabel = "",
   museumContextWarning = null,
   museumContextLoading = false,
@@ -74,6 +74,7 @@ export function DashboardSidebar({
   onWorkspaceChange,
   workspaceWarning = null,
 }: DashboardSidebarProps) {
+  void _onAdminModeToggle
   const t = useTranslations("dashboard.sidebar")
   const tTabs = useTranslations("dashboard.tabs")
   const tCommon = useTranslations("common")

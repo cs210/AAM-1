@@ -123,7 +123,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
     }
   }
 
-  const museumList = museums ?? []
+  const museumList = React.useMemo(() => museums ?? [], [museums])
   const categoryOptions = React.useMemo(
     () => Array.from(new Set(museumList.map((museum) => museum.category.trim()).filter(Boolean))).sort(),
     [museumList]

@@ -8,7 +8,6 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -26,17 +25,16 @@ function AcceptInvitationContent() {
 
   useEffect(() => {
     if (!invitationId) {
-      setStatus("error");
-      setMessage(t("missingLink"));
       return;
     }
 
     const id = invitationId;
     let cancelled = false;
+    let redirectTimer: ReturnType<typeof setTimeout> | undefined;
 
     async function accept() {
       setStatus("loading");
-      const { data, error } = await authClient.organization.acceptInvitation({
+      const { error } = await authClient.organization.acceptInvitation({
         invitationId: id,
       });
 
@@ -55,14 +53,15 @@ function AcceptInvitationContent() {
 
       setStatus("success");
       setMessage(t("joined"));
-      setTimeout(() => router.push("/dashboard"), 2000);
+      redirectTimer = setTimeout(() => router.push("/dashboard"), 2000);
     }
 
-    accept();
+    void accept();
     return () => {
       cancelled = true;
+      if (redirectTimer) clearTimeout(redirectTimer);
     };
-  }, [invitationId, router]);
+  }, [invitationId, router, t]);
 
   if (!invitationId) {
     return (
