@@ -51,7 +51,7 @@ function PassportCard({
               <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
               {isOwnProfile && onEditPress ? (
                 <Pressable onPress={(e) => { e.stopPropagation(); onEditPress(); }} style={styles.editButton} hitSlop={8}>
-                  <PencilIcon size={18} color="#007AFF" />
+                  <PencilIcon size={18} color="#A67C52" />
                 </Pressable>
               ) : null}
             </View>
@@ -506,11 +506,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: '#A67C52',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   wrappedContent: {
     flexDirection: 'row',
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 8,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
   passportSectionSub: {
     fontSize: 13,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   passportListContent: {
     paddingHorizontal: 20,
     paddingBottom: 32,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
   passportCardWrapper: {
     marginBottom: 14,
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
   passportLoadingText: {
     fontSize: 15,
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
   passportEmptyTitle: {
     fontSize: 18,
