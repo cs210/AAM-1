@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { StarIcon } from 'lucide-react-native';
+import { StarIcon, PencilIcon } from 'lucide-react-native';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ export interface CheckinPostData {
   rating?: number;
   review?: string;
   createdAt: number;
+  editedAt?: number;
 }
 
 const CARD_COLORS = [
@@ -27,7 +28,14 @@ const CARD_COLORS = [
   { bg: 'bg-[#E6E6FA]', text: 'text-[#4B4B7E]', accent: '#7B7BAF', accentClass: 'text-[#7B7BAF]' },
 ];
 
-export const CheckinPost = ({ checkin, cardIndex = 0 }: { checkin: CheckinPostData; cardIndex?: number }) => {
+type CheckinPostProps = {
+  checkin: CheckinPostData;
+  cardIndex?: number;
+  isOwnCheckin?: boolean;
+  onEditPress?: () => void;
+};
+
+export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress }: CheckinPostProps) => {
   const handlePress = () => {
     router.push(`/(museums)/${checkin.museumId}`);
   };
@@ -55,9 +63,10 @@ export const CheckinPost = ({ checkin, cardIndex = 0 }: { checkin: CheckinPostDa
       onPress={handlePress}
       android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
     >
+      {/* Header: User info + Rating */}
       <View className="flex-row justify-between items-start mb-3.5">
         <View className="flex-row items-center flex-1 mr-3">
-          <Avatar className="size-11 mr-3">
+          <Avatar className="size-11 mr-3" alt={checkin.userName}>
             {checkin.userImage ? (
               <AvatarImage source={{ uri: checkin.userImage }} />
             ) : (
@@ -69,11 +78,21 @@ export const CheckinPost = ({ checkin, cardIndex = 0 }: { checkin: CheckinPostDa
             )}
           </Avatar>
           <View className="flex-1">
-            <Text className={cn('text-[17px] font-bold mb-0.5', colorScheme.text)} numberOfLines={1}>
-              {checkin.userName}
-            </Text>
+            <View className="flex-row items-center gap-1.5 mb-0.5">
+              <Text className={cn('text-[17px] font-bold', colorScheme.text)} numberOfLines={1}>
+                {checkin.userName}
+              </Text>
+              {isOwnCheckin && onEditPress && (
+                <Pressable onPress={() => onEditPress()} hitSlop={8}>
+                  <PencilIcon size={16} color="#007AFF" />
+                </Pressable>
+              )}
+            </View>
             <Text className={cn('text-sm font-medium opacity-70', colorScheme.text)} numberOfLines={1}>
               {checkin.museumName}
+              {checkin.editedAt != null ? (
+                <Text className="text-xs italic opacity-70"> · Edited</Text>
+              ) : null}
             </Text>
           </View>
         </View>

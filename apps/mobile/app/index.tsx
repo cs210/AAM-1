@@ -45,7 +45,7 @@ export default function Screen() {
               <Text>Museum interest survey</Text>
             </Button>
           </Link>
-          <Link href="/(tabs)" asChild>
+          <Link href="/home" asChild>
             <Button size="lg">
               <Text>Go to Home</Text>
             </Button>

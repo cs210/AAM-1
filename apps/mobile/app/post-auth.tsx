@@ -31,9 +31,9 @@ export default function PostAuthScreen() {
     if (!profileCreated || userInterests === undefined) return;
 
     if (userInterests === null) {
-      router.replace('/intake?redirect=/(tabs)');
+      router.replace('/intake?redirect=/home');
     } else {
-      router.replace('/(tabs)');
+      router.replace('/home');
     }
   }, [userInterests, profileCreated]);
 
