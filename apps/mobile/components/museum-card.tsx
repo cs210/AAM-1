@@ -35,8 +35,8 @@ export function MuseumCard({ museum, className }: Props) {
             <Text className="text-lg font-semibold text-[#1A1A1A] flex-1 leading-6" numberOfLines={2}>
               {museum.name}
             </Text>
-            <View className="bg-[#A67C52]/15 px-2.5 py-1 rounded-lg ml-3">
-              <Text className="text-[11px] text-[#A67C52] font-semibold capitalize">
+            <View className="bg-[#D4915A]/15 px-2.5 py-1 rounded-lg ml-3">
+              <Text className="text-[11px] text-[#D4915A] font-semibold capitalize">
                 {museum.category}
               </Text>
             </View>
@@ -46,7 +46,7 @@ export function MuseumCard({ museum, className }: Props) {
           <Text className="text-sm text-[#666] mb-3">
             {museum.location?.city || 'Unknown'}, {museum.location?.state || ''}
           </Text>
-          <Text className="text-[13px] text-[#A67C52] font-medium">
+          <Text className="text-[13px] text-[#D4915A] font-medium">
             {ratingLabel}
           </Text>
         </CardContent>

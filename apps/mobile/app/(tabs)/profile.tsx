@@ -51,7 +51,7 @@ function PassportCard({
               <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
               {isOwnProfile && onEditPress ? (
                 <Pressable onPress={(e) => { e.stopPropagation(); onEditPress(); }} style={styles.editButton} hitSlop={8}>
-                  <PencilIcon size={18} color="#A67C52" />
+                  <PencilIcon size={18} color="#D4915A" />
                 </Pressable>
               ) : null}
             </View>
@@ -186,8 +186,8 @@ export default function WrappedScreen() {
               )}
             </View>
             
-            {/* Settings Icon - Top Right */}
-            {!isViewingOtherProfile && (
+            {/* Settings Icon or Follow/Unfollow Button - Top Right */}
+            {!isViewingOtherProfile ? (
               <View>
                 <TouchableOpacity
                   style={styles.settingsButton}
@@ -212,6 +212,15 @@ export default function WrappedScreen() {
                   </View>
                 )}
               </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.topRightFollowButton, isFollowing ? styles.unfollowButton : styles.followButton]}
+                onPress={isFollowing ? handleUnfollow : handleFollow}
+              >
+                <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
+                  {isFollowing ? 'Unfollow' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
           
@@ -234,31 +243,7 @@ export default function WrappedScreen() {
               </Text>
             </View>
           </View>
-          
-          {/* When viewing someone else's profile: show Follow/Unfollow */}
-          {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
-            <TouchableOpacity
-              style={[styles.followButtonBase, isFollowing ? styles.unfollowButton : styles.followButton]}
-              onPress={isFollowing ? handleUnfollow : handleFollow}
-            >
-              <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
-                {isFollowing ? 'Unfollow' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
-        
-        {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
-        {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
-          <TouchableOpacity
-            style={[styles.followButtonBase, isFollowing ? styles.unfollowButton : styles.followButton]}
-            onPress={isFollowing ? handleUnfollow : handleFollow}
-          >
-            <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
-              {isFollowing ? 'Unfollow' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
       
       {/* Wrapped Section - Only show for own profile */}
@@ -269,7 +254,7 @@ export default function WrappedScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.wrappedContent}>
-            <Sparkles size={18} color="#A67C52" />
+            <Sparkles size={18} color="#D4915A" />
             <Text style={styles.wrappedText}>Wrapped</Text>
           </View>
         </TouchableOpacity>
@@ -398,7 +383,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -481,7 +466,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   followButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
   },
   unfollowButton: {
     backgroundColor: '#FFFFFF',
@@ -498,6 +483,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  topRightFollowButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 48,
+  },
   wrappedSection: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 16,
@@ -506,7 +497,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#A67C52',
+    shadowColor: '#D4915A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -521,7 +512,7 @@ const styles = StyleSheet.create({
   wrappedText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#A67C52',
+    color: '#D4915A',
   },
   passportSectionHeader: {
     paddingHorizontal: 20,

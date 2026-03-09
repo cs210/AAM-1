@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Image, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
@@ -38,7 +39,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A67C52" />
+          <ActivityIndicator size="large" color="#D4915A" />
           <Text style={styles.loadingText}>Loading feed...</Text>
         </View>
       </SafeAreaView>
@@ -60,12 +61,34 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      {/* Top right bubble gradient */}
+      <View style={styles.topRightBubble} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
+          style={styles.bubbleGradient}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+      </View>
+      
+      {/* Bottom left bubble gradient */}
+      <View style={styles.bottomLeftBubble} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
+          style={styles.bubbleGradient}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+      </View>
+      
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header with Welcome and Profile */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.greeting}>Welcome</Text>
             <Text style={styles.userName}>{firstName}</Text>
+            {/* Separator Line */}
+            <View style={styles.separator} />
           </View>
           <Pressable 
             style={styles.profileButton}
@@ -134,6 +157,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  topRightBubble: {
+    position: 'absolute',
+    top: -200,
+    right: -150,
+    width: 550,
+    height: 400,
+    borderRadius: 200,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  bottomLeftBubble: {
+    position: 'absolute',
+    bottom: -200,
+    left: -150,
+    width: 550,
+    height: 400,
+    borderRadius: 200,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  bubbleGradient: {
+    width: '100%',
+    height: '100%',
+  },
   scrollContent: {
     paddingBottom: 80,
   },
@@ -159,13 +206,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
     color: '#666',
     marginBottom: 2,
   },
   userName: {
-    fontSize: 40,
+    fontSize: 42,
     fontWeight: '600',
     color: '#1A1A1A',
     letterSpacing: -0.5,
@@ -174,9 +221,16 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#999',
+    color: '#666',
     paddingHorizontal: 20,
     marginBottom: 16,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#E5E5E5',
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    maxWidth: '60%',
   },
   profileButton: {
     marginLeft: 16,
@@ -191,12 +245,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileInitial: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
   },
@@ -212,19 +266,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#222',
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 24,
   },
   exploreButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 16,
