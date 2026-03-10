@@ -378,6 +378,13 @@ export const reorderExhibitInteractions = mutation({
       args.hallId
     );
     for (let i = 0; i < args.orderedIds.length; i++) {
+      const interaction = await ctx.db.get(args.orderedIds[i]);
+      if (!interaction) {
+        throw new Error("Interaction not found");
+      }
+      if (interaction.hallId !== args.hallId) {
+        throw new Error("Interaction does not belong to this hall");
+      }
       await ctx.db.patch(args.orderedIds[i], { sortOrder: i });
     }
     return args.hallId;
