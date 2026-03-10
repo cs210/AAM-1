@@ -215,6 +215,18 @@ export default function WrappedScreen() {
                     >
                       <Text style={styles.dropdownItemText}>Preferences</Text>
                     </TouchableOpacity>
+                    <View style={styles.dropdownDivider} />
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={async () => {
+                        setShowSettingsDropdown(false);
+                        const { authClient } = await import('@/lib/auth-client');
+                        await authClient.signOut();
+                        router.replace('/sign-in');
+                      }}
+                    >
+                      <Text style={[styles.dropdownItemText, styles.logoutText]}>Log out</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>
@@ -440,6 +452,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1A1A1A',
     fontWeight: '500',
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 4,
+  },
+  logoutText: {
+    color: '#DC2626',
   },
   nameSection: {
     marginBottom: 8,
@@ -717,7 +737,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   passportEmptyButton: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#D4915A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
