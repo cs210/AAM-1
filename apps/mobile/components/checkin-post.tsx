@@ -11,8 +11,9 @@ export interface CheckinPostData {
   userId: string;
   userName: string;
   userImage?: string;
-  museumId: string;
-  museumName: string;
+  contentType: string;
+  contentId: string;
+  contentName: string;
   rating?: number;
   review?: string;
   createdAt: number;
@@ -29,7 +30,7 @@ const CARD_COLORS = [
 
 export const CheckinPost = ({ checkin, cardIndex = 0 }: { checkin: CheckinPostData; cardIndex?: number }) => {
   const handlePress = () => {
-    router.push(`/(museums)/${checkin.museumId}`);
+    router.push(`/(museums)/${checkin.contentId}`);
   };
 
   const colorScheme = CARD_COLORS[cardIndex % CARD_COLORS.length];
@@ -57,7 +58,7 @@ export const CheckinPost = ({ checkin, cardIndex = 0 }: { checkin: CheckinPostDa
     >
       <View className="flex-row justify-between items-start mb-3.5">
         <View className="flex-row items-center flex-1 mr-3">
-          <Avatar className="size-11 mr-3">
+          <Avatar className="size-11 mr-3" alt={checkin.userName}>
             {checkin.userImage ? (
               <AvatarImage source={{ uri: checkin.userImage }} />
             ) : (
@@ -73,7 +74,7 @@ export const CheckinPost = ({ checkin, cardIndex = 0 }: { checkin: CheckinPostDa
               {checkin.userName}
             </Text>
             <Text className={cn('text-sm font-medium opacity-70', colorScheme.text)} numberOfLines={1}>
-              {checkin.museumName}
+              {checkin.contentName}
             </Text>
           </View>
         </View>
