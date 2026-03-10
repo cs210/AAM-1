@@ -464,18 +464,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#007AFF',
   },
-  viewWrappedButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  followButtonBase: {
-    paddingHorizontal: 32,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 8,
-    alignSelf: 'flex-start',
-  },
   followButton: {
     backgroundColor: '#D4915A',
   },
