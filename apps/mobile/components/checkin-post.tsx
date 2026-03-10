@@ -78,7 +78,6 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
       <View className="flex-row justify-between items-start mb-3.5">
         <View className="flex-row items-center flex-1 mr-3">
           <Avatar className="size-11 mr-3" alt={checkin.userName}>
-          <Avatar className="size-11 mr-3" alt={checkin.userName}>
             {checkin.userImage ? (
               <AvatarImage source={{ uri: checkin.userImage }} />
             ) : (
