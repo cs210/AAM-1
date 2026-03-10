@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as checkIns from "../checkIns.js";
 import type * as email from "../email.js";
 import type * as events from "../events.js";
 import type * as fakeData from "../fakeData.js";
@@ -19,6 +20,8 @@ import type * as museums from "../museums.js";
 import type * as organizationRequests from "../organizationRequests.js";
 import type * as ratings from "../ratings.js";
 import type * as recsys from "../recsys.js";
+import type * as userInterests from "../userInterests.js";
+import type * as userProfiles from "../userProfiles.js";
 
 import type {
   ApiFromModules,
@@ -29,6 +32,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
+  checkIns: typeof checkIns;
   email: typeof email;
   events: typeof events;
   fakeData: typeof fakeData;
@@ -38,6 +42,8 @@ declare const fullApi: ApiFromModules<{
   organizationRequests: typeof organizationRequests;
   ratings: typeof ratings;
   recsys: typeof recsys;
+  userInterests: typeof userInterests;
+  userProfiles: typeof userProfiles;
 }>;
 
 /**
