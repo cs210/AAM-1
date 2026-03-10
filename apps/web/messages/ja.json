@@ -291,8 +291,7 @@
         "create": "展覧会を作成"
       },
       "exhibitionCard": {
-        "hallsCount_one": "{count} ホール",
-        "hallsCount_other": "{count} ホール",
+        "hallsCount": "{count, plural, other {# ホール}}",
         "fromDate": "{date} から",
         "addHall": "ホールを追加",
         "removeExhibition": "展覧会を削除",

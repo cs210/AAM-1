@@ -291,8 +291,7 @@
         "create": "Create exhibition"
       },
       "exhibitionCard": {
-        "hallsCount_one": "{count} hall",
-        "hallsCount_other": "{count} halls",
+        "hallsCount": "{count, plural, one {# hall} other {# halls}}",
         "fromDate": "From {date}",
         "addHall": "Add hall",
         "removeExhibition": "Remove exhibition",
