@@ -291,8 +291,7 @@
         "create": "Crear exposición"
       },
       "exhibitionCard": {
-        "hallsCount_one": "{count} sala",
-        "hallsCount_other": "{count} salas",
+        "hallsCount": "{count, plural, one {# sala} other {# salas}}",
         "fromDate": "Desde {date}",
         "addHall": "Añadir sala",
         "removeExhibition": "Eliminar exposición",
