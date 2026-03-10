@@ -1,14 +1,15 @@
 
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles } from 'lucide-react-native';
+import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles, CameraIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
+import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
 
@@ -129,10 +130,55 @@ export default function WrappedScreen() {
 
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
+  const generateUploadUrl = useMutation(api.userProfiles.generateUploadUrl);
+  const updateProfileImage = useMutation(api.userProfiles.updateProfileImage);
+  const updateBannerImage = useMutation(api.userProfiles.updateBannerImage);
 
   const [editingVisit, setEditingVisit] = useState<ProfileVisit | null>(null);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
+
+  const pickAndUploadImage = async (type: 'avatar' | 'banner') => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: type === 'avatar' ? [1, 1] : [16, 9],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    try {
+      if (type === 'avatar') setUploadingAvatar(true);
+      else setUploadingBanner(true);
+
+      const uploadUrl = await generateUploadUrl();
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': asset.mimeType ?? 'image/jpeg' },
+        body: await (await fetch(asset.uri)).blob(),
+      });
+      const { storageId } = await response.json();
+
+      if (type === 'avatar') {
+        await updateProfileImage({ storageId });
+      } else {
+        await updateBannerImage({ storageId });
+      }
+    } catch {
+      Alert.alert('Upload failed', 'Something went wrong. Please try again.');
+    } finally {
+      if (type === 'avatar') setUploadingAvatar(false);
+      else setUploadingBanner(false);
+    }
+  };
 
   const handleFollow = async () => {
     if (!viewedUserId) return;
@@ -169,28 +215,57 @@ export default function WrappedScreen() {
       ) : null}
       <View style={styles.profileHeader}>
         {/* Banner Image */}
-        <ImageBackground
-          source={require('@/assets/images/login-background.jpg')}
-          style={styles.bannerImage}
-          imageStyle={styles.bannerImageStyle}
-          resizeMode="cover"
+        <TouchableOpacity
+          onPress={!isViewingOtherProfile ? () => pickAndUploadImage('banner') : undefined}
+          activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+          disabled={!!isViewingOtherProfile}
         >
-          <View style={styles.bannerOverlay} />
-        </ImageBackground>
+          <ImageBackground
+            source={profile?.bannerUrl ? { uri: profile.bannerUrl } : require('@/assets/images/login-background.jpg')}
+            style={styles.bannerImage}
+            imageStyle={styles.bannerImageStyle}
+            resizeMode="cover"
+          >
+            <View style={styles.bannerOverlay} />
+            {!isViewingOtherProfile && (
+              <View style={styles.bannerEditHint}>
+                {uploadingBanner ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <CameraIcon size={16} color="#fff" />
+                )}
+              </View>
+            )}
+          </ImageBackground>
+        </TouchableOpacity>
         
         {/* Profile Content */}
         <View style={styles.profileContent}>
           <View style={styles.topRow}>
             {/* Avatar */}
-            <View style={styles.avatarContainer}>
-              {profile?.imageUrl ? (
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={!isViewingOtherProfile ? () => pickAndUploadImage('avatar') : undefined}
+              activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+              disabled={!!isViewingOtherProfile}
+            >
+              {uploadingAvatar ? (
+                <View style={[styles.avatarPlaceholder, styles.avatarUploading]}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              ) : profile?.imageUrl ? (
                 <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
                 </View>
               )}
-            </View>
+              {!isViewingOtherProfile && !uploadingAvatar && (
+                <View style={styles.avatarEditBadge}>
+                  <CameraIcon size={10} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
             
             {/* Settings Icon or Follow/Unfollow Button - Top Right */}
             {!isViewingOtherProfile ? (
@@ -380,6 +455,30 @@ const styles = StyleSheet.create({
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  bannerEditHint: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 14,
+    padding: 6,
+  },
+  avatarUploading: {
+    opacity: 0.7,
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#D4915A',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   profileContent: {
     paddingHorizontal: 20,
