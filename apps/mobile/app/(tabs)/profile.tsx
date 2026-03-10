@@ -459,10 +459,11 @@ const styles = StyleSheet.create({
     color: '#888',
   },
   followButtonBase: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
   followButton: {
     backgroundColor: '#D4915A',
