@@ -1,87 +1,36 @@
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
-import { Link, Stack } from 'expo-router';
-import { MoonStarIcon, StarIcon, SunIcon } from 'lucide-react-native';
+import { router, Stack } from 'expo-router';
 import * as React from 'react';
-import { Image, type ImageStyle, View } from 'react-native';
-import { Uniwind, useUniwind } from 'uniwind';
-
-const LOGO = {
-  light: require('@/assets/images/react-native-reusables-light.png'),
-  dark: require('@/assets/images/react-native-reusables-dark.png'),
-};
+import { ActivityIndicator, View } from 'react-native';
+import { useConvexAuth } from 'convex/react';
+import { Text } from '@/components/ui/text';
 
 const SCREEN_OPTIONS = {
-  title: 'React Native Reusables',
-  headerTransparent: true,
-  headerRight: () => <ThemeToggle />,
-};
-
-const IMAGE_STYLE: ImageStyle = {
-  height: 76,
-  width: 76,
+  title: 'YAMI',
+  headerShown: false,
 };
 
 export default function Screen() {
-  const { theme } = useUniwind();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
+  React.useEffect(() => {
+    if (isLoading) return;
+
+    if (isAuthenticated) {
+      router.replace('/post-auth');
+    } else {
+      router.replace('/sign-in');
+    }
+  }, [isAuthenticated, isLoading]);
 
   return (
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
-      <View className="flex-1 items-center justify-center gap-8 p-4">
-        <Image source={LOGO[theme ?? 'light']} style={IMAGE_STYLE} resizeMode="contain" />
-        <View className="gap-2 p-4">
-          <Text className="ios:text-foreground text-muted-foreground font-mono text-sm">
-            1. Edit <Text variant="code">app/index.tsx</Text> to get started.
-          </Text>
-          <Text className="ios:text-foreground text-muted-foreground font-mono text-sm">
-            2. Save to see your changes instantly.
-          </Text>
-        </View>
-        <View className="flex-row flex-wrap justify-center gap-2">
-          <Link href="/intake" asChild>
-            <Button size="lg">
-              <Text>Museum interest survey</Text>
-            </Button>
-          </Link>
-          <Link href="/home" asChild>
-            <Button size="lg">
-              <Text>Go to Home</Text>
-            </Button>
-          </Link>
-          <Link href="/sign-in" asChild>
-            <Button variant="ghost">
-              <Text>Sign in</Text>
-              <Icon as={StarIcon} />
-            </Button>
-          </Link>
-        </View>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#D4915A" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: '#8E8E93' }}>
+          Loading...
+        </Text>
       </View>
     </>
-  );
-}
-
-const THEME_ICONS = {
-  light: SunIcon,
-  dark: MoonStarIcon,
-};
-
-function ThemeToggle() {
-  const { theme } = useUniwind();
-
-  function toggleTheme() {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    Uniwind.setTheme(newTheme);
-  }
-
-  return (
-    <Button
-      onPressIn={toggleTheme}
-      size="icon"
-      variant="ghost"
-      className="ios:size-9 web:mx-4 rounded-full">
-      <Icon as={THEME_ICONS[theme ?? 'light']} className="size-5" />
-    </Button>
   );
 }
