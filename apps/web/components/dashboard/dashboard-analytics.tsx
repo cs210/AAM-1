@@ -23,11 +23,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import type { ChartConfig } from "@/components/ui/chart"
 import {
   Select,
   SelectContent,
@@ -164,11 +164,11 @@ export function DashboardAnalytics() {
   }, [pointsToShow, sortAsc])
 
   const cumulativeData = React.useMemo(() => {
-    let total = 0
-    return checkInsData.map((row) => {
-      total += row.checkins
-      return { ...row, cumulative: total }
-    })
+    return checkInsData.reduce<Array<(typeof checkInsData)[number] & { cumulative: number }>>((rows, row) => {
+      const previousTotal = rows.at(-1)?.cumulative ?? 0
+      rows.push({ ...row, cumulative: previousTotal + row.checkins })
+      return rows
+    }, [])
   }, [checkInsData])
 
   const areaGradientId = React.useId().replace(/:/g, "")
@@ -436,7 +436,7 @@ export function DashboardAnalytics() {
               <YAxis tickLine={false} axisLine={false} tickMargin={8} className="text-muted-foreground text-xs" />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {ratingsDistributionData.map((entry, index) => (
+                {ratingsDistributionData.map((entry) => (
                   <Cell key={entry.stars} fill={entry.fill} />
                 ))}
               </Bar>
@@ -471,7 +471,7 @@ export function DashboardAnalytics() {
                   paddingAngle={2}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {trafficSourceData.map((entry, index) => (
+                  {trafficSourceData.map((entry) => (
                     <Cell key={entry.name} fill={entry.fill} />
                   ))}
                 </Pie>

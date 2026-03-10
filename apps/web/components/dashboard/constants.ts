@@ -66,3 +66,23 @@ export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
 export type WorkspaceDashboardTabId = (typeof workspaceDashboardTabs)[number]["id"]
 export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
 export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId
+export type DashboardTabMessageKey =
+  | "museumDetails"
+  | "organizations"
+  | "exhibitions"
+  | "interactions"
+  | "analytics"
+  | "orgRequests"
+  | "users"
+  | "invitations"
+
+export const dashboardTabMessageKeys: Record<AllDashboardTabId, DashboardTabMessageKey> = {
+  "museum-details": "museumDetails",
+  organizations: "organizations",
+  exhibitions: "exhibitions",
+  interactions: "interactions",
+  analytics: "analytics",
+  "org-requests": "orgRequests",
+  users: "users",
+  invitations: "invitations",
+}

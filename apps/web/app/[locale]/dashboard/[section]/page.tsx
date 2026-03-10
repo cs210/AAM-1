@@ -1,8 +1,6 @@
+import { getTranslations } from "next-intl/server"
 import { redirect } from "next/navigation"
-import { AdminInvitations } from "@/components/dashboard/admin-invitations"
-import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
-import { AdminUsers } from "@/components/dashboard/admin-users"
-import { dashboardPathToTabId } from "@/components/dashboard/constants"
+import { dashboardPathToTabId, dashboardTabMessageKeys } from "@/components/dashboard/constants"
 import { DashboardOrganizations } from "@/components/dashboard/dashboard-organizations"
 import { MuseumDetailsForm } from "@/components/dashboard/museum-details-form"
 import {
@@ -12,26 +10,20 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-const sectionLabels: Record<string, string> = {
-  exhibitions: "Exhibitions",
-  interactions: "Interactions",
-  analytics: "Analytics",
-}
-
 export default async function DashboardSectionPage({
   params,
 }: {
-  params: Promise<{ section: string }>
+  params: Promise<{ locale: string; section: string }>
 }) {
-  const { section } = await params
+  const { locale, section } = await params
 
   if (section === "admin") {
-    redirect("/dashboard/admin/org-requests")
+    redirect(`/${locale}/dashboard/admin/org-requests`)
   }
 
   const tabId = dashboardPathToTabId[section]
   if (!tabId) {
-    redirect("/dashboard/details")
+    redirect(`/${locale}/dashboard/details`)
   }
 
   if (tabId === "museum-details") {
@@ -41,13 +33,15 @@ export default async function DashboardSectionPage({
     return <DashboardOrganizations />
   }
 
-  const label = sectionLabels[section] ?? section
+  const t = await getTranslations("dashboard.shell")
+  const tTabs = await getTranslations("dashboard.tabs")
+  const label = tTabs(dashboardTabMessageKeys[tabId])
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Coming Soon</CardTitle>
+        <CardTitle>{t("comingSoon")}</CardTitle>
         <CardDescription>
-          The {label} section will be part of the next iteration.
+          {t("comingSoonDescription", { section: label })}
         </CardDescription>
       </CardHeader>
     </Card>

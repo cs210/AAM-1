@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
 import { ExternalLinkIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -31,6 +32,22 @@ type OperatingHour = {
   isOpen: boolean
   openTime: string
   closeTime: string
+}
+
+const dayMessageKeys = {
+  Monday: "monday",
+  Tuesday: "tuesday",
+  Wednesday: "wednesday",
+  Thursday: "thursday",
+  Friday: "friday",
+  Saturday: "saturday",
+  Sunday: "sunday",
+} as const
+
+type DayName = keyof typeof dayMessageKeys
+
+function isDayName(day: string): day is DayName {
+  return day in dayMessageKeys
 }
 
 type FormState = {
@@ -98,26 +115,26 @@ type MuseumDetailsRow = {
 }
 
 const timezoneItems = [
-  { label: "Pacific Time (PT)", value: "America/Los_Angeles" },
-  { label: "Mountain Time (MT)", value: "America/Denver" },
-  { label: "Central Time (CT)", value: "America/Chicago" },
-  { label: "Eastern Time (ET)", value: "America/New_York" },
+  { key: "pacific", value: "America/Los_Angeles" },
+  { key: "mountain", value: "America/Denver" },
+  { key: "central", value: "America/Chicago" },
+  { key: "eastern", value: "America/New_York" },
 ] as const
 
 const languageItems = [
-  { label: "English", value: "en" },
-  { label: "Spanish", value: "es" },
-  { label: "French", value: "fr" },
-  { label: "German", value: "de" },
+  { key: "english", value: "en" },
+  { key: "spanish", value: "es" },
+  { key: "french", value: "fr" },
+  { key: "german", value: "de" },
 ] as const
 
 const accessibilityOptions = [
-  { id: "wheelchair", label: "Wheelchair accessible entrances" },
-  { id: "elevators", label: "Elevators available" },
-  { id: "accessible-restrooms", label: "Accessible restrooms" },
-  { id: "assistive-listening", label: "Assistive listening devices" },
-  { id: "braille-signage", label: "Braille / tactile signage" },
-  { id: "sensory-hours", label: "Sensory-friendly visiting hours" },
+  { id: "wheelchair" },
+  { id: "elevators" },
+  { id: "accessible-restrooms" },
+  { id: "assistive-listening" },
+  { id: "braille-signage" },
+  { id: "sensory-hours" },
 ] as const
 
 const defaultOperatingHours: OperatingHour[] = [
@@ -182,6 +199,9 @@ function toFormState(row: MuseumDetailsRow): FormState {
 }
 
 export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormProps) {
+  const t = useTranslations("dashboard.museumDetails")
+  const tDay = useTranslations("dashboard.museumDetails.days")
+  const tCommon = useTranslations("common")
   const museumIdFromContext = useDashboardMuseumId()
   const museumId = museumIdProp ?? museumIdFromContext
 
@@ -252,23 +272,23 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     const longitude = Number(form.longitude.trim())
 
     if (!name) {
-      setError("Museum name is required.")
+      setError(t("errors.nameRequired"))
       return
     }
     if (!category) {
-      setError("Category is required.")
+      setError(t("errors.categoryRequired"))
       return
     }
     if (!city || !state) {
-      setError("City and state are required.")
+      setError(t("errors.cityStateRequired"))
       return
     }
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      setError("Latitude must be a number between -90 and 90.")
+      setError(t("errors.latitudeRange"))
       return
     }
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      setError("Longitude must be a number between -180 and 180.")
+      setError(t("errors.longitudeRange"))
       return
     }
 
@@ -322,12 +342,12 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
         accessibilityNotes: optionalText(form.accessibilityNotes),
         point: { latitude, longitude },
       })
-      setSuccess("Museum details saved.")
+      setSuccess(t("saveSuccess"))
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "Failed to save museum details."
+          : t("errors.saveFailed")
       )
     } finally {
       setSaving(false)
@@ -338,8 +358,8 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Museum Details</CardTitle>
-          <CardDescription>Select a museum context to edit details.</CardDescription>
+          <CardTitle>{t("emptyStateTitle")}</CardTitle>
+          <CardDescription>{t("emptyStateDescription")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -349,7 +369,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     return (
       <Card>
         <CardContent className="py-12">
-          <div className="text-muted-foreground text-center text-sm">Loading museum details…</div>
+          <div className="text-muted-foreground text-center text-sm">{t("loading")}</div>
         </CardContent>
       </Card>
     )
@@ -359,8 +379,8 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Museum Details</CardTitle>
-          <CardDescription>This museum context is invalid or no longer exists.</CardDescription>
+          <CardTitle>{t("emptyStateTitle")}</CardTitle>
+          <CardDescription>{t("invalidDescription")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -370,9 +390,9 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div>
-          <CardTitle>Museum Information</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
           <CardDescription>
-            This information appears in your visitor-facing app profile.
+            {t("description")}
           </CardDescription>
         </div>
         <Button
@@ -383,7 +403,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           render={<a href={`/museums/${encodeURIComponent(museumId)}`} target="_blank" rel="noreferrer" />}
         >
           <ExternalLinkIcon className="size-4" />
-          View page
+          {t("viewPage")}
         </Button>
       </CardHeader>
       <CardContent>
@@ -401,7 +421,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-name">Museum Name</Label>
+              <Label htmlFor="museum-details-name">{t("fields.name")}</Label>
               <Input
                 id="museum-details-name"
                 value={form.name}
@@ -414,7 +434,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
               )} */}
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-tagline">Tagline</Label>
+              <Label htmlFor="museum-details-tagline">{t("fields.tagline")}</Label>
               <Input
                 id="museum-details-tagline"
                 value={form.tagline}
@@ -424,7 +444,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           </div>
 
           <div className="grid gap-1">
-            <Label htmlFor="museum-details-description">Short Description</Label>
+            <Label htmlFor="museum-details-description">{t("fields.description")}</Label>
             <Textarea
               id="museum-details-description"
               value={form.description}
@@ -435,7 +455,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-phone">Public Phone</Label>
+              <Label htmlFor="museum-details-phone">{t("fields.phone")}</Label>
               <Input
                 id="museum-details-phone"
                 value={form.phone}
@@ -443,7 +463,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
               />
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-email">Public Email</Label>
+              <Label htmlFor="museum-details-email">{t("fields.email")}</Label>
               <Input
                 id="museum-details-email"
                 type="email"
@@ -454,7 +474,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           </div>
 
           <div className="grid gap-1">
-            <Label htmlFor="museum-details-website">Website</Label>
+            <Label htmlFor="museum-details-website">{t("fields.website")}</Label>
             <Input
               id="museum-details-website"
               value={form.website}
@@ -464,16 +484,16 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-timezone">Timezone</Label>
+              <Label htmlFor="museum-details-timezone">{t("fields.timezone")}</Label>
               <Select value={form.timezone} onValueChange={(value) => setForm((prev) => ({ ...prev, timezone: value ?? "" }))}>
                 <SelectTrigger id="museum-details-timezone" className="w-full">
-                  <SelectValue placeholder="Select timezone" />
+                  <SelectValue placeholder={t("placeholders.selectTimezone")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     {timezoneItems.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
-                        {item.label}
+                        {t(`timezones.${item.key}`)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -481,16 +501,16 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
               </Select>
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-language">Primary App Language</Label>
+              <Label htmlFor="museum-details-language">{t("fields.primaryLanguage")}</Label>
               <Select value={form.primaryLanguage} onValueChange={(value) => setForm((prev) => ({ ...prev, primaryLanguage: value ?? "" }))}>
                 <SelectTrigger id="museum-details-language" className="w-full">
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder={t("placeholders.selectLanguage")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     {languageItems.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
-                        {item.label}
+                        {t(`languages.${item.key}`)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -500,18 +520,18 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           </div>
 
           <div className="grid gap-1">
-            <Label htmlFor="museum-details-category">Category</Label>
+            <Label htmlFor="museum-details-category">{t("fields.category")}</Label>
             <Input
               id="museum-details-category"
               value={form.category}
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
-              placeholder="art, history, science"
+              placeholder={t("placeholders.category")}
               required
             />
           </div>
 
           <div className="grid gap-1">
-            <Label htmlFor="museum-details-address">Street Address</Label>
+            <Label htmlFor="museum-details-address">{t("fields.address")}</Label>
             <Input
               id="museum-details-address"
               value={form.address}
@@ -521,7 +541,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="grid gap-1 md:col-span-2">
-              <Label htmlFor="museum-details-city">City</Label>
+              <Label htmlFor="museum-details-city">{t("fields.city")}</Label>
               <Input
                 id="museum-details-city"
                 value={form.city}
@@ -530,7 +550,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
               />
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-state">State / Province</Label>
+              <Label htmlFor="museum-details-state">{t("fields.state")}</Label>
               <Input
                 id="museum-details-state"
                 value={form.state}
@@ -539,7 +559,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
               />
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-postal">Postal Code</Label>
+              <Label htmlFor="museum-details-postal">{t("fields.postalCode")}</Label>
               <Input
                 id="museum-details-postal"
                 value={form.postalCode}
@@ -550,7 +570,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-latitude">Latitude</Label>
+              <Label htmlFor="museum-details-latitude">{t("fields.latitude")}</Label>
               <Input
                 id="museum-details-latitude"
                 type="number"
@@ -561,7 +581,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
               />
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-details-longitude">Longitude</Label>
+              <Label htmlFor="museum-details-longitude">{t("fields.longitude")}</Label>
               <Input
                 id="museum-details-longitude"
                 type="number"
@@ -576,23 +596,24 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           <MuseumImageManager museumId={museumId} onPrimaryImageChange={handlePrimaryImageChange} />
 
           <div>
-            <Label>Operating Hours</Label>
+            <Label>{t("fields.operatingHours")}</Label>
             <div className="mt-1 rounded-xl border">
               <div className="grid grid-cols-[minmax(120px,1fr)_110px_1fr_1fr] gap-2 border-b px-3 py-2 text-xs font-medium tracking-wide uppercase">
-                <span>Day</span>
-                <span>Open</span>
-                <span>From</span>
-                <span>To</span>
+                <span>{t("hours.day")}</span>
+                <span>{t("hours.open")}</span>
+                <span>{t("hours.from")}</span>
+                <span>{t("hours.to")}</span>
               </div>
               <div className="divide-y">
                 {operatingHours.map((entry) => {
+                  const dayLabel = isDayName(entry.day) ? tDay(dayMessageKeys[entry.day]) : entry.day
                   const dayId = entry.day.toLowerCase()
                   return (
                     <div
                       key={entry.day}
                       className="grid grid-cols-[minmax(120px,1fr)_110px_1fr_1fr] gap-2 px-3 py-2"
                     >
-                      <div className="flex items-center text-sm font-medium">{entry.day}</div>
+                      <div className="flex items-center text-sm font-medium">{dayLabel}</div>
                       <div className="flex items-center">
                         <label className="inline-flex items-center gap-2 text-sm">
                           <input
@@ -604,7 +625,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
                               updateOperatingHour(entry.day, "isOpen", event.target.checked)
                             }
                           />
-                          Open
+                          {t("hours.open")}
                         </label>
                       </div>
                       <Input
@@ -633,7 +654,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           </div>
 
           <div>
-            <Label>Accessibility Features</Label>
+            <Label>{t("fields.accessibilityFeatures")}</Label>
             <div className="mt-1 rounded-xl border p-4">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {accessibilityOptions.map((option) => (
@@ -649,12 +670,12 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
                       checked={selectedAccessibility.includes(option.id)}
                       onChange={() => toggleAccessibilityOption(option.id)}
                     />
-                    {option.label}
+                    {t(`accessibilityOptions.${option.id}`)}
                   </label>
                 ))}
               </div>
               <div className="mt-4 grid gap-1">
-                <Label htmlFor="museum-details-accessibility-notes">Additional Accessibility Notes</Label>
+                <Label htmlFor="museum-details-accessibility-notes">{t("fields.accessibilityNotes")}</Label>
                 <Textarea
                   id="museum-details-accessibility-notes"
                   rows={3}
@@ -670,7 +691,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
       </CardContent>
       <CardFooter className="justify-end">
         <Button type="submit" form="museum-details-form" disabled={saving}>
-          {saving ? "Saving…" : "Save Museum Details"}
+          {saving ? tCommon("saving") : t("save")}
         </Button>
       </CardFooter>
     </Card>

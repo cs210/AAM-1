@@ -1,10 +1,39 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import createMiddleware from "next-intl/middleware";
+import { routing } from "./i18n/routing";
 
-// Routes that unauthenticated users can access
-const publicRoutes = ["/sign-in", "/sign-up"];
+const intlMiddleware = createMiddleware(routing);
+
+// Routes that unauthenticated users can access (path without locale prefix)
+const publicRoutes = ["/sign-in", "/sign-up", "/accept-invitation"];
+
+/** Pathname without the locale prefix (e.g. /en/dashboard -> /dashboard) */
+function pathnameWithoutLocale(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  // First segment is locale
+  if (segments.length > 0 && routing.locales.includes(segments[0] as (typeof routing.locales)[number])) {
+    return "/" + segments.slice(1).join("/") || "/";
+  }
+  return pathname;
+}
+
+/** Locale from pathname (e.g. /en/dashboard -> en) */
+function localeFromPathname(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length > 0 && routing.locales.includes(segments[0] as (typeof routing.locales)[number])) {
+    return segments[0] as (typeof routing.locales)[number];
+  }
+  return routing.defaultLocale;
+}
 
 export default async function proxy(request: NextRequest) {
+  // Run next-intl first (locale detection and redirect to prefix)
+  const intlResponse = await intlMiddleware(request);
+  if (intlResponse && intlResponse.status >= 300 && intlResponse.status < 400) {
+    return intlResponse;
+  }
+
   const configuredSiteUrlRaw = process.env.SITE_URL?.trim();
   const configuredSiteUrl =
     configuredSiteUrlRaw && !configuredSiteUrlRaw.includes("$") ? configuredSiteUrlRaw : null;
@@ -26,23 +55,25 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
-  const sessionCookie = getSessionCookie(request);
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
+  const pathname = request.nextUrl.pathname;
+  const pathWithoutLocale = pathnameWithoutLocale(pathname);
+  const isPublicRoute = publicRoutes.includes(pathWithoutLocale);
 
-  // Allow public routes and API auth routes
+  const sessionCookie = getSessionCookie(request);
+
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // Redirect unauthenticated users to sign-in
   if (!sessionCookie) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    const locale = localeFromPathname(pathname);
+    const signInUrl = new URL(`/${locale}/sign-in`, request.url);
+    return NextResponse.redirect(signInUrl, 302);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  // Run proxy on all routes except static assets and auth API routes
-  matcher: ["/((?!.*\\..*|_next|api/auth).+)", "/trpc(.*)"],
+  matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)"],
 };

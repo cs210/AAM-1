@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useAction } from "convex/react"
+import { useTranslations } from "next-intl"
 import { api } from "@packages/backend/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -17,14 +18,15 @@ import {
 } from "@/components/ui/select"
 
 const ORG_ROLES = [
-  { value: "member", label: "Member" },
-  { value: "admin", label: "Admin" },
-  { value: "owner", label: "Owner" },
+  { value: "member", key: "member" },
+  { value: "admin", key: "admin" },
+  { value: "owner", key: "owner" },
 ] as const
 
 type OrgRow = { _id: string; name?: string; slug?: string }
 
 export function AdminInvitations() {
+  const t = useTranslations("dashboard.adminInvitations")
   const listOrgs = useAction(api.admin.listOrganizationsForAdmin)
   const [orgs, setOrgs] = React.useState<OrgRow[] | null | undefined>(undefined)
   const [email, setEmail] = React.useState("")
@@ -58,9 +60,9 @@ export function AdminInvitations() {
     })
     setSubmitting(false)
     if (res.error) {
-      setError(res.error.message ?? "Failed to send invitation")
+      setError(res.error.message ?? t("errors.sendFailed"))
     } else {
-      setSuccess(`Invitation sent to ${email.trim()}`)
+      setSuccess(t("success", { email: email.trim() }))
       setEmail("")
       loadOrgs()
     }
@@ -71,14 +73,14 @@ export function AdminInvitations() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invitations</CardTitle>
-        <CardDescription>Invite users to an organization by email.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
         {orgs === undefined ? (
-          <p className="text-muted-foreground text-sm">Loading organizations…</p>
+          <p className="text-muted-foreground text-sm">{t("loading")}</p>
         ) : orgList.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No organizations yet. Approve an org request first.</p>
+          <p className="text-muted-foreground text-sm">{t("empty")}</p>
         ) : (
           <form onSubmit={handleInvite} className="space-y-4">
             {error && (
@@ -93,21 +95,21 @@ export function AdminInvitations() {
             )}
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="grid gap-2">
-                <Label htmlFor="invite-email">Email</Label>
+                <Label htmlFor="invite-email">{t("fields.email")}</Label>
                 <Input
                   id="invite-email"
                   type="email"
-                  placeholder="user@example.com"
+                  placeholder={t("placeholders.email")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="invite-org">Organization</Label>
+                <Label htmlFor="invite-org">{t("fields.organization")}</Label>
                 <Select value={organizationId} onValueChange={(v) => setOrganizationId(v ?? "")} required>
                   <SelectTrigger id="invite-org">
-                    <SelectValue placeholder="Select organization" />
+                    <SelectValue placeholder={t("placeholders.organization")} />
                   </SelectTrigger>
                   <SelectContent>
                     {orgList.map((org) => (
@@ -119,7 +121,7 @@ export function AdminInvitations() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="invite-role">Role</Label>
+                <Label htmlFor="invite-role">{t("fields.role")}</Label>
                 <Select value={role} onValueChange={(v) => setRole(v as "member" | "admin" | "owner")}>
                   <SelectTrigger id="invite-role">
                     <SelectValue />
@@ -127,7 +129,7 @@ export function AdminInvitations() {
                   <SelectContent>
                     {ORG_ROLES.map((r) => (
                       <SelectItem key={r.value} value={r.value}>
-                        {r.label}
+                        {t(`roles.${r.key}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -135,7 +137,7 @@ export function AdminInvitations() {
               </div>
             </div>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Sending…" : "Send invitation"}
+              {submitting ? t("sending") : t("send")}
             </Button>
           </form>
         )}
