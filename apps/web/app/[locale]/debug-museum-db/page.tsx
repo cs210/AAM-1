@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@packages/backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ const defaultEvent = {
 };
 
 export default function DebugSeedPage() {
+  const t = useTranslations("debug");
   const museums = useQuery(api.museums.listMuseums);
   const addMuseum = useMutation(api.museums.addMuseum);
   const addEvent = useMutation(api.events.addEvent);
@@ -70,20 +72,20 @@ export default function DebugSeedPage() {
   };
 
   const submitMuseum = async () => {
-    setMuseumStatus({ type: "working", message: "Saving museum..." });
+    setMuseumStatus({ type: "working", message: t("saving") });
     if (!museumForm.name.trim()) {
-      setMuseumStatus({ type: "error", message: "Museum name is required." });
+      setMuseumStatus({ type: "error", message: t("museumRequired") });
       return;
     }
     if (!museumForm.city.trim() || !museumForm.state.trim() || !museumForm.zipCode.trim()) {
-      setMuseumStatus({ type: "error", message: "City, state, and zip code are required." });
+      setMuseumStatus({ type: "error", message: t("cityStateZipRequired") });
       return;
     }
 
     const latitude = Number(museumForm.latitude);
     const longitude = Number(museumForm.longitude);
     if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-      setMuseumStatus({ type: "error", message: "Latitude and longitude must be valid numbers." });
+      setMuseumStatus({ type: "error", message: t("latLngValid") });
       return;
     }
 
@@ -102,35 +104,35 @@ export default function DebugSeedPage() {
         website: museumForm.website.trim() || undefined,
         phone: museumForm.phone.trim() || undefined,
       });
-      setMuseumStatus({ type: "success", message: "Museum saved. Add another or switch to events." });
+      setMuseumStatus({ type: "success", message: t("museumSaved") });
       setMuseumForm({ ...defaultMuseum, city: museumForm.city, state: museumForm.state, zipCode: museumForm.zipCode });
     } catch (error) {
-      setMuseumStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to save museum." });
+      setMuseumStatus({ type: "error", message: error instanceof Error ? error.message : t("saveMuseumFailed") });
     }
   };
 
   const submitEvent = async () => {
-    setEventStatus({ type: "working", message: "Saving event..." });
+    setEventStatus({ type: "working", message: t("saving") });
     if (!eventForm.title.trim()) {
-      setEventStatus({ type: "error", message: "Event title is required." });
+      setEventStatus({ type: "error", message: t("eventTitleRequired") });
       return;
     }
 
     const startDate = Date.parse(eventForm.startDate);
     const endDate = Date.parse(eventForm.endDate);
     if (Number.isNaN(startDate) || Number.isNaN(endDate)) {
-      setEventStatus({ type: "error", message: "Start and end dates are required." });
+      setEventStatus({ type: "error", message: t("startEndRequired") });
       return;
     }
     if (endDate < startDate) {
-      setEventStatus({ type: "error", message: "End date must be after start date." });
+      setEventStatus({ type: "error", message: t("endAfterStart") });
       return;
     }
 
     const hasMuseum = Boolean(eventForm.museumId);
     if (!hasMuseum) {
       if (!eventForm.city.trim() || !eventForm.state.trim() || !eventForm.zipCode.trim()) {
-        setEventStatus({ type: "error", message: "Location is required when no museum is selected." });
+        setEventStatus({ type: "error", message: t("locationRequiredNoMuseum") });
         return;
       }
     }
@@ -139,13 +141,13 @@ export default function DebugSeedPage() {
     let longitude: number | undefined;
     if (!hasMuseum) {
       if (!eventForm.latitude.trim() || !eventForm.longitude.trim()) {
-        setEventStatus({ type: "error", message: "Latitude and longitude are required when no museum is selected." });
+        setEventStatus({ type: "error", message: t("latLngRequiredNoMuseum") });
         return;
       }
       latitude = Number(eventForm.latitude);
       longitude = Number(eventForm.longitude);
       if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-        setEventStatus({ type: "error", message: "Latitude and longitude must be valid numbers." });
+        setEventStatus({ type: "error", message: t("latLngValid") });
         return;
       }
     }
@@ -168,10 +170,10 @@ export default function DebugSeedPage() {
         imageUrl: eventForm.imageUrl.trim() || undefined,
         registrationUrl: eventForm.registrationUrl.trim() || undefined,
       });
-      setEventStatus({ type: "success", message: "Event saved. Add another." });
+      setEventStatus({ type: "success", message: t("eventSaved") });
       setEventForm({ ...defaultEvent, museumId: eventForm.museumId });
     } catch (error) {
-      setEventStatus({ type: "error", message: error instanceof Error ? error.message : "Failed to save event." });
+      setEventStatus({ type: "error", message: error instanceof Error ? error.message : t("saveEventFailed") });
     }
   };
 
@@ -180,14 +182,13 @@ export default function DebugSeedPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <div className="flex flex-col gap-3">
           <span className="w-fit rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Debug Console
+            {t("badge")}
           </span>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Manual Data Entry for Museums & Events
+            {t("title")}
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Use this page to insert dummy content while shaping the product. These entries go straight to Convex,
-            so treat it as a staging-only tool.
+            {t("intro")}
           </p>
         </div>
 
@@ -195,12 +196,12 @@ export default function DebugSeedPage() {
           <div className="space-y-6">
             <Card className="border border-border/60 bg-background/80 shadow-[0_20px_40px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
               <CardHeader>
-                <CardTitle>Museum Intake</CardTitle>
-                <CardDescription>Add a museum entry with location + metadata.</CardDescription>
+                <CardTitle>{t("museumIntake")}</CardTitle>
+                <CardDescription>{t("museumIntakeDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="museum-name">Museum name</Label>
+                  <Label htmlFor="museum-name">{t("museumName")}</Label>
                   <Input
                     id="museum-name"
                     value={museumForm.name}
@@ -209,7 +210,7 @@ export default function DebugSeedPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="museum-description">Description</Label>
+                  <Label htmlFor="museum-description">{t("description")}</Label>
                   <Textarea
                     id="museum-description"
                     value={museumForm.description}
@@ -219,7 +220,7 @@ export default function DebugSeedPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="museum-category">Category</Label>
+                  <Label htmlFor="museum-category">{t("category")}</Label>
                   <Input
                     id="museum-category"
                     value={museumForm.category}
@@ -229,10 +230,10 @@ export default function DebugSeedPage() {
                 </div>
                 <div className="grid gap-3 rounded-xl border border-border/60 bg-muted/50 p-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Location
+                    {t("location")}
                   </span>
                   <div className="grid gap-2">
-                    <Label htmlFor="museum-address">Address</Label>
+                    <Label htmlFor="museum-address">{t("address")}</Label>
                     <Input
                       id="museum-address"
                       value={museumForm.address}
@@ -242,7 +243,7 @@ export default function DebugSeedPage() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="museum-city">City</Label>
+                      <Label htmlFor="museum-city">{t("city")}</Label>
                       <Input
                         id="museum-city"
                         value={museumForm.city}
@@ -251,7 +252,7 @@ export default function DebugSeedPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="museum-state">State</Label>
+                      <Label htmlFor="museum-state">{t("state")}</Label>
                       <Input
                         id="museum-state"
                         value={museumForm.state}
@@ -260,7 +261,7 @@ export default function DebugSeedPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="museum-zip">Zip</Label>
+                      <Label htmlFor="museum-zip">{t("zip")}</Label>
                       <Input
                         id="museum-zip"
                         value={museumForm.zipCode}
@@ -271,7 +272,7 @@ export default function DebugSeedPage() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label htmlFor="museum-lat">Latitude</Label>
+                      <Label htmlFor="museum-lat">{t("latitude")}</Label>
                       <Input
                         id="museum-lat"
                         value={museumForm.latitude}
@@ -280,7 +281,7 @@ export default function DebugSeedPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="museum-lng">Longitude</Label>
+                      <Label htmlFor="museum-lng">{t("longitude")}</Label>
                       <Input
                         id="museum-lng"
                         value={museumForm.longitude}
@@ -292,7 +293,7 @@ export default function DebugSeedPage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="grid gap-2">
-                    <Label htmlFor="museum-image">Image URL</Label>
+                    <Label htmlFor="museum-image">{t("imageUrl")}</Label>
                     <Input
                       id="museum-image"
                       value={museumForm.imageUrl}
@@ -301,7 +302,7 @@ export default function DebugSeedPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="museum-website">Website</Label>
+                    <Label htmlFor="museum-website">{t("website")}</Label>
                     <Input
                       id="museum-website"
                       value={museumForm.website}
@@ -310,7 +311,7 @@ export default function DebugSeedPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="museum-phone">Phone</Label>
+                    <Label htmlFor="museum-phone">{t("phone")}</Label>
                     <Input
                       id="museum-phone"
                       value={museumForm.phone}
@@ -322,10 +323,10 @@ export default function DebugSeedPage() {
               </CardContent>
               <CardFooter className="flex flex-wrap gap-3">
                 <Button onClick={submitMuseum} disabled={museumStatus.type === "working"}>
-                  {museumStatus.type === "working" ? "Saving..." : "Save museum"}
+                  {museumStatus.type === "working" ? t("saving") : t("saveMuseum")}
                 </Button>
                 <Button variant="ghost" onClick={resetMuseum}>
-                  Reset form
+                  {t("resetForm")}
                 </Button>
                 {museumStatus.message && (
                   <span
@@ -339,12 +340,12 @@ export default function DebugSeedPage() {
 
             <Card className="border border-border/60 bg-background/80 shadow-[0_20px_40px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
               <CardHeader>
-                <CardTitle>Event Intake</CardTitle>
-                <CardDescription>Attach to a museum or create a standalone event.</CardDescription>
+                <CardTitle>{t("eventIntake")}</CardTitle>
+                <CardDescription>{t("eventIntakeDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="event-title">Event title</Label>
+                  <Label htmlFor="event-title">{t("eventTitle")}</Label>
                   <Input
                     id="event-title"
                     value={eventForm.title}
@@ -353,7 +354,7 @@ export default function DebugSeedPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="event-description">Description</Label>
+                  <Label htmlFor="event-description">{t("description")}</Label>
                   <Textarea
                     id="event-description"
                     value={eventForm.description}
@@ -363,7 +364,7 @@ export default function DebugSeedPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="event-category">Category</Label>
+                  <Label htmlFor="event-category">{t("category")}</Label>
                   <Input
                     id="event-category"
                     value={eventForm.category}
@@ -372,18 +373,18 @@ export default function DebugSeedPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Museum (optional)</Label>
+                  <Label>{t("museumOptional")}</Label>
                   <Select
                     value={eventForm.museumId ?? ""}
                     onValueChange={(value) => setEventForm((prev) => ({ ...prev, museumId: value || null }))}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a museum">
-                        {selectedMuseum?.name ?? "Select a museum"}
+                      <SelectValue placeholder={t("selectMuseum")}>
+                        {selectedMuseum?.name ?? t("selectMuseum")}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No museum</SelectItem>
+                      <SelectItem value="">{t("noMuseum")}</SelectItem>
                       {museumList.map((museum) => (
                         <SelectItem key={museum._id} value={museum._id}>
                           {museum.name}
@@ -392,16 +393,16 @@ export default function DebugSeedPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    If no museum is selected, you must provide a location below.
+                    {t("noMuseumLocationHint")}
                   </p>
                 </div>
                 <div className="grid gap-3 rounded-xl border border-border/60 bg-muted/50 p-4">
                   <span className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Event Location (when no museum)
+                    {t("eventLocation")}
                   </span>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="grid gap-2">
-                      <Label htmlFor="event-city">City</Label>
+                      <Label htmlFor="event-city">{t("city")}</Label>
                       <Input
                         id="event-city"
                         value={eventForm.city}
@@ -410,7 +411,7 @@ export default function DebugSeedPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="event-state">State</Label>
+                      <Label htmlFor="event-state">{t("state")}</Label>
                       <Input
                         id="event-state"
                         value={eventForm.state}
@@ -419,7 +420,7 @@ export default function DebugSeedPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="event-zip">Zip</Label>
+                      <Label htmlFor="event-zip">{t("zip")}</Label>
                       <Input
                         id="event-zip"
                         value={eventForm.zipCode}
@@ -430,7 +431,7 @@ export default function DebugSeedPage() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label htmlFor="event-lat">Latitude</Label>
+                      <Label htmlFor="event-lat">{t("latitude")}</Label>
                       <Input
                         id="event-lat"
                         value={eventForm.latitude}
@@ -439,7 +440,7 @@ export default function DebugSeedPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="event-lng">Longitude</Label>
+                      <Label htmlFor="event-lng">{t("longitude")}</Label>
                       <Input
                         id="event-lng"
                         value={eventForm.longitude}
@@ -451,7 +452,7 @@ export default function DebugSeedPage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="event-start">Start date</Label>
+                    <Label htmlFor="event-start">{t("startDate")}</Label>
                     <Input
                       id="event-start"
                       type="datetime-local"
@@ -460,7 +461,7 @@ export default function DebugSeedPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="event-end">End date</Label>
+                    <Label htmlFor="event-end">{t("endDate")}</Label>
                     <Input
                       id="event-end"
                       type="datetime-local"
@@ -471,7 +472,7 @@ export default function DebugSeedPage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="event-image">Image URL</Label>
+                    <Label htmlFor="event-image">{t("imageUrl")}</Label>
                     <Input
                       id="event-image"
                       value={eventForm.imageUrl}
@@ -480,7 +481,7 @@ export default function DebugSeedPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="event-register">Registration URL</Label>
+                    <Label htmlFor="event-register">{t("registrationUrl")}</Label>
                     <Input
                       id="event-register"
                       value={eventForm.registrationUrl}
@@ -495,7 +496,7 @@ export default function DebugSeedPage() {
                   {eventStatus.type === "working" ? "Saving..." : "Save event"}
                 </Button>
                 <Button variant="ghost" onClick={resetEvent}>
-                  Reset form
+                  {t("resetForm")}
                 </Button>
                 {eventStatus.message && (
                   <span
@@ -510,15 +511,15 @@ export default function DebugSeedPage() {
 
           <Card className="h-fit border border-border/60 bg-background/80 shadow-[0_20px_40px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
             <CardHeader>
-              <CardTitle>Current Museums</CardTitle>
-              <CardDescription>Quick snapshot to confirm inserts.</CardDescription>
+              <CardTitle>{t("currentMuseums")}</CardTitle>
+              <CardDescription>{t("currentMuseumsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {museums === undefined && (
                 <div className="h-20 animate-pulse rounded-lg bg-muted" />
               )}
               {museumList.length === 0 && museums !== undefined && (
-                <p className="text-sm text-muted-foreground">No museums yet. Add the first one.</p>
+                <p className="text-sm text-muted-foreground">{t("noMuseumsAddFirst")}</p>
               )}
               {museumList.map((museum) => (
                 <div key={museum._id} className="rounded-lg border border-border/60 bg-muted/40 p-3">

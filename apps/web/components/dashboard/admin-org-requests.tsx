@@ -495,7 +495,7 @@ export function AdminOrgRequests() {
                   <div className="space-y-1">
                     <p className="font-medium">{organization.name ?? t("unnamedOrganization")}</p>
                     <p className="text-muted-foreground text-sm">
-                      {t("currentMuseum")}:{" "}
+                      {t("currentMuseum")}
                       {organization.hasInvalidMuseumContext
                         ? t("invalidMuseumContext")
                         : organization.linkedMuseumName ?? t("unassigned")}

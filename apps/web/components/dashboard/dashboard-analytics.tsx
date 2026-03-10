@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import {
   Bar,
   BarChart as RechartsBarChart,
@@ -62,23 +63,16 @@ const allCheckInsData = [
   { week: "Week 12", label: "W12", checkins: 248, previous: 210 },
 ]
 
-const checkInsChartConfigSingle = {
-  checkins: {
-    label: "Check-ins",
-    color: "var(--chart-1)",
-  },
-} satisfies ChartConfig
+const makeCheckInsChartConfigSingle = (checkinsLabel: string) =>
+  ({
+    checkins: { label: checkinsLabel, color: "var(--chart-1)" },
+  }) satisfies ChartConfig
 
-const checkInsChartConfigCompare = {
-  checkins: {
-    label: "This period",
-    color: "var(--chart-1)",
-  },
-  previous: {
-    label: "Previous period",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig
+const makeCheckInsChartConfigCompare = (thisPeriodLabel: string, previousLabel: string) =>
+  ({
+    checkins: { label: thisPeriodLabel, color: "var(--chart-1)" },
+    previous: { label: previousLabel, color: "var(--chart-2)" },
+  }) satisfies ChartConfig
 
 // Ratings: use theme chart colors per star (1–5)
 const ratingsDistributionData = [
@@ -89,28 +83,14 @@ const ratingsDistributionData = [
   { stars: "5", count: 30, fill: "var(--chart-5)" },
 ]
 
-const ratingsChartConfig = {
-  count: {
-    label: "Ratings",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig
+const makeRatingsChartConfig = (label: string) =>
+  ({ count: { label, color: "var(--chart-2)" } }) satisfies ChartConfig
 
-// Line chart: engagement trend (same data as check-ins, line style)
-const engagementTrendConfig = {
-  checkins: {
-    label: "Check-ins",
-    color: "var(--chart-1)",
-  },
-} satisfies ChartConfig
+const makeEngagementTrendConfig = (label: string) =>
+  ({ checkins: { label, color: "var(--chart-1)" } }) satisfies ChartConfig
 
-// Area chart: cumulative visits
-const cumulativeConfig = {
-  cumulative: {
-    label: "Cumulative visits",
-    color: "var(--chart-3)",
-  },
-} satisfies ChartConfig
+const makeCumulativeConfig = (label: string) =>
+  ({ cumulative: { label, color: "var(--chart-3)" } }) satisfies ChartConfig
 
 // Pie chart: where visitors find the museum (traffic source)
 const trafficSourceData = [
@@ -119,42 +99,54 @@ const trafficSourceData = [
   { name: "Website", value: 18, fill: "var(--chart-3)" },
   { name: "Walk-in", value: 12, fill: "var(--chart-4)" },
 ]
-const trafficSourceConfig = {
-  value: { label: "Visitors", color: "var(--chart-1)" },
-  App: { label: "App", color: "var(--chart-1)" },
-  Social: { label: "Social", color: "var(--chart-2)" },
-  Website: { label: "Website", color: "var(--chart-3)" },
-  "Walk-in": { label: "Walk-in", color: "var(--chart-4)" },
-} satisfies ChartConfig
+const makeTrafficSourceConfig = (visitorsLabel: string, appLabel: string, socialLabel: string, websiteLabel: string, walkInLabel: string) =>
+  ({
+    value: { label: visitorsLabel, color: "var(--chart-1)" },
+    App: { label: appLabel, color: "var(--chart-1)" },
+    Social: { label: socialLabel, color: "var(--chart-2)" },
+    Website: { label: websiteLabel, color: "var(--chart-3)" },
+    "Walk-in": { label: walkInLabel, color: "var(--chart-4)" },
+  }) satisfies ChartConfig
 
-// Pie chart: exhibition popularity (share of visits)
 const exhibitionShareData = [
   { name: "Modern Art", value: 35, fill: "var(--chart-1)" },
   { name: "History Wing", value: 28, fill: "var(--chart-2)" },
   { name: "Science Lab", value: 22, fill: "var(--chart-3)" },
   { name: "Kids Zone", value: 15, fill: "var(--chart-4)" },
 ]
-const exhibitionShareConfig = {
-  value: { label: "Share of visits", color: "var(--chart-1)" },
-  "Modern Art": { label: "Modern Art", color: "var(--chart-1)" },
-  "History Wing": { label: "History Wing", color: "var(--chart-2)" },
-  "Science Lab": { label: "Science Lab", color: "var(--chart-3)" },
-  "Kids Zone": { label: "Kids Zone", color: "var(--chart-4)" },
-} satisfies ChartConfig
+const makeExhibitionShareConfig = (shareLabel: string, modernArt: string, historyWing: string, scienceLab: string, kidsZone: string) =>
+  ({
+    value: { label: shareLabel, color: "var(--chart-1)" },
+    "Modern Art": { label: modernArt, color: "var(--chart-1)" },
+    "History Wing": { label: historyWing, color: "var(--chart-2)" },
+    "Science Lab": { label: scienceLab, color: "var(--chart-3)" },
+    "Kids Zone": { label: kidsZone, color: "var(--chart-4)" },
+  }) satisfies ChartConfig
 
-const DATE_RANGE_OPTIONS: { value: DateRangeKey; label: string; points: number }[] = [
-  { value: "7d", label: "Last 7 days", points: 7 },
-  { value: "30d", label: "Last 30 days", points: 7 },
-  { value: "12w", label: "Last 12 weeks", points: 12 },
-  { value: "custom", label: "Custom range", points: 12 },
+const DATE_RANGE_OPTIONS: { value: DateRangeKey; points: number }[] = [
+  { value: "7d", points: 7 },
+  { value: "30d", points: 7 },
+  { value: "12w", points: 12 },
+  { value: "custom", points: 12 },
 ]
 
 export function DashboardAnalytics() {
+  const t = useTranslations("dashboard.analytics")
   const [dateRange, setDateRange] = React.useState<DateRangeKey>("12w")
   const [comparePrevious, setComparePrevious] = React.useState(false)
   const [customFrom, setCustomFrom] = React.useState("")
   const [customTo, setCustomTo] = React.useState("")
   const [sortAsc, setSortAsc] = React.useState(false)
+
+  const dateRangeLabels: Record<DateRangeKey, string> = React.useMemo(
+    () => ({
+      "7d": t("last7Days"),
+      "30d": t("last30Days"),
+      "12w": t("last12Weeks"),
+      custom: t("customRange"),
+    }),
+    [t]
+  )
 
   const pointsToShow = dateRange === "custom" ? 12 : DATE_RANGE_OPTIONS.find((o) => o.value === dateRange)?.points ?? 12
   const checkInsData = React.useMemo(() => {
@@ -173,15 +165,46 @@ export function DashboardAnalytics() {
 
   const areaGradientId = React.useId().replace(/:/g, "")
 
-  const statCards = React.useMemo(() => {
-    const base = [
-      { title: "Total check-ins", value: "1,247", sub: "Visitor check-ins", icon: TicketCheckIcon, change: "+12% vs previous" },
-      { title: "Total ratings", value: "89", sub: "Ratings submitted", icon: StarIcon, change: "+5%" },
-      { title: "Average rating", value: "4.2", sub: "Out of 5 stars", icon: StarIcon, change: "+0.2" },
-      { title: "Museum followers", value: "312", sub: "Users following", icon: UserPlusIcon, change: "+8%" },
-    ]
-    return base
-  }, [])
+  const statCards = React.useMemo(
+    () => [
+      { title: t("totalCheckIns"), value: "1,247", sub: t("visitorCheckIns"), icon: TicketCheckIcon, change: t("changeVsPrevious") },
+      { title: t("totalRatings"), value: "89", sub: t("ratingsSubmitted"), icon: StarIcon, change: t("changePlus5") },
+      { title: t("averageRating"), value: "4.2", sub: t("outOf5Stars"), icon: StarIcon, change: t("changePlus02") },
+      { title: t("museumFollowers"), value: "312", sub: t("usersFollowing"), icon: UserPlusIcon, change: t("changePlus8") },
+    ],
+    [t]
+  )
+
+  const checkInsChartConfigSingle = React.useMemo(() => makeCheckInsChartConfigSingle(t("checkInsLabel")), [t])
+  const checkInsChartConfigCompare = React.useMemo(
+    () => makeCheckInsChartConfigCompare(t("thisPeriod"), t("previousPeriod")),
+    [t]
+  )
+  const ratingsChartConfig = React.useMemo(() => makeRatingsChartConfig(t("ratingsLabel")), [t])
+  const engagementTrendConfig = React.useMemo(() => makeEngagementTrendConfig(t("checkInsLabel")), [t])
+  const cumulativeConfig = React.useMemo(() => makeCumulativeConfig(t("cumulativeVisits")), [t])
+  const trafficSourceConfig = React.useMemo(
+    () =>
+      makeTrafficSourceConfig(
+        t("visitorsLabel"),
+        t("appLabel"),
+        t("socialLabel"),
+        t("websiteLabel"),
+        t("walkInLabel")
+      ),
+    [t]
+  )
+  const exhibitionShareConfig = React.useMemo(
+    () =>
+      makeExhibitionShareConfig(
+        t("shareOfVisits"),
+        t("modernArt"),
+        t("historyWing"),
+        t("scienceLab"),
+        t("kidsZone")
+      ),
+    [t]
+  )
 
   return (
     <div className="space-y-6">
@@ -190,23 +213,23 @@ export function DashboardAnalytics() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <CalendarIcon className="size-4" />
-            Date & range
+            {t("dateRange")}
           </CardTitle>
           <CardDescription>
-            Choose date range, sort order, and optionally compare to the previous period.
+            {t("dateRangeDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm whitespace-nowrap">Period</span>
+            <span className="text-muted-foreground text-sm whitespace-nowrap">{t("period")}</span>
             <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangeKey)}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select range" />
+                <SelectValue placeholder={t("selectRange")} />
               </SelectTrigger>
               <SelectContent>
                 {DATE_RANGE_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {dateRangeLabels[opt.value]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -220,7 +243,7 @@ export function DashboardAnalytics() {
                 onChange={(e) => setCustomFrom(e.target.value)}
                 className="border-input bg-background text-foreground h-8 rounded-lg border px-2.5 text-sm"
               />
-              <span className="text-muted-foreground text-sm">to</span>
+              <span className="text-muted-foreground text-sm">{t("to")}</span>
               <input
                 type="date"
                 value={customTo}
@@ -240,7 +263,7 @@ export function DashboardAnalytics() {
             )}
           >
             <ArrowLeftRightIcon className="size-4" />
-            {sortAsc ? "Oldest first" : "Newest first"}
+            {sortAsc ? t("oldestFirst") : t("newestFirst")}
           </button>
           <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm hover:bg-muted/50">
             <input
@@ -249,7 +272,7 @@ export function DashboardAnalytics() {
               onChange={(e) => setComparePrevious(e.target.checked)}
               className="rounded border-input"
             />
-            <span>Compare to previous period</span>
+            <span>{t("comparePrevious")}</span>
           </label>
         </CardContent>
       </Card>
@@ -283,11 +306,9 @@ export function DashboardAnalytics() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Check-ins over time</CardTitle>
+          <CardTitle>{t("checkInsOverTime")}</CardTitle>
           <CardDescription>
-            {comparePrevious
-              ? "This period vs previous period (static example)."
-              : "Weekly visitor check-ins (static example)."}
+            {comparePrevious ? t("checkInsDescCompare") : t("checkInsDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -311,8 +332,8 @@ export function DashboardAnalytics() {
               <ChartTooltip content={<ChartTooltipContent />} />
               {comparePrevious ? (
                 <>
-                  <Bar dataKey="checkins" fill="var(--color-checkins)" radius={[4, 4, 0, 0]} name="This period" />
-                  <Bar dataKey="previous" fill="var(--color-previous)" radius={[4, 4, 0, 0]} name="Previous period" />
+                  <Bar dataKey="checkins" fill="var(--color-checkins)" radius={[4, 4, 0, 0]} name={t("thisPeriod")} />
+                  <Bar dataKey="previous" fill="var(--color-previous)" radius={[4, 4, 0, 0]} name={t("previousPeriod")} />
                 </>
               ) : (
                 <Bar
@@ -328,9 +349,9 @@ export function DashboardAnalytics() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Engagement trend</CardTitle>
+          <CardTitle>{t("engagementTrend")}</CardTitle>
           <CardDescription>
-            Weekly check-ins as a trend line (same period).
+            {t("engagementTrendDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -366,9 +387,9 @@ export function DashboardAnalytics() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Cumulative visits</CardTitle>
+          <CardTitle>{t("cumulativeVisits")}</CardTitle>
           <CardDescription>
-            Running total of check-ins over the selected period.
+            {t("cumulativeVisitsDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -410,9 +431,9 @@ export function DashboardAnalytics() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ratings distribution</CardTitle>
+          <CardTitle>{t("ratingsDistribution")}</CardTitle>
           <CardDescription>
-            Number of ratings per star (1–5). Static example data.
+            {t("ratingsDistributionDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -448,9 +469,9 @@ export function DashboardAnalytics() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Visitor sources</CardTitle>
+            <CardTitle>{t("visitorSources")}</CardTitle>
             <CardDescription>
-              Where visitors discover your museum (App, social, website, walk-in).
+              {t("visitorSourcesDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -482,9 +503,9 @@ export function DashboardAnalytics() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Exhibition popularity</CardTitle>
+            <CardTitle>{t("exhibitionPopularity")}</CardTitle>
             <CardDescription>
-              Share of visits by exhibition or zone (static example).
+              {t("exhibitionPopularityDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>

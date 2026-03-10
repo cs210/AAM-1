@@ -10,16 +10,20 @@ const noHardcodedStringsConfig = {
     "no-hardcoded-strings/no-hardcoded-strings": [
       "warn",
       {
-        allowedFunctionNames: ["t"],
-        ignoreStrings: [],
+        allowedFunctionNames: ["t", "tCommon"],
+        ignoreStrings: ["quote", "attribution", "title", "openQuote", " "],
         ignorePatterns: [
           /^[0-9\s\-:.,]+$/, // numbers, dates, times
           /^[A-Z_][A-Z0-9_]*$/, // constants / enum-like
           /^[a-z]+:[a-z]+$/, // protocol-style (e.g. yami://)
+          /^\s+$/, // whitespace only
+          /^[()·/×\s]$/, // single punctuation / typography / separators / single space
         ],
       },
     ],
   },
 };
 
-export default [...nextConfig, noHardcodedStringsConfig];
+const config = [...nextConfig, noHardcodedStringsConfig];
+
+export default config;

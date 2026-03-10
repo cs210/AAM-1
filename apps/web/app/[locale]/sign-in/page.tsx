@@ -95,7 +95,7 @@ function SignInContent() {
               {isLoading ? t("signingIn") : t("submit")}
             </Button>
             <p className="text-muted-foreground text-center text-sm">
-              {t("noAccount")}{" "}
+              {t("noAccount")}
               <Link
                 href="/sign-up"
                 className="font-medium text-primary underline-offset-4 hover:underline"
