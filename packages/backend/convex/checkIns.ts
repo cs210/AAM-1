@@ -2,10 +2,11 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
-// Create a museum check-in
+// Create a check-in (museum or event)
 export const createCheckIn = mutation({
   args: {
-    museumId: v.id("museums"),
+    contentType: v.union(v.literal("museum"), v.literal("event")),
+    contentId: v.union(v.id("museums"), v.id("events")),
     rating: v.optional(v.number()),
     review: v.optional(v.string()),
     imageUrls: v.optional(v.array(v.string())),
@@ -28,8 +29,8 @@ export const createCheckIn = mutation({
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
       userId: user._id,
-      contentType: "museum",
-      contentId: args.museumId,
+      contentType: args.contentType,
+      contentId: args.contentId,
       rating: args.rating,
       review: args.review,
       imageUrls,
@@ -38,46 +39,47 @@ export const createCheckIn = mutation({
       createdAt: Date.now(),
     });
 
-    // Update user profile with check-in data
-    let userProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_userId", (q) => q.eq("userId", user._id))
-      .first();
+    // Update user profile with check-in data (museum check-ins only)
+    if (args.contentType === "museum") {
+      let userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_userId", (q) => q.eq("userId", user._id))
+        .first();
       
+      if (!userProfile) {
+        throw new ConvexError("Error in createCheckIn(): User profile doesn't exist.")
+      }
 
-    if (!userProfile) {
-      throw new ConvexError("Error in createCheckIn(): User profile doesn't exist.")
+      // Update existing profile
+      const museumData = userProfile.museumData ?? {
+        totalCheckIns: 0,
+        totalMuseums: 0,
+        checkIns: {},
+      };
+
+      const contentIdStr = args.contentId;
+      const existingCheckIns = museumData.checkIns[contentIdStr] ?? [];
+
+      // Check if this museum is new
+      const isNewMuseum = !museumData.checkIns[contentIdStr];
+
+      museumData.checkIns[contentIdStr] = [...existingCheckIns, checkInId];
+      museumData.totalCheckIns += 1;
+      if (isNewMuseum) {
+        museumData.totalMuseums += 1;
+      }
+
+      await ctx.db.patch(userProfile._id, {
+        museumData,
+        updatedAt: Date.now(),
+      });
     }
-
-    // Update existing profile
-    const museumData = userProfile.museumData ?? {
-      totalCheckIns: 0,
-      totalMuseums: 0,
-      checkIns: {},
-    };
-
-    const museumIdStr = args.museumId;
-    const existingCheckIns = museumData.checkIns[museumIdStr] ?? [];
-
-    // Check if this museum is new
-    const isNewMuseum = !museumData.checkIns[museumIdStr];
-
-    museumData.checkIns[museumIdStr] = [...existingCheckIns, checkInId];
-    museumData.totalCheckIns += 1;
-    if (isNewMuseum) {
-      museumData.totalMuseums += 1;
-    }
-
-    await ctx.db.patch(userProfile._id, {
-      museumData,
-      updatedAt: Date.now(),
-    });
 
     return {
       _id: checkInId,
       userId: user._id,
-      contentType: "museum",
-      contentId: args.museumId,
+      contentType: args.contentType,
+      contentId: args.contentId,
       rating: args.rating,
       review: args.review,
       imageUrls,
@@ -233,6 +235,142 @@ export const deleteCheckIn = mutation({
   },
 });
 
+// Convenience mutation: Create a museum check-in
+export const createMuseumCheckIn = mutation({
+  args: {
+    museumId: v.id("museums"),
+    rating: v.optional(v.number()),
+    review: v.optional(v.string()),
+    imageUrls: v.optional(v.array(v.string())),
+    friendUserIds: v.optional(v.array(v.string())),
+    visitDate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    // Validate rating if provided
+    if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
+      throw new Error("Rating must be between 1 and 5");
+    }
+
+    const visitDate = args.visitDate ?? Date.now();
+    const imageUrls = args.imageUrls ?? [];
+    const friendUserIds = args.friendUserIds ?? [];
+
+    // Insert the check-in record
+    const checkInId = await ctx.db.insert("checkIns", {
+      userId: user._id,
+      contentType: "museum",
+      contentId: args.museumId,
+      rating: args.rating,
+      review: args.review,
+      imageUrls,
+      friendUserIds,
+      visitDate,
+      createdAt: Date.now(),
+    });
+
+    // Update user profile with check-in data
+    let userProfile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .first();
+    
+    if (!userProfile) {
+      throw new ConvexError("Error in createMuseumCheckIn(): User profile doesn't exist.")
+    }
+
+    // Update existing profile
+    const museumData = userProfile.museumData ?? {
+      totalCheckIns: 0,
+      totalMuseums: 0,
+      checkIns: {},
+    };
+
+    const contentIdStr = args.museumId;
+    const existingCheckIns = museumData.checkIns[contentIdStr] ?? [];
+
+    // Check if this museum is new
+    const isNewMuseum = !museumData.checkIns[contentIdStr];
+
+    museumData.checkIns[contentIdStr] = [...existingCheckIns, checkInId];
+    museumData.totalCheckIns += 1;
+    if (isNewMuseum) {
+      museumData.totalMuseums += 1;
+    }
+
+    await ctx.db.patch(userProfile._id, {
+      museumData,
+      updatedAt: Date.now(),
+    });
+
+    return {
+      _id: checkInId,
+      userId: user._id,
+      contentType: "museum" as const,
+      contentId: args.museumId,
+      rating: args.rating,
+      review: args.review,
+      imageUrls,
+      friendUserIds,
+      visitDate,
+      createdAt: Date.now(),
+    };
+  },
+});
+
+// Convenience mutation: Create an event check-in
+export const createEventCheckIn = mutation({
+  args: {
+    eventId: v.id("events"),
+    rating: v.optional(v.number()),
+    review: v.optional(v.string()),
+    imageUrls: v.optional(v.array(v.string())),
+    friendUserIds: v.optional(v.array(v.string())),
+    visitDate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new ConvexError("Not authenticated");
+
+    // Validate rating if provided
+    if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
+      throw new Error("Rating must be between 1 and 5");
+    }
+
+    const visitDate = args.visitDate ?? Date.now();
+    const imageUrls = args.imageUrls ?? [];
+    const friendUserIds = args.friendUserIds ?? [];
+
+    // Insert the check-in record
+    const checkInId = await ctx.db.insert("checkIns", {
+      userId: user._id,
+      contentType: "event",
+      contentId: args.eventId,
+      rating: args.rating,
+      review: args.review,
+      imageUrls,
+      friendUserIds,
+      visitDate,
+      createdAt: Date.now(),
+    });
+
+    return {
+      _id: checkInId,
+      userId: user._id,
+      contentType: "event" as const,
+      contentId: args.eventId,
+      rating: args.rating,
+      review: args.review,
+      imageUrls,
+      friendUserIds,
+      visitDate,
+      createdAt: Date.now(),
+    };
+  },
+});
+
 // Get check-in statistics for a museum
 export const getMuseumCheckInStats = query({
   args: { museumId: v.id("museums") },
@@ -241,6 +379,65 @@ export const getMuseumCheckInStats = query({
       .query("checkIns")
       .withIndex("by_content", (q) =>
         q.eq("contentType", "museum").eq("contentId", args.museumId)
+      )
+      .collect();
+
+    const totalCheckIns = checkIns.length;
+    const uniqueUsers = new Set(checkIns.map((ci) => ci.userId)).size;
+    const ratedCheckIns = checkIns.filter((ci) => ci.rating !== undefined);
+    const averageRating =
+      ratedCheckIns.length > 0
+        ? ratedCheckIns.reduce((sum, ci) => sum + (ci.rating || 0), 0) /
+          ratedCheckIns.length
+        : 0;
+
+    return {
+      totalCheckIns,
+      uniqueVisitors: uniqueUsers,
+      averageRating: Math.round(averageRating * 10) / 10,
+      totalRatings: ratedCheckIns.length,
+    };
+  },
+});
+
+// Get all check-ins for an event
+export const getEventCheckIns = query({
+  args: { eventId: v.id("events") },
+  handler: async (ctx, args) => {
+    const checkIns = await ctx.db
+      .query("checkIns")
+      .withIndex("by_content", (q) =>
+        q.eq("contentType", "event").eq("contentId", args.eventId)
+      )
+      .collect();
+
+    return checkIns;
+  },
+});
+
+// Get check-ins for a user at a specific event
+export const getUserEventCheckIns = query({
+  args: { userId: v.string(), eventId: v.id("events") },
+  handler: async (ctx, args) => {
+    const checkIns = await ctx.db
+      .query("checkIns")
+      .withIndex("by_user_and_content", (q) =>
+        q.eq("userId", args.userId).eq("contentType", "event").eq("contentId", args.eventId)
+      )
+      .collect();
+
+    return checkIns;
+  },
+});
+
+// Get check-in statistics for an event
+export const getEventCheckInStats = query({
+  args: { eventId: v.id("events") },
+  handler: async (ctx, args) => {
+    const checkIns = await ctx.db
+      .query("checkIns")
+      .withIndex("by_content", (q) =>
+        q.eq("contentType", "event").eq("contentId", args.eventId)
       )
       .collect();
 
@@ -279,18 +476,18 @@ export const getFollowingCheckins = query({
 
     if (followingIds.length === 0) return [];
 
-    // Get checkins from followed users (museums only)
+    // Get checkins from followed users (museums and events)
     const checkIns = await ctx.db
       .query("checkIns")
       .collect();
 
-    // Filter for museum checkins from followed users and sort by most recent
+    // Filter for checkins from followed users and sort by most recent
     const followingCheckIns = checkIns
-      .filter((ci) => ci.contentType === "museum" && followingIds.includes(ci.userId))
+      .filter((ci) => (ci.contentType === "museum" || ci.contentType === "event") && followingIds.includes(ci.userId))
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 50); // Limit to 50 most recent
 
-    // Enrich with user and museum data
+    // Enrich with user and content data (museum or event)
     const enriched = await Promise.all(
       followingCheckIns.map(async (ci) => {
         const userProfile = await ctx.db
@@ -298,15 +495,17 @@ export const getFollowingCheckins = query({
           .withIndex("by_userId", (q) => q.eq("userId", ci.userId))
           .first();
 
-        const museum = await ctx.db.get(ci.contentId as any);
+        const content = await ctx.db.get(ci.contentId as any);
+        const contentName = content && "name" in content ? content.name : "Unknown";
 
         return {
           _id: ci._id,
           userId: ci.userId,
           userName: userProfile?.name || "Unknown User",
           userImage: userProfile?.imageUrl,
-          museumId: ci.contentId,
-          museumName: (museum && "name" in museum) ? museum.name : "Unknown Museum",
+          contentType: ci.contentType,
+          contentId: ci.contentId,
+          contentName: contentName,
           rating: ci.rating,
           review: ci.review,
           createdAt: ci.createdAt,
