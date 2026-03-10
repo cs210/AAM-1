@@ -19,7 +19,7 @@ async function getCheckInsRaw(
   if (filters.userId) {
     return await ctx.db
       .query("checkIns")
-      .withIndex("by_user", (q) => q.eq("userId", filters.userId!))
+      .withIndex("by_user_and_content", (q) => q.eq("userId", filters.userId!))
       .collect();
   }
   if (filters.museumId) {
@@ -161,7 +161,7 @@ export const getProfileVisits = query({
     const visits = await Promise.all(
       checkIns.map(async (ci) => {
         const museum = await ctx.db.get(ci.contentId);
-        const city = museum?.location?.city;
+        const city = museum && "location" in museum ? museum.location?.city : undefined;
         return {
           checkIn: {
             _id: ci._id,
@@ -172,7 +172,7 @@ export const getProfileVisits = query({
             review: ci.review,
             editedAt: ci.editedAt,
           },
-          museum: museum
+          museum: museum && "name" in museum
             ? {
                 _id: museum._id,
                 name: museum.name,
