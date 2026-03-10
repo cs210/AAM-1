@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useMutation, useQuery } from "convex/react"
+import { useTranslations } from "next-intl"
 import { api } from "@packages/backend/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,9 @@ function slugify(name: string) {
 }
 
 export function DashboardOrganizations() {
+  const t = useTranslations("dashboard.organizations")
+  const tShell = useTranslations("dashboard.shell")
+  const tCommon = useTranslations("common")
   const user = useQuery(api.auth.getCurrentUser)
   const isAdmin = (user as { role?: string } | null)?.role === "admin"
   const myOrgs = useQuery(api.admin.listMyOrganizations) as OrgRow[] | undefined
@@ -62,7 +66,7 @@ export function DashboardOrganizations() {
     const locationState = state.trim()
     const orgSlug = slugify(name)
     if (!name || !locationCity || !locationState || !orgSlug) {
-      setError("Please complete all required museum details.")
+      setError(tShell("completeRequiredMuseumDetails"))
       return
     }
 
@@ -81,7 +85,7 @@ export function DashboardOrganizations() {
       })
 
       if (orgError) {
-        setError(orgError.message ?? "Unable to create workspace.")
+        setError(orgError.message ?? tShell("unableToCreateWorkspace"))
         return
       }
 
@@ -98,7 +102,7 @@ export function DashboardOrganizations() {
         await authClient.organization.setActive({ organizationId: data.id })
       }
 
-      setSuccess(`Created organization request for ${name}.`)
+      setSuccess(t("createSuccess", { name }))
       setMuseumName("")
       setCity("")
       setState("")
@@ -106,7 +110,7 @@ export function DashboardOrganizations() {
       setStaffRole("")
       setIsCreateOpen(false)
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Something went wrong.")
+      setError(createError instanceof Error ? createError.message : tShell("somethingWentWrong"))
     } finally {
       setIsSubmitting(false)
     }
@@ -117,15 +121,15 @@ export function DashboardOrganizations() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
-            <CardTitle>Your workspaces</CardTitle>
+            <CardTitle>{t("title")}</CardTitle>
             {!isAdmin && (
               <Button type="button" size="sm" onClick={() => setIsCreateOpen(true)}>
-                Request New Organization
+                {t("requestNewOrganization")}
               </Button>
             )}
           </div>
           <CardDescription>
-            Organizations you belong to and their current museum assignment.
+            {t("description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -140,9 +144,9 @@ export function DashboardOrganizations() {
             </div>
           ) : null}
           {myOrgs === undefined ? (
-            <p className="text-muted-foreground text-sm">Loading…</p>
+            <p className="text-muted-foreground text-sm">{tCommon("loading")}</p>
           ) : myOrgs.length === 0 ? (
-            <p className="text-muted-foreground text-sm">You are not a member of any workspace yet.</p>
+            <p className="text-muted-foreground text-sm">{t("empty")}</p>
           ) : (
             <ul className="space-y-2">
               {myOrgs.map((org: OrgRow) => (
@@ -150,10 +154,10 @@ export function DashboardOrganizations() {
                   <p className="font-medium">{org.name ?? org._id}</p>
                   <p className="text-muted-foreground text-xs">{org._id}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    Museum:{" "}
+                    {t("museumLabel")}:{" "}
                     {org.hasInvalidMuseumContext
-                      ? "Invalid museum context"
-                      : org.linkedMuseumName ?? "Not assigned yet"}
+                      ? tShell("invalidMuseumContext")
+                      : org.linkedMuseumName ?? tShell("museumNotAssigned")}
                   </p>
                 </li>
               ))}
@@ -165,15 +169,15 @@ export function DashboardOrganizations() {
       <AlertDialog open={isCreateOpen} onOpenChange={(open) => !isSubmitting && setIsCreateOpen(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Request New Organization</AlertDialogTitle>
+            <AlertDialogTitle>{t("requestDialogTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Submit a new museum workspace request for admin approval.
+              {t("requestDialogDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <form id="request-organization-form" className="space-y-3" onSubmit={handleCreateOrganization}>
             <Input
               id="request-organization-name"
-              placeholder="Museum name"
+              placeholder={t("museumNamePlaceholder")}
               value={museumName}
               onChange={(event) => setMuseumName(event.target.value)}
               disabled={isSubmitting}
@@ -182,7 +186,7 @@ export function DashboardOrganizations() {
             <div className="grid gap-3 md:grid-cols-2">
               <Input
                 id="request-organization-city"
-                placeholder="City"
+                placeholder={t("cityPlaceholder")}
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
                 disabled={isSubmitting}
@@ -190,7 +194,7 @@ export function DashboardOrganizations() {
               />
               <Input
                 id="request-organization-state"
-                placeholder="State"
+                placeholder={t("statePlaceholder")}
                 value={state}
                 onChange={(event) => setState(event.target.value)}
                 disabled={isSubmitting}
@@ -199,27 +203,27 @@ export function DashboardOrganizations() {
             </div>
             <Input
               id="request-organization-website"
-              placeholder="Museum website (optional)"
+              placeholder={t("websitePlaceholder")}
               value={website}
               onChange={(event) => setWebsite(event.target.value)}
               disabled={isSubmitting}
             />
             <Input
               id="request-organization-role"
-              placeholder="Your role (optional)"
+              placeholder={t("rolePlaceholder")}
               value={staffRole}
               onChange={(event) => setStaffRole(event.target.value)}
               disabled={isSubmitting}
             />
           </form>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSubmitting}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               type="submit"
               form="request-organization-form"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Submitting..." : "Submit request"}
+              {isSubmitting ? t("submitting") : t("submitRequest")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

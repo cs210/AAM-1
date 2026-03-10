@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useAction, useMutation } from "convex/react"
+import { useTranslations } from "next-intl"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Doc, Id } from "@packages/backend/convex/_generated/dataModel"
 import { Badge } from "@/components/ui/badge"
@@ -49,7 +50,7 @@ type OrgMemberRow = {
   _id: string
   organizationId: string
   userId: string
-  role: string
+  role: "member" | "admin" | "owner"
   createdAt: number
   userName?: string
   userEmail?: string
@@ -62,6 +63,9 @@ type UserSearchRow = {
 }
 
 export function AdminOrgRequests() {
+  const t = useTranslations("dashboard.adminOrgRequests")
+  const tCommon = useTranslations("common")
+  const tRole = useTranslations("dashboard.adminOrgRequests.roles")
   const listOrgRequests = useAction(api.admin.listOrgRequestsForAdmin)
   const listOrganizations = useAction(api.admin.listOrganizationsForAdmin)
   const listMuseums = useAction(api.admin.listMuseumsForAdmin)
@@ -111,13 +115,13 @@ export function AdminOrgRequests() {
         }))
       )
     } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : "Failed to load organizations"
+      const message = loadError instanceof Error ? loadError.message : t("errors.loadOrganizations")
       setError(message)
       setRequests(null)
       setOrganizations(null)
       setMuseums(null)
     }
-  }, [listMuseums, listOrgRequests, listOrganizations])
+  }, [listMuseums, listOrgRequests, listOrganizations, t])
 
   React.useEffect(() => {
     void load()
@@ -153,10 +157,10 @@ export function AdminOrgRequests() {
         setMembers(rows)
       } catch (membersError) {
         setMembers(null)
-        setMemberError(membersError instanceof Error ? membersError.message : "Failed to load members")
+        setMemberError(membersError instanceof Error ? membersError.message : t("errors.loadMembers"))
       }
     },
-    [listOrganizationMembers]
+    [listOrganizationMembers, t]
   )
 
   const handleOpenMemberDialog = React.useCallback(
@@ -188,11 +192,11 @@ export function AdminOrgRequests() {
       const existingMemberIds = new Set((members ?? []).map((member) => member.userId))
       setMemberSearchResults(results.filter((result) => !existingMemberIds.has(result.id)))
     } catch (searchError) {
-      setMemberError(searchError instanceof Error ? searchError.message : "Failed to search users")
+      setMemberError(searchError instanceof Error ? searchError.message : t("errors.searchUsers"))
     } finally {
       setIsMemberSearchLoading(false)
     }
-  }, [memberSearchQuery, members, searchUsersByEmail, selectedOrganization])
+  }, [memberSearchQuery, members, searchUsersByEmail, selectedOrganization, t])
 
   const handleAddUserToOrganization = React.useCallback(
     async (email: string) => {
@@ -208,16 +212,21 @@ export function AdminOrgRequests() {
           email: normalizedEmail,
           role: "member",
         })
-        setMemberSuccess(`Added ${normalizedEmail} to ${selectedOrganization.name ?? "organization"}.`)
+        setMemberSuccess(
+          t("memberAdded", {
+            email: normalizedEmail,
+            organization: selectedOrganization.name ?? t("organizationFallback"),
+          })
+        )
         await loadMembers(selectedOrganization._id)
         await handleSearchUsers()
       } catch (addError) {
-        setMemberError(addError instanceof Error ? addError.message : "Failed to add user")
+        setMemberError(addError instanceof Error ? addError.message : t("errors.addUser"))
       } finally {
         setMemberBusyKey(null)
       }
     },
-    [addUserToOrganizationByEmail, handleSearchUsers, loadMembers, selectedOrganization]
+    [addUserToOrganizationByEmail, handleSearchUsers, loadMembers, selectedOrganization, t]
   )
 
   const handleRemoveUserFromOrganization = React.useCallback(
@@ -231,16 +240,20 @@ export function AdminOrgRequests() {
           organizationId: selectedOrganization._id,
           userId: member.userId,
         })
-        setMemberSuccess(`Removed ${member.userEmail ?? member.userId} from organization.`)
+        setMemberSuccess(
+          t("memberRemoved", {
+            email: member.userEmail ?? member.userId,
+          })
+        )
         await loadMembers(selectedOrganization._id)
         await handleSearchUsers()
       } catch (removeError) {
-        setMemberError(removeError instanceof Error ? removeError.message : "Failed to remove user")
+        setMemberError(removeError instanceof Error ? removeError.message : t("errors.removeUser"))
       } finally {
         setMemberBusyKey(null)
       }
     },
-    [handleSearchUsers, loadMembers, removeUserFromOrganization, selectedOrganization]
+    [handleSearchUsers, loadMembers, removeUserFromOrganization, selectedOrganization, t]
   )
 
   const handleRequestStatus = async (request: OrgRequestAdminRow, status: "approved" | "rejected") => {
@@ -259,7 +272,7 @@ export function AdminOrgRequests() {
       }
       await load()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Failed to update request")
+      setError(requestError instanceof Error ? requestError.message : t("errors.updateRequest"))
     } finally {
       setBusyKey(null)
     }
@@ -280,7 +293,7 @@ export function AdminOrgRequests() {
       setError(
         assignmentError instanceof Error
           ? assignmentError.message
-          : "Failed to update organization museum link"
+          : t("errors.updateMuseumLink")
       )
     } finally {
       setBusyKey(null)
@@ -296,7 +309,7 @@ export function AdminOrgRequests() {
     return (
       <Card>
         <CardContent className="py-12">
-          <div className="text-muted-foreground text-center text-sm">Loading organizations…</div>
+          <div className="text-muted-foreground text-center text-sm">{t("loading")}</div>
         </CardContent>
       </Card>
     )
@@ -306,8 +319,8 @@ export function AdminOrgRequests() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Organizations</CardTitle>
-          <CardDescription>Unable to load organization admin data.</CardDescription>
+          <CardTitle>{t("organizationsTitle")}</CardTitle>
+          <CardDescription>{t("adminDataUnavailable")}</CardDescription>
         </CardHeader>
         <CardContent>
           {error ? (
@@ -316,7 +329,7 @@ export function AdminOrgRequests() {
             </div>
           ) : null}
           <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
-            Retry
+            {tCommon("retry")}
           </Button>
         </CardContent>
       </Card>
@@ -328,8 +341,8 @@ export function AdminOrgRequests() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle>Organization requests</CardTitle>
-            <CardDescription>Pending/approved/rejected requests from users.</CardDescription>
+            <CardTitle>{t("requestsTitle")}</CardTitle>
+            <CardDescription>{t("requestsDescription")}</CardDescription>
           </div>
           <Button
             type="button"
@@ -338,8 +351,8 @@ export function AdminOrgRequests() {
             onClick={() => setIsRequestSectionOpen((open) => !open)}
           >
             {isRequestSectionOpen
-              ? "Hide requests"
-              : `Show requests (${pendingRequestsCount} pending)`}
+              ? t("hideRequests")
+              : t("showRequests", { count: pendingRequestsCount })}
           </Button>
         </CardHeader>
         {isRequestSectionOpen ? (
@@ -350,7 +363,7 @@ export function AdminOrgRequests() {
               </div>
             ) : null}
             {requests.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No organization requests.</p>
+              <p className="text-muted-foreground text-sm">{t("noRequests")}</p>
             ) : (
               <ul className="space-y-3">
                 {requests.map((request) => {
@@ -378,7 +391,7 @@ export function AdminOrgRequests() {
                             {request.website ? ` · ${request.website}` : ""}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            User: {request.userDisplay ?? request.userId}
+                            {t("userLabel")}: {request.userDisplay ?? request.userId}
                             {request.staffRole ? ` · ${request.staffRole}` : ""}
                           </p>
                         </div>
@@ -391,7 +404,7 @@ export function AdminOrgRequests() {
                                 : "secondary"
                           }
                         >
-                          {request.status}
+                          {t(`statuses.${request.status}`)}
                         </Badge>
                       </div>
 
@@ -405,18 +418,18 @@ export function AdminOrgRequests() {
                             }}
                           >
                             <SelectTrigger className="w-full md:w-72">
-                              <SelectValue placeholder="Assign museum now (optional)">
+                              <SelectValue placeholder={t("assignMuseumNowOptional")}>
                                 {(value) => {
-                                  if (!value || value === "none") return "Assign later"
-                                  if (typeof value !== "string") return "Assign museum now (optional)"
+                                  if (!value || value === "none") return t("assignLater")
+                                  if (typeof value !== "string") return t("assignMuseumNowOptional")
                                   return (
-                                    requestMuseumNameById.get(value) ?? "Assign museum now (optional)"
+                                    requestMuseumNameById.get(value) ?? t("assignMuseumNowOptional")
                                   )
                                 }}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">Assign later</SelectItem>
+                              <SelectItem value="none">{t("assignLater")}</SelectItem>
                               {requestAvailableMuseums.map((museum) => (
                                 <SelectItem key={museum._id} value={museum._id}>
                                   {museum.name}
@@ -430,7 +443,7 @@ export function AdminOrgRequests() {
                               disabled={isBusy}
                               onClick={() => void handleRequestStatus(request, "approved")}
                             >
-                              Approve
+                              {t("approve")}
                             </Button>
                             <Button
                               size="sm"
@@ -438,7 +451,7 @@ export function AdminOrgRequests() {
                               disabled={isBusy}
                               onClick={() => void handleRequestStatus(request, "rejected")}
                             >
-                              Reject
+                              {t("reject")}
                             </Button>
                           </div>
                         </div>
@@ -454,12 +467,12 @@ export function AdminOrgRequests() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Organizations</CardTitle>
-          <CardDescription>Manage museum linkage and membership for each organization.</CardDescription>
+          <CardTitle>{t("organizationsTitle")}</CardTitle>
+          <CardDescription>{t("organizationsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {organizations.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No organizations found.</p>
+            <p className="text-muted-foreground text-sm">{t("noOrganizations")}</p>
           ) : (
             organizations.map((organization) => {
               const availableMuseums = getAvailableMuseums(organization.linkedMuseumId)
@@ -480,12 +493,12 @@ export function AdminOrgRequests() {
               return (
                 <div key={organization._id} className="rounded-xl border bg-muted/30 p-4">
                   <div className="space-y-1">
-                    <p className="font-medium">{organization.name ?? "Unnamed organization"}</p>
+                    <p className="font-medium">{organization.name ?? t("unnamedOrganization")}</p>
                     <p className="text-muted-foreground text-sm">
-                      Current museum:{" "}
+                      {t("currentMuseum")}:{" "}
                       {organization.hasInvalidMuseumContext
-                        ? "Invalid museum context"
-                        : organization.linkedMuseumName ?? "Unassigned"}
+                        ? t("invalidMuseumContext")
+                        : organization.linkedMuseumName ?? t("unassigned")}
                     </p>
                   </div>
 
@@ -498,16 +511,16 @@ export function AdminOrgRequests() {
                       }}
                     >
                       <SelectTrigger className="w-full md:w-80">
-                        <SelectValue placeholder="Select museum">
+                        <SelectValue placeholder={t("selectMuseum")}>
                           {(value) => {
-                            if (!value || value === "none") return "Unassigned"
-                            if (typeof value !== "string") return "Select museum"
-                            return museumNameById.get(value) ?? "Select museum"
+                            if (!value || value === "none") return t("unassigned")
+                            if (typeof value !== "string") return t("selectMuseum")
+                            return museumNameById.get(value) ?? t("selectMuseum")
                           }}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Unassigned</SelectItem>
+                        <SelectItem value="none">{t("unassigned")}</SelectItem>
                         {availableMuseums.map((museum) => (
                           <SelectItem key={museum._id} value={museum._id}>
                             {museum.name}
@@ -521,14 +534,14 @@ export function AdminOrgRequests() {
                       disabled={isBusy}
                       onClick={() => void handleOrganizationAssignment(organization)}
                     >
-                      Save
+                      {tCommon("save")}
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => void handleOpenMemberDialog(organization)}
                     >
-                      Manage members
+                      {t("manageMembers")}
                     </Button>
                   </div>
                 </div>
@@ -554,9 +567,9 @@ export function AdminOrgRequests() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{selectedOrganization?.name ?? "Organization"}</AlertDialogTitle>
+            <AlertDialogTitle>{selectedOrganization?.name ?? t("organizationFallback")}</AlertDialogTitle>
             <AlertDialogDescription>
-              View members, search by email, add users, and remove users from this organization.
+              {t("membersDialogDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -573,10 +586,10 @@ export function AdminOrgRequests() {
             ) : null}
 
             <div className="rounded-xl border bg-muted/20 p-3">
-              <p className="text-sm font-medium">Add user by email</p>
+              <p className="text-sm font-medium">{t("addUserByEmail")}</p>
               <div className="mt-2 flex gap-2">
                 <Input
-                  placeholder="Search email (min 2 chars)"
+                  placeholder={t("searchEmailPlaceholder")}
                   value={memberSearchQuery}
                   onChange={(event) => setMemberSearchQuery(event.target.value)}
                 />
@@ -586,7 +599,7 @@ export function AdminOrgRequests() {
                   disabled={isMemberSearchLoading}
                   onClick={() => void handleSearchUsers()}
                 >
-                  {isMemberSearchLoading ? "Searching..." : "Search"}
+                  {isMemberSearchLoading ? t("searching") : t("search")}
                 </Button>
               </div>
               {memberSearchResults.length > 0 ? (
@@ -607,25 +620,25 @@ export function AdminOrgRequests() {
                           disabled={memberBusyKey === addKey}
                           onClick={() => void handleAddUserToOrganization(user.email)}
                         >
-                          {memberBusyKey === addKey ? "Adding..." : "Add"}
+                          {memberBusyKey === addKey ? t("adding") : t("add")}
                         </Button>
                       </li>
                     )
                   })}
                 </ul>
               ) : memberSearchQuery.trim().length >= 2 && !isMemberSearchLoading ? (
-                <p className="text-muted-foreground mt-2 text-xs">No matching users.</p>
+                <p className="text-muted-foreground mt-2 text-xs">{t("noMatchingUsers")}</p>
               ) : null}
             </div>
 
             <div className="rounded-xl border bg-muted/20 p-3">
-              <p className="text-sm font-medium">Members</p>
+              <p className="text-sm font-medium">{t("members")}</p>
               {members === undefined ? (
-                <p className="text-muted-foreground mt-2 text-sm">Loading members...</p>
+                <p className="text-muted-foreground mt-2 text-sm">{t("loadingMembers")}</p>
               ) : members === null ? (
-                <p className="text-muted-foreground mt-2 text-sm">Unable to load members.</p>
+                <p className="text-muted-foreground mt-2 text-sm">{t("unableToLoadMembers")}</p>
               ) : members.length === 0 ? (
-                <p className="text-muted-foreground mt-2 text-sm">No members yet.</p>
+                <p className="text-muted-foreground mt-2 text-sm">{t("noMembers")}</p>
               ) : (
                 <ul className="mt-2 space-y-2">
                   {members.map((member) => {
@@ -640,7 +653,9 @@ export function AdminOrgRequests() {
                             {member.userName ? `${member.userName} · ` : ""}
                             {member.userEmail || member.userId}
                           </p>
-                          <p className="text-muted-foreground text-xs">{member.role}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {tRole(member.role)}
+                          </p>
                         </div>
                         <Button
                           size="sm"
@@ -648,7 +663,7 @@ export function AdminOrgRequests() {
                           disabled={memberBusyKey === removeKey}
                           onClick={() => void handleRemoveUserFromOrganization(member)}
                         >
-                          {memberBusyKey === removeKey ? "Removing..." : "Remove"}
+                          {memberBusyKey === removeKey ? t("removing") : t("remove")}
                         </Button>
                       </li>
                     )
@@ -659,7 +674,7 @@ export function AdminOrgRequests() {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("close")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -1,0 +1,399 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "logOut": "Log out",
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving…",
+    "language": "Language",
+    "loading": "Loading…",
+    "account": "Account",
+    "dashboard": "Dashboard",
+    "backToLanding": "Back to landing",
+    "goHome": "Go home",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "metadata": {
+    "title": "YAMI — Your Art, Museum & Identity",
+    "description": "The first social, automated record of human cultural engagement. Discover museums as a visitor or manage your institution through the staff dashboard."
+  },
+  "landing": {
+    "visitor": "For Visitors",
+    "museum": "For Museums",
+    "hero": {
+      "your": "Your",
+      "cultural": "Cultural",
+      "passport": "Passport",
+      "the": "The",
+      "museum": "Museum",
+      "os": "OS",
+      "visitorSubline": "The first social, automated record of human cultural engagement. Every visit, every masterpiece, every hour in the gallery — yours forever.",
+      "museumSubline": "YAMI gives your museum a visitor engagement layer that syncs with TMS, surfaces analytics, and brings interactive discovery to every gallery — with near-zero overhead to implement.",
+      "getEarlyAccess": "Get early access",
+      "createAccount": "Create account",
+      "openDashboard": "Open dashboard",
+      "staffSignIn": "Staff sign in"
+    },
+    "footer": {
+      "tagline": "YAMI is revolutionizing the social experience of our shared culture and art. Beta testing begins soon. Open source on release."
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "description": "Enter your email and password to sign in to your account.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "signingIn": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "signInFailed": "Sign in failed"
+    },
+    "signUp": {
+      "title": "Create an account",
+      "description": "Enter your details to create a new account.",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign up",
+      "creating": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "signUpFailed": "Sign up failed",
+      "profileFailed": "Account created, but profile setup failed. Please try signing in again."
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "museumDetails": "Museum Details",
+      "organizations": "Organizations",
+      "exhibitions": "Exhibitions",
+      "interactions": "Interactions",
+      "analytics": "Analytics",
+      "orgRequests": "Org requests",
+      "users": "Users",
+      "invitations": "Invitations"
+    },
+    "sidebar": {
+      "museumContext": "Museum Context",
+      "loadingMuseums": "Loading museums...",
+      "searchSelectMuseum": "Search and select museum",
+      "noMuseumsFound": "No museums found.",
+      "navigation": "Navigation",
+      "adminMode": "Admin mode",
+      "adminModeOn": "on",
+      "adminModeOff": "off",
+      "admin": "Admin",
+      "account": "Account",
+      "logOut": "Log out"
+    },
+    "shell": {
+      "loadingMuseums": "Loading museums...",
+      "signInRequired": "Sign in required",
+      "signInRequiredDescription": "You need an account and workspace to access the dashboard.",
+      "museumStaffOnly": "Museum staff access only",
+      "museumStaffOnlyDescription": "You need to be in at least one organization workspace to use this dashboard. Request access below or wait for an invite. If you are not museum staff, use the visitor app instead.",
+      "invalidMuseumContext": "Invalid museum context",
+      "invalidMuseumContextNoMuseums": "Museum context is invalid because no museums are available.",
+      "invalidMuseumContextSwitched": "Museum context is invalid (likely deleted). Switched to the first available museum.",
+      "museumNotAssigned": "Museum not assigned yet",
+      "selectMuseum": "Select a museum",
+      "noMuseumsAvailable": "No museums available",
+      "workspaceWarning": "Assigned museum is invalid (likely deleted). Ask an admin to reassign this workspace.",
+      "completeRequiredMuseumDetails": "Please complete all required museum details.",
+      "unableToCreateWorkspace": "Unable to create workspace.",
+      "somethingWentWrong": "Something went wrong.",
+      "pendingApproval": "Your most recent workspace request is pending approval.",
+      "museumNamePlaceholder": "Museum name",
+      "cityPlaceholder": "City",
+      "statePlaceholder": "State",
+      "websitePlaceholder": "Museum website (optional)",
+      "staffRolePlaceholder": "Your role (optional)",
+      "submittingRequest": "Submitting request...",
+      "requestMuseumAccess": "Request museum access",
+      "notMuseumStaff": "Not museum staff?",
+      "openVisitorApp": "Open visitor app",
+      "workspacePendingActivation": "Workspace pending activation",
+      "workspacePendingActivationDescription": "Your request for {name} has been submitted. You can access the dashboard after an admin approves this organization.",
+      "openVisitorAppWhileWaiting": "Open visitor app while you wait",
+      "unnamedOrganization": "Unnamed organization",
+      "heroDescription": "Keep your museum profile current so visitors always see accurate details in the mobile app.",
+      "workspaceSetupIncomplete": "Workspace setup incomplete",
+      "workspaceSetupIncompleteDescription": "This workspace is not linked to a museum yet. Ask an admin to assign a museum in the admin Organizations section.",
+      "comingSoon": "Coming Soon",
+      "comingSoonDescription": "The {section} section will be part of the next iteration."
+    },
+    "userDetails": {
+      "notSignedIn": "Not signed in",
+      "museumTeam": "Museum Team",
+      "adminBadge": "Admin",
+      "workspace": "Workspace",
+      "loadingWorkspaces": "Loading workspaces...",
+      "selectWorkspace": "Select workspace",
+      "museumLabel": "Museum",
+      "notAssignedYet": "Not assigned yet",
+      "noWorkspace": "No workspace",
+      "pendingActivation": "Pending activation"
+    },
+    "organizations": {
+      "title": "Your workspaces",
+      "requestNewOrganization": "Request New Organization",
+      "description": "Organizations you belong to and their current museum assignment.",
+      "empty": "You are not a member of any workspace yet.",
+      "museumLabel": "Museum",
+      "requestDialogTitle": "Request New Organization",
+      "requestDialogDescription": "Submit a new museum workspace request for admin approval.",
+      "museumNamePlaceholder": "Museum name",
+      "cityPlaceholder": "City",
+      "statePlaceholder": "State",
+      "websitePlaceholder": "Museum website (optional)",
+      "rolePlaceholder": "Your role (optional)",
+      "submitting": "Submitting...",
+      "submitRequest": "Submit request",
+      "createSuccess": "Created organization request for {name}."
+    },
+    "images": {
+      "title": "Images",
+      "description": "Upload files or add image URLs, reorder the gallery, and set the primary card image.",
+      "urlPlaceholder": "https://example.com/museum-gallery.jpg",
+      "altPlaceholder": "Alt text (optional)",
+      "addUrl": "Add URL",
+      "uploadHint": "Upload one or more local images",
+      "loading": "Loading image gallery…",
+      "empty": "No additional images yet.",
+      "untitled": "Untitled image",
+      "primaryCardImage": "Primary card image",
+      "primary": "Primary",
+      "setPrimary": "Set primary",
+      "moveUp": "Move image up",
+      "moveDown": "Move image down",
+      "delete": "Delete image",
+      "imageUrlRequired": "Image URL is required.",
+      "addFailed": "Failed to add image",
+      "uploadFileFailed": "Failed to upload image file",
+      "uploadFailed": "Failed to upload image(s)",
+      "setPrimaryFailed": "Failed to set primary image",
+      "deleteFailed": "Failed to delete image",
+      "reorderFailed": "Failed to reorder images"
+    },
+    "museumDetails": {
+      "title": "Museum Information",
+      "description": "This information appears in your visitor-facing app profile.",
+      "viewPage": "View page",
+      "loading": "Loading museum details…",
+      "emptyStateTitle": "Museum Details",
+      "emptyStateDescription": "Select a museum context to edit details.",
+      "invalidDescription": "This museum context is invalid or no longer exists.",
+      "save": "Save Museum Details",
+      "saveSuccess": "Museum details saved.",
+      "fields": {
+        "name": "Museum Name",
+        "tagline": "Tagline",
+        "description": "Short Description",
+        "phone": "Public Phone",
+        "email": "Public Email",
+        "website": "Website",
+        "timezone": "Timezone",
+        "primaryLanguage": "Primary App Language",
+        "category": "Category",
+        "address": "Street Address",
+        "city": "City",
+        "state": "State / Province",
+        "postalCode": "Postal Code",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "operatingHours": "Operating Hours",
+        "accessibilityFeatures": "Accessibility Features",
+        "accessibilityNotes": "Additional Accessibility Notes"
+      },
+      "placeholders": {
+        "selectTimezone": "Select timezone",
+        "selectLanguage": "Select language",
+        "category": "art, history, science"
+      },
+      "hours": {
+        "day": "Day",
+        "open": "Open",
+        "from": "From",
+        "to": "To"
+      },
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      },
+      "timezones": {
+        "pacific": "Pacific Time (PT)",
+        "mountain": "Mountain Time (MT)",
+        "central": "Central Time (CT)",
+        "eastern": "Eastern Time (ET)"
+      },
+      "languages": {
+        "english": "English",
+        "spanish": "Spanish",
+        "french": "French",
+        "german": "German"
+      },
+      "accessibilityOptions": {
+        "wheelchair": "Wheelchair accessible entrances",
+        "elevators": "Elevators available",
+        "accessible-restrooms": "Accessible restrooms",
+        "assistive-listening": "Assistive listening devices",
+        "braille-signage": "Braille / tactile signage",
+        "sensory-hours": "Sensory-friendly visiting hours"
+      },
+      "errors": {
+        "nameRequired": "Museum name is required.",
+        "categoryRequired": "Category is required.",
+        "cityStateRequired": "City and state are required.",
+        "latitudeRange": "Latitude must be a number between -90 and 90.",
+        "longitudeRange": "Longitude must be a number between -180 and 180.",
+        "saveFailed": "Failed to save museum details."
+      }
+    },
+    "adminInvitations": {
+      "title": "Invitations",
+      "description": "Invite users to an organization by email.",
+      "loading": "Loading organizations…",
+      "empty": "No organizations yet. Approve an org request first.",
+      "sending": "Sending…",
+      "send": "Send invitation",
+      "success": "Invitation sent to {email}",
+      "fields": {
+        "email": "Email",
+        "organization": "Organization",
+        "role": "Role"
+      },
+      "placeholders": {
+        "email": "user@example.com",
+        "organization": "Select organization"
+      },
+      "roles": {
+        "member": "Member",
+        "admin": "Admin",
+        "owner": "Owner"
+      },
+      "errors": {
+        "sendFailed": "Failed to send invitation"
+      }
+    },
+    "adminUsers": {
+      "title": "Users",
+      "description": "Manage users, roles, and bans.",
+      "createUser": "Create user",
+      "creating": "Creating…",
+      "create": "Create",
+      "loading": "Loading users…",
+      "pendingInvitations": "Pending invitations",
+      "cancelling": "Cancelling…",
+      "cancelInvite": "Cancel invite",
+      "empty": "No users yet.",
+      "organizationsLabel": "Organizations",
+      "none": "None",
+      "banned": "Banned",
+      "setRole": "Set {role}",
+      "unban": "Unban",
+      "ban": "Ban",
+      "deleting": "Deleting…",
+      "delete": "Delete",
+      "confirmDelete": "Permanently delete user {email}? This cannot be undone.",
+      "fields": {
+        "email": "Email",
+        "password": "Password",
+        "nameOptional": "Name (optional)"
+      },
+      "roles": {
+        "member": "member",
+        "admin": "admin",
+        "owner": "owner",
+        "user": "user"
+      },
+      "errors": {
+        "loadUsers": "Failed to load users",
+        "createUser": "Failed to create user",
+        "setRole": "Failed to set role",
+        "ban": "Failed to ban",
+        "unban": "Failed to unban",
+        "cancelInvitation": "Failed to cancel invitation",
+        "deleteUser": "Failed to delete user"
+      }
+    },
+    "adminOrgRequests": {
+      "loading": "Loading organizations…",
+      "requestsTitle": "Organization requests",
+      "requestsDescription": "Pending, approved, or rejected requests from users.",
+      "hideRequests": "Hide requests",
+      "showRequests": "Show requests ({count} pending)",
+      "noRequests": "No organization requests.",
+      "organizationsTitle": "Organizations",
+      "organizationsDescription": "Manage museum linkage and membership for each organization.",
+      "adminDataUnavailable": "Unable to load organization admin data.",
+      "noOrganizations": "No organizations found.",
+      "userLabel": "User",
+      "assignMuseumNowOptional": "Assign museum now (optional)",
+      "assignLater": "Assign later",
+      "approve": "Approve",
+      "reject": "Reject",
+      "currentMuseum": "Current museum",
+      "invalidMuseumContext": "Invalid museum context",
+      "unassigned": "Unassigned",
+      "selectMuseum": "Select museum",
+      "manageMembers": "Manage members",
+      "organizationFallback": "Organization",
+      "unnamedOrganization": "Unnamed organization",
+      "membersDialogDescription": "View members, search by email, add users, and remove users from this organization.",
+      "addUserByEmail": "Add user by email",
+      "searchEmailPlaceholder": "Search email (min 2 chars)",
+      "searching": "Searching...",
+      "search": "Search",
+      "adding": "Adding...",
+      "add": "Add",
+      "noMatchingUsers": "No matching users.",
+      "members": "Members",
+      "loadingMembers": "Loading members...",
+      "unableToLoadMembers": "Unable to load members.",
+      "noMembers": "No members yet.",
+      "removing": "Removing...",
+      "remove": "Remove",
+      "memberAdded": "Added {email} to {organization}.",
+      "memberRemoved": "Removed {email} from organization.",
+      "roles": {
+        "member": "member",
+        "admin": "admin",
+        "owner": "owner"
+      },
+      "statuses": {
+        "pending": "pending",
+        "approved": "approved",
+        "rejected": "rejected"
+      },
+      "errors": {
+        "loadOrganizations": "Failed to load organizations",
+        "loadMembers": "Failed to load members",
+        "searchUsers": "Failed to search users",
+        "addUser": "Failed to add user",
+        "removeUser": "Failed to remove user",
+        "updateRequest": "Failed to update request",
+        "updateMuseumLink": "Failed to update organization museum link"
+      }
+    }
+  },
+  "acceptInvitation": {
+    "invalidLink": "Invalid link",
+    "invalidLinkDescription": "This invitation link is invalid or missing an ID.",
+    "title": "Organization invitation",
+    "accepting": "Accepting invitation…",
+    "joined": "You have joined the organization.",
+    "goToDashboard": "Go to dashboard",
+    "missingLink": "Missing invitation link.",
+    "couldNotAccept": "Could not accept invitation."
+  }
+}
