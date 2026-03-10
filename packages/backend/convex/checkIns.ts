@@ -4,6 +4,33 @@ import { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
+async function getCheckInsRaw(
+  ctx: QueryCtx,
+  filters: { userId?: string; museumId?: Id<"museums"> }
+): Promise<Doc<"checkIns">[]> {
+  if (filters.userId && filters.museumId) {
+    return await ctx.db
+      .query("checkIns")
+      .withIndex("by_user_and_content", (q) =>
+        q.eq("userId", filters.userId!).eq("contentType", "museum").eq("contentId", filters.museumId!)
+      )
+      .collect();
+  }
+  if (filters.userId) {
+    return await ctx.db
+      .query("checkIns")
+      .withIndex("by_user", (q) => q.eq("userId", filters.userId!))
+      .collect();
+  }
+  if (filters.museumId) {
+    return await ctx.db
+      .query("checkIns")
+      .withIndex("by_content", (q) => q.eq("contentType", "museum").eq("contentId", filters.museumId!))
+      .collect();
+  }
+  return [];
+}
+
 // Create a check-in (museum or event)
 export const createCheckIn = mutation({
   args: {
@@ -133,12 +160,12 @@ export const getProfileVisits = query({
 
     const visits = await Promise.all(
       checkIns.map(async (ci) => {
-        const museum = await ctx.db.get(ci.museumId);
+        const museum = await ctx.db.get(ci.contentId);
         const city = museum?.location?.city;
         return {
           checkIn: {
             _id: ci._id,
-            museumId: ci.museumId,
+            museumId: ci.contentId,
             rating: ci.rating,
             visitDate: ci.visitDate,
             createdAt: ci.createdAt,
@@ -159,7 +186,7 @@ export const getProfileVisits = query({
     );
 
     const valid = visits.filter((entry) => entry.museum != null) as {
-      checkIn: { _id: Id<"museumCheckIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
+      checkIn: { _id: Id<"checkIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
       museum: { _id: Id<"museums">; name: string; imageUrl?: string; category: string; city?: string };
     }[];
 
