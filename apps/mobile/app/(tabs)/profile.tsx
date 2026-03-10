@@ -1,51 +1,94 @@
 
 
-import React from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, Animated, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { authClient } from '@/lib/auth-client';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
+import { EditCheckinModal } from '@/components/edit-checkin-modal';
+import { useCheckInActions } from '@/hooks/useCheckInActions';
 
-const { width, height } = Dimensions.get('window');
-// Pane height fits the area below the profile header so content isn't shifted down
-const PROFILE_HEADER_APPROX = 220;
-const CARD_HEIGHT = Math.max(height - PROFILE_HEADER_APPROX, 400);
+const { width } = Dimensions.get('window');
 
-const stats = [
-  { title: 'You visited', value: '12 museums this year', icon: '🏛️' },
-  { title: 'Cities explored', value: '5 cities through art', icon: '🌆' },
-  { title: 'Artworks favorited', value: '34 artworks', icon: '❤️' },
-  { title: 'Hours browsing', value: '18 hours', icon: '⏰' },
-  { title: 'Most visited museum', value: 'Modern Art Gallery', icon: '🎨' },
-  { title: 'Events attended', value: '3 events', icon: '🎟️' },
-  { title: 'Artworks shared', value: '7 artworks', icon: '🔗' },
-  { title: 'New artists discovered', value: '9 artists', icon: '🧑‍🎨' },
-  { title: 'Reviews written', value: '4 reviews', icon: '✍️' },
-  { title: 'Badges earned', value: '2 badges', icon: '🏅' },
-];
-
-const Pane = ({ item, index }: { item: typeof stats[0]; index: number }) => {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      delay: index * 100,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
-  return (
-    <Animated.View style={[styles.pane, { opacity: fadeAnim }]}>
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{item.icon}</Text>
-      </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.value}>{item.value}</Text>
-    </Animated.View>
-  );
+type ProfileVisit = {
+  checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
+  museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
+
+function formatVisitDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function PassportCard({
+  visit,
+  isOwnProfile,
+  onEditPress,
+}: {
+  visit: ProfileVisit;
+  isOwnProfile: boolean;
+  onEditPress?: () => void;
+}) {
+  const { checkIn, museum } = visit;
+  const onCardPress = () => router.push(`/(museums)/${museum._id}` as any);
+
+  return (
+    <View style={styles.passportCardWrapper}>
+      <Pressable style={({ pressed }) => [styles.passportCard, pressed && styles.passportCardPressed]} onPress={onCardPress}>
+        <View style={styles.passportCardInner}>
+          <View style={styles.passportImageWrap}>
+            {museum.imageUrl ? (
+              <Image source={{ uri: museum.imageUrl }} style={styles.passportImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.passportImage, styles.passportImagePlaceholder]}>
+                <Text style={styles.passportImageLetter}>{museum.name ? museum.name[0].toUpperCase() : '?'}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.passportBody}>
+            <View style={styles.passportTitleRow}>
+              <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
+              {isOwnProfile && onEditPress ? (
+                <Pressable onPress={(e) => { e.stopPropagation(); onEditPress(); }} style={styles.editButton} hitSlop={8}>
+                  <PencilIcon size={18} color="#D4915A" />
+                </Pressable>
+              ) : null}
+            </View>
+            {museum.city ? (
+              <View style={styles.passportLocationRow}>
+                <MapPinIcon size={12} color="#6b7280" />
+                <Text style={styles.passportLocation}>{museum.city}</Text>
+              </View>
+            ) : null}
+            <View style={styles.passportDateStamp}>
+              <Text style={styles.passportDateText}>{formatVisitDate(checkIn.visitDate)}</Text>
+              {checkIn.editedAt != null ? (
+                <Text style={styles.editedLabel}> · Edited</Text>
+              ) : null}
+            </View>
+            {checkIn.rating != null ? (
+              <View style={styles.passportStarsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <StarIcon
+                    key={star}
+                    size={14}
+                    color={star <= checkIn.rating! ? '#FFB800' : '#D0D0D0'}
+                    fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
+                  />
+                ))}
+                <Text style={styles.passportRatingNum}>{checkIn.rating.toFixed(1)}</Text>
+              </View>
+            ) : null}
+            {checkIn.review ? (
+              <Text style={styles.passportReview} numberOfLines={2}>{checkIn.review}</Text>
+            ) : null}
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
 
 
 export default function WrappedScreen() {
@@ -72,8 +115,18 @@ export default function WrappedScreen() {
   const following = useQuery(api.follows.getFollowing, viewedUserId ? { userId: viewedUserId } : 'skip');
   const isFollowing = useQuery(api.follows.isFollowingUser, viewedUserId && currentUserId && viewedUserId !== currentUserId ? { userId: viewedUserId } : 'skip');
 
+  // Cultural passport: visits for the profile being viewed
+  const profileVisits = useQuery(
+    api.checkIns.getProfileVisits,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
+
+  const [editingVisit, setEditingVisit] = useState<ProfileVisit | null>(null);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
   const handleFollow = async () => {
     if (!viewedUserId) return;
@@ -100,7 +153,7 @@ export default function WrappedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
       {isViewingOtherProfile ? (
         <View style={styles.backBar}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -109,200 +162,524 @@ export default function WrappedScreen() {
         </View>
       ) : null}
       <View style={styles.profileHeader}>
-        <View style={styles.avatarRow}>
-          {profile?.imageUrl ? (
-            <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
+        {/* Banner Image */}
+        <ImageBackground
+          source={require('@/assets/images/login-background.jpg')}
+          style={styles.bannerImage}
+          imageStyle={styles.bannerImageStyle}
+          resizeMode="cover"
+        >
+          <View style={styles.bannerOverlay} />
+        </ImageBackground>
+        
+        {/* Profile Content */}
+        <View style={styles.profileContent}>
+          <View style={styles.topRow}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              {profile?.imageUrl ? (
+                <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
+                </View>
+              )}
             </View>
-          )}
-          <Text style={styles.profileNameNextToAvatar} numberOfLines={1}>{displayName}</Text>
-        </View>
-        {viewedUserId === currentUserId && profile?.email && (
-          <Text style={styles.profileEmail}>{profile.email}</Text>
-        )}
-        <View style={styles.countsRow}>
-          <View style={styles.countBox}>
-            <Text style={styles.countNumber}>{followers ? followers.length : '-'}</Text>
-            <Text style={styles.countLabel}>Followers</Text>
+            
+            {/* Settings Icon or Follow/Unfollow Button - Top Right */}
+            {!isViewingOtherProfile ? (
+              <View>
+                <TouchableOpacity
+                  style={styles.settingsButton}
+                  onPress={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <SettingsIcon size={20} color="#1A1A1A" />
+                </TouchableOpacity>
+                
+                {/* Settings Dropdown */}
+                {showSettingsDropdown && (
+                  <View style={styles.dropdownContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setShowSettingsDropdown(false);
+                        router.push('/intake?redirect=/(tabs)/profile');
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>Preferences</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.topRightFollowButton, isFollowing ? styles.unfollowButton : styles.followButton]}
+                onPress={isFollowing ? handleUnfollow : handleFollow}
+              >
+                <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
+                  {isFollowing ? 'Unfollow' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={styles.countBox}>
-            <Text style={styles.countNumber}>{following ? following.length : '-'}</Text>
-            <Text style={styles.countLabel}>Following</Text>
+          
+          {/* Name and Email */}
+          <View style={styles.nameSection}>
+            <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+            {viewedUserId === currentUserId && profile?.email && (
+              <Text style={styles.profileEmail}>{profile.email}</Text>
+            )}
+            
+            {/* Followers/Following Row */}
+            <View style={styles.countsRow}>
+              <Text style={styles.countText}>
+                <Text style={styles.countNumber}>{followers ? followers.length : '0'}</Text>
+                <Text style={styles.countLabel}> Followers</Text>
+              </Text>
+              <Text style={styles.countText}>
+                <Text style={styles.countNumber}>{following ? following.length : '0'}</Text>
+                <Text style={styles.countLabel}> Following</Text>
+              </Text>
+            </View>
           </View>
         </View>
-        {/* When viewing someone else's profile: show Follow/Unfollow below their counts */}
-        {viewedUserId && currentUserId && viewedUserId !== currentUserId ? (
-          <TouchableOpacity
-            style={[styles.followButtonBase, isFollowing ? styles.unfollowButton : styles.followButton]}
-            onPress={isFollowing ? handleUnfollow : handleFollow}
-          >
-            <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
-              {isFollowing ? 'Unfollow' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
-      {/* Wrapped is only visible on your own profile */}
-      {viewedUserId === currentUserId ? (
-        <FlatList
-          data={stats}
-          renderItem={({ item, index }) => <Pane item={item} index={index} />}
-          keyExtractor={(_, idx) => idx.toString()}
-          showsVerticalScrollIndicator={false}
-          pagingEnabled
-          snapToInterval={CARD_HEIGHT}
-          decelerationRate="fast"
-          disableIntervalMomentum={true}
-          contentContainerStyle={{}}
-        />
+      
+      {/* Wrapped Section - Only show for own profile */}
+      {!isViewingOtherProfile && (
+        <TouchableOpacity 
+          style={styles.wrappedSection}
+          onPress={() => router.push('/wrapped')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.wrappedContent}>
+            <Sparkles size={18} color="#D4915A" />
+            <Text style={styles.wrappedText}>Wrapped</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      
+      {/* Cultural passport: own profile or when viewing another user's visits */}
+      {viewedUserId ? (
+        profileVisits === undefined ? (
+          <View style={styles.passportLoading}>
+            <Text style={styles.passportLoadingText}>Loading visits...</Text>
+          </View>
+        ) : profileVisits.length === 0 ? (
+          <View style={styles.passportEmpty}>
+            <Text style={styles.passportEmptyTitle}>
+              {viewedUserId === currentUserId ? 'No visits yet' : 'No visits'}
+            </Text>
+            <Text style={styles.passportEmptySub}>
+              {viewedUserId === currentUserId
+                ? 'Check in at a museum to start your passport.'
+                : 'This user has not checked in anywhere yet.'}
+            </Text>
+            {viewedUserId === currentUserId && (
+              <TouchableOpacity
+                style={styles.passportEmptyButton}
+                onPress={() => router.push('/(tabs)/explore')}
+              >
+                <Text style={styles.passportEmptyButtonText}>Explore museums</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <FlatList
+            data={profileVisits}
+            keyExtractor={(item) => item.checkIn._id}
+            renderItem={({ item }) => (
+              <PassportCard
+                visit={item}
+                isOwnProfile={viewedUserId === currentUserId}
+                onEditPress={viewedUserId === currentUserId ? () => setEditingVisit(item) : undefined}
+              />
+            )}
+            contentContainerStyle={styles.passportListContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View style={styles.passportSectionHeader}>
+                <Text style={styles.passportSectionSub}>{profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}</Text>
+              </View>
+            }
+          />
+        )
       ) : null}
-    </View>
+
+      <EditCheckinModal
+        visible={editingVisit != null}
+        initialRating={editingVisit?.checkIn.rating ?? null}
+        initialReview={editingVisit?.checkIn.review}
+        onSave={(rating, review) =>
+          editingVisit &&
+          saveCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>, rating, review)
+        }
+        onDelete={() =>
+          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>)
+        }
+        onClose={() => setEditingVisit(null)}
+      />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
   backBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 4,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
     padding: 8,
   },
   profileHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#F0F0F0',
   },
-  avatarRow: {
+  bannerImage: {
+    width: '100%',
+    height: 120,
+  },
+  bannerImageStyle: {
+    resizeMode: 'cover',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  profileContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    paddingTop: 0,
+  },
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginTop: -40,
     marginBottom: 12,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 14,
-    backgroundColor: '#e0e7ef',
+  avatarContainer: {
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    borderRadius: 44,
   },
-  profileNameNextToAvatar: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#222',
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8D5C4',
   },
   avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 14,
-    backgroundColor: '#e0e7ef',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#D4915A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#888',
+    fontSize: 36,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  settingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 48,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    top: 88,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 160,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    fontWeight: '500',
+  },
+  nameSection: {
+    marginBottom: 8,
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 2,
   },
   profileEmail: {
-    fontSize: 16,
-    color: '#888',
-    marginBottom: 4,
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
   },
   countsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 8,
+    gap: 16,
+    marginTop: 4,
   },
-  countBox: {
-    alignItems: 'center',
-    marginHorizontal: 16,
+  countText: {
+    fontSize: 13,
   },
   countNumber: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
   countLabel: {
     fontSize: 14,
     color: '#888',
   },
   followButtonBase: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 12,
-    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
   followButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#D4915A',
   },
   unfollowButton: {
-    backgroundColor: '#eee',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#D0D0D0',
   },
   followButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
   unfollowButtonText: {
-    color: '#555',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  pane: {
-    width,
-    height: CARD_HEIGHT,
+  topRightFollowButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 48,
+  },
+  wrappedSection: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#D4915A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  wrappedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  wrappedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D4915A',
+  },
+  passportSectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  passportSectionSub: {
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  passportListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    backgroundColor: '#FFFFFF',
+  },
+  passportCardWrapper: {
+    marginBottom: 14,
+  },
+  passportCard: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  passportCardPressed: {
+    opacity: 0.95,
+  },
+  passportCardInner: {
+    flexDirection: 'row',
+    padding: 12,
+  },
+  passportImageWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 14,
+  },
+  passportImage: {
+    width: '100%',
+    height: '100%',
+  },
+  passportImagePlaceholder: {
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passportImageLetter: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  passportBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 96,
+  },
+  passportTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
+  },
+  passportMuseumName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  editButton: {
+    padding: 4,
+  },
+  editedLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
+  },
+  passportLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  passportLocation: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  passportDateStamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  passportDateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    letterSpacing: 0.3,
+  },
+  passportStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  passportRatingNum: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFB800',
+  },
+  passportReview: {
+    fontSize: 13,
+    color: '#64748b',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  passportLoading: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#f8fafc',
-    marginTop: 0,
+    backgroundColor: '#FFFFFF',
   },
-  iconContainer: {
-    backgroundColor: '#e0e7ef',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
+  passportLoadingText: {
+    fontSize: 15,
+    color: '#64748b',
   },
-  icon: {
-    fontSize: 48,
-    fontFamily: 'PublicSans',
+  passportEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+  },
+  passportEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  passportEmptySub: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  passportEmptyButton: {
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  passportEmptyButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
-    color: '#222',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '900',
-    fontFamily: 'PublicSans',
-    marginBottom: 8,
-    color: '#222',
-    letterSpacing: 1.2,
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: '400',
-    fontFamily: 'PublicSans',
-    color: '#555',
-    letterSpacing: 0.3,
   },
 });

@@ -7,35 +7,44 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: '#D4915A',
+        tabBarInactiveTintColor: '#999',
         headerShown: false,
+        tabBarShowLabel: false,
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#F0F0F0',
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 8,
+        },
       }}>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <HomeIcon size={size} color={color} />
+            <HomeIcon size={28} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Search',
+          title: 'Explore',
           tabBarIcon: ({ color, size }) => (
-            <CompassIcon size={size} color={color} />
+            <CompassIcon size={28} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'My Profile',
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <UserIcon size={size} color={color} />
+            <UserIcon size={28} color={color} />
           ),
-          // Tapping the Profile tab always goes to your own profile (no userId param)
           tabBarButton: (props) => {
             const { onPress, ref, ...rest } = props;
             return (

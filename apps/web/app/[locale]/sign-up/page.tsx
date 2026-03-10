@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
+import { useMutation } from "convex/react";
+import { api } from "@packages/backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,13 +15,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-function SignInContent() {
+export default function SignUpPage() {
+  const t = useTranslations("auth.signUp");
+  const tCommon = useTranslations("common");
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackURL = searchParams.get("callbackURL") ?? "/dashboard";
+  const saveProfile = useMutation(api.auth.saveUserProfile);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,26 +37,40 @@ function SignInContent() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-    const { data, error: err } = await authClient.signIn.email({
+    const { data, error: err } = await authClient.signUp.email({
+      name,
       email,
       password,
-      callbackURL,
+      callbackURL: "/dashboard",
     });
     setIsLoading(false);
     if (err) {
-      setError(err.message ?? "Sign in failed");
+      setError(err.message ?? t("signUpFailed"));
       return;
     }
-    if (data) router.push(callbackURL);
+    if (data) {
+      try {
+        await saveProfile({
+          name: data.user.name || undefined,
+          email: data.user.email || undefined,
+          imageUrl: data.user.image || undefined,
+        });
+      } catch (profileError) {
+        console.error("Failed to save user profile:", profileError);
+        setError(t("profileFailed"));
+        return;
+      }
+      router.push("/dashboard");
+    }
   }
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
           <CardDescription>
-            Enter your email and password to sign in to your account.
+            {t("description")}
           </CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
@@ -63,9 +85,21 @@ function SignInContent() {
             )}
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="sign-in-email">Email</FieldLabel>
+                <FieldLabel htmlFor="sign-up-name">{t("name")}</FieldLabel>
                 <Input
-                  id="sign-in-email"
+                  id="sign-up-name"
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="sign-up-email">{t("email")}</FieldLabel>
+                <Input
+                  id="sign-up-email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -75,53 +109,36 @@ function SignInContent() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="sign-in-password">Password</FieldLabel>
+                <FieldLabel htmlFor="sign-up-password">{t("password")}</FieldLabel>
                 <Input
-                  id="sign-in-password"
+                  id="sign-up-password"
                   type="password"
+                  placeholder="At least 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
+                  minLength={8}
                 />
               </Field>
             </FieldGroup>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in…" : "Sign in"}
+              {isLoading ? t("creating") : t("submit")}
             </Button>
             <p className="text-muted-foreground text-center text-sm">
-              Don&apos;t have an account?{" "}
+              {t("hasAccount")}{" "}
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Sign up
+                {tCommon("signIn")}
               </Link>
             </p>
           </CardFooter>
         </form>
       </Card>
     </div>
-  );
-}
-
-export default function SignInPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-8">
-          <Card className="w-full max-w-sm">
-            <CardHeader>
-              <CardTitle>Sign in</CardTitle>
-              <CardDescription>Loading…</CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      }
-    >
-      <SignInContent />
-    </Suspense>
   );
 }

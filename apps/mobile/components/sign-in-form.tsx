@@ -1,4 +1,3 @@
-import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -44,7 +43,7 @@ export function SignInForm() {
     }
 
     if (data) {
-      router.replace('/(tabs)');
+      router.replace('/post-auth');
     }
   }
 

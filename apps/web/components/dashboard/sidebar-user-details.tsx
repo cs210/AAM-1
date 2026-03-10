@@ -1,8 +1,9 @@
 "use client"
 
-import Link from "next/link"
+import { Link } from "@/i18n/navigation"
 import { useQuery } from "convex/react"
 import { Building2Icon, TriangleAlertIcon, UserIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { api } from "@packages/backend/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
@@ -36,6 +37,8 @@ export function SidebarUserDetails({
   onWorkspaceChange,
   workspaceWarning,
 }: SidebarUserDetailsProps) {
+  const t = useTranslations("dashboard.userDetails")
+  const tCommon = useTranslations("common")
   const user = useQuery(api.auth.getCurrentUser)
   const { data: activeOrganization } = authClient.useActiveOrganization()
   const pendingRequest = useQuery(api.organizationRequests.getMyRequest)
@@ -51,13 +54,13 @@ export function SidebarUserDetails({
   if (user === null) {
     return (
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">Not signed in</p>
+        <p className="text-muted-foreground text-xs">{t("notSignedIn")}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="flex-1" render={<Link href="/sign-in" />}>
-            Sign in
+            {tCommon("signIn")}
           </Button>
           <Button size="sm" className="flex-1" render={<Link href="/sign-up" />}>
-            Sign up
+            {tCommon("signUp")}
           </Button>
         </div>
       </div>
@@ -71,11 +74,11 @@ export function SidebarUserDetails({
           <UserIcon className="size-4" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{user.name ?? "Museum Team"}</p>
+          <p className="truncate text-sm font-medium">{user.name ?? t("museumTeam")}</p>
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
           {isAdmin ? (
             <p className="mt-1 inline-flex rounded-md border border-amber-300/80 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800 uppercase dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-300">
-              Admin
+              {t("adminBadge")}
             </p>
           ) : null}
         </div>
@@ -83,7 +86,7 @@ export function SidebarUserDetails({
       {!hideWorkspaceSection ? (
         <div className="rounded-lg border bg-muted/30 p-2">
           <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-            Workspace
+            {t("workspace")}
           </p>
           {showWorkspaceSwitcher ? (
             <div className="mt-2 space-y-2">
@@ -95,10 +98,10 @@ export function SidebarUserDetails({
                 disabled={workspaceLoading || workspaceOptions.length === 0}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={workspaceLoading ? "Loading workspaces..." : "Select workspace"}>
+                  <SelectValue placeholder={workspaceLoading ? t("loadingWorkspaces") : t("selectWorkspace")}>
                     {(value) => {
-                      if (!value || typeof value !== "string") return workspaceLoading ? "Loading workspaces..." : "Select workspace"
-                      return workspaceOptionById.get(value)?.label ?? "Select workspace"
+                      if (!value || typeof value !== "string") return workspaceLoading ? t("loadingWorkspaces") : t("selectWorkspace")
+                      return workspaceOptionById.get(value)?.label ?? t("selectWorkspace")
                     }}
                   </SelectValue>
                 </SelectTrigger>
@@ -111,7 +114,7 @@ export function SidebarUserDetails({
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground px-1 text-xs">
-                Museum: {activeWorkspaceOption?.museumLabel ?? "Not assigned yet"}
+                {t("museumLabel")}: {activeWorkspaceOption?.museumLabel ?? t("notAssignedYet")}
               </p>
               {workspaceWarning ? (
                 <p className="flex items-start gap-1.5 px-1 text-xs text-amber-700 dark:text-amber-400">
@@ -126,13 +129,13 @@ export function SidebarUserDetails({
               <span className="truncate">
                 {activeOrganization
                   ? activeOrganization.name
-                  : pendingRequest?.museumName ?? "No workspace"}
+                  : pendingRequest?.museumName ?? t("noWorkspace")}
               </span>
             </div>
           )}
           {!showWorkspaceSwitcher && pendingRequest?.status === "pending" ? (
             <p className="text-muted-foreground mt-1 px-2 text-xs">
-              Pending activation
+              {t("pendingActivation")}
             </p>
           ) : null}
         </div>

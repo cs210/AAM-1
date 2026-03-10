@@ -1,8 +1,10 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { useMutation } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
 import * as React from 'react';
 import {
   KeyboardAvoidingView,
@@ -40,7 +42,7 @@ interface Question {
   type: QuestionType;
   choices?: string[];
   scaleMax?: number;
-  scaleLabels?: { start: string; mid: string; end: string };
+  scaleLabels?: { start: string; mid?: string; end: string };
   placeholder?: string;
 }
 
@@ -48,7 +50,6 @@ const QUESTIONS: Question[] = [
   {
     id: 'visit_frequency',
     question: 'How often do you visit museums?',
-    subtext: 'Roughly is just fine.',
     type: 'choice',
     choices: ['Rarely or never', 'Once a year', 'A few times a year', 'Monthly or more'],
   },
@@ -82,8 +83,7 @@ const QUESTIONS: Question[] = [
     type: 'scale',
     scaleMax: 5,
     scaleLabels: {
-      start: 'Not very',
-      mid: 'Somewhat',
+      start: 'Not interested',
       end: 'Very interested',
     },
   },
@@ -108,7 +108,7 @@ const QUESTIONS: Question[] = [
   {
     id: 'anything_else',
     question: "Anything else you'd like us to know about your museum interests?",
-    subtext: 'Optional — a few words or a sentence is great.',
+    subtext: 'Few words or a sentence is great!',
     type: 'text',
     placeholder: 'e.g. I love outdoor sculpture gardens…',
   },
@@ -125,8 +125,14 @@ const CARD_SHADOW = {
 
 export default function IntakeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
+  const redirect =
+    typeof params.redirect === 'string' && params.redirect.length > 0
+      ? params.redirect
+      : undefined;
   const [step, setStep] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, string | number>>({});
+  const [hasSubmitted, setHasSubmitted] = React.useState(false);
   const currentQuestion = QUESTIONS[step];
   const isComplete = step >= QUESTIONS.length;
   const progress =
@@ -140,6 +146,20 @@ export default function IntakeScreen() {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const saveUserInterests = useMutation(api.userInterests.saveForCurrentAccount);
+
+  const submitAnswers = React.useCallback(async () => {
+    if (hasSubmitted) return;
+    setHasSubmitted(true);
+    try {
+      await saveUserInterests({
+        userInfo: answers,
+      });
+    } catch (error) {
+      console.error("Failed to save user interests", error);
+    }
+  }, [answers, hasSubmitted, saveUserInterests]);
+
   const goNext = React.useCallback(() => {
     if (step < QUESTIONS.length - 1) {
       setStep((s) => s + 1);
@@ -152,6 +172,20 @@ export default function IntakeScreen() {
     if (step > 0) setStep((s) => s - 1);
     else router.back();
   }, [step, router]);
+
+  React.useEffect(() => {
+    if (isComplete && !hasSubmitted) {
+      void submitAnswers();
+    }
+  }, [isComplete, hasSubmitted, submitAnswers]);
+
+  const handleDone = React.useCallback(() => {
+    if (redirect) {
+      router.replace(redirect);
+    } else {
+      router.back();
+    }
+  }, [redirect, router]);
 
   if (isComplete) {
     return (
@@ -169,7 +203,7 @@ export default function IntakeScreen() {
                 We'll use your answers to tailor what we show you and to improve our programs.
               </Text>
               <Pressable
-                onPress={() => router.back()}
+                onPress={handleDone}
                 style={({ pressed }) => [
                   styles.doneButton,
                   pressed && styles.pressed,
@@ -261,7 +295,10 @@ export default function IntakeScreen() {
                       return (
                         <Pressable
                           key={n}
-                          onPress={() => setAnswer(currentQuestion.id, n)}
+                          onPress={() => {
+                            setAnswer(currentQuestion.id, n);
+                            setTimeout(goNext, 280);
+                          }}
                           style={({ pressed }) => [
                             styles.scaleSquare,
                             isSelected && styles.scaleSquareSelected,
@@ -284,9 +321,11 @@ export default function IntakeScreen() {
                     <Text style={styles.scaleLabelText}>
                       {currentQuestion.scaleLabels.start}
                     </Text>
-                    <Text style={[styles.scaleLabelText, styles.scaleLabelMid]}>
-                      {currentQuestion.scaleLabels.mid}
-                    </Text>
+                    {currentQuestion.scaleLabels.mid ? (
+                      <Text style={[styles.scaleLabelText, styles.scaleLabelMid]}>
+                        {currentQuestion.scaleLabels.mid}
+                      </Text>
+                    ) : null}
                     <Text style={[styles.scaleLabelText, styles.scaleLabelEnd]}>
                       {currentQuestion.scaleLabels.end}
                     </Text>
@@ -518,7 +557,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingTop: 60,
+    paddingBottom: 32,
   },
   pressed: {
     opacity: 0.92,

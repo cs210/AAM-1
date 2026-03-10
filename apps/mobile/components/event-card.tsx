@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { CalendarIcon, MapPinIcon } from 'lucide-react-native';
+import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
 
 export type EventCardData = {
   _id: string;
@@ -18,8 +20,27 @@ type Props = {
   event: EventCardData;
   showMuseum?: boolean;
   compactDate?: boolean;
-  style?: ViewStyle;
+  className?: string;
+  cardIndex?: number;
 };
+
+const EVENT_COLORS = [
+  { bg: 'bg-[#C8A882]', text: 'text-white', badgeBg: 'bg-white/25' },
+  { bg: 'bg-[#6B9BD1]', text: 'text-white', badgeBg: 'bg-white/25' },
+  { bg: 'bg-[#B8956A]', text: 'text-white', badgeBg: 'bg-white/25' },
+  { bg: 'bg-[#7FB87F]', text: 'text-white', badgeBg: 'bg-white/25' },
+  { bg: 'bg-[#C98BA6]', text: 'text-white', badgeBg: 'bg-white/25' },
+  { bg: 'bg-[#9B9BCE]', text: 'text-white', badgeBg: 'bg-white/25' },
+];
+
+const COLOR_VALUES = [
+  '#FFFFFF',
+  '#FFFFFF',
+  '#FFFFFF',
+  '#FFFFFF',
+  '#FFFFFF',
+  '#FFFFFF',
+];
 
 function formatDateCompact(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('en-US', {
@@ -36,85 +57,43 @@ function formatDateFull(timestamp: number): string {
   });
 }
 
-export function EventCard({ event, showMuseum = true, compactDate = true, style }: Props) {
+export function EventCard({ event, showMuseum = true, compactDate = true, className, cardIndex = 0 }: Props) {
   const formatDate = compactDate ? formatDateCompact : formatDateFull;
+  const colorScheme = EVENT_COLORS[cardIndex % EVENT_COLORS.length];
+  const iconColor = COLOR_VALUES[cardIndex % COLOR_VALUES.length];
 
   return (
     <Pressable 
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed, style]}
+      className={cn(
+        'rounded-2xl p-5 mb-4 shadow-sm shadow-black/5 active:opacity-90',
+        colorScheme.bg,
+        className
+      )}
       onPress={() => event.museumId && router.push(`/${event.museumId}`)}
       disabled={!event.museumId}
     >
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{event.category}</Text>
+      <View className={cn('px-3 py-1.5 rounded-xl self-start mb-3', colorScheme.badgeBg)}>
+        <Text className={cn('text-xs font-bold uppercase tracking-wide', colorScheme.text)}>
+          {event.category}
+        </Text>
       </View>
-      <Text style={styles.title} numberOfLines={2}>{event.title}</Text>
+      <Text className={cn('text-base font-semibold mb-3 leading-6', colorScheme.text)} numberOfLines={2}>
+        {event.title}
+      </Text>
       {showMuseum && event.museum && (
-        <View style={styles.museumRow}>
-          <MapPinIcon size={12} color="#8E8E93" />
-          <Text style={styles.museumName} numberOfLines={1}>{event.museum.name}</Text>
+        <View className="flex-row items-center gap-1.5 mb-2">
+          <MapPinIcon size={14} color={iconColor} style={{ opacity: 0.9 }} />
+          <Text className={cn('text-sm font-medium flex-1 opacity-95', colorScheme.text)} numberOfLines={1}>
+            {event.museum.name}
+          </Text>
         </View>
       )}
-      <View style={styles.dateRow}>
-        <CalendarIcon size={12} color="#8E8E93" />
-        <Text style={styles.dateText}>
+      <View className="flex-row items-center gap-1.5">
+        <CalendarIcon size={14} color={iconColor} style={{ opacity: 0.9 }} />
+        <Text className={cn('text-sm font-medium opacity-95', colorScheme.text)}>
           {formatDate(event.startDate)} - {formatDate(event.endDate)}
         </Text>
       </View>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  cardPressed: {
-    backgroundColor: '#F5F5F5',
-  },
-  badge: {
-    backgroundColor: '#34C75915',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    color: '#34C759',
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#222',
-    marginBottom: 8,
-  },
-  museumRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  museumName: {
-    fontSize: 13,
-    color: '#8E8E93',
-    flex: 1,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dateText: {
-    fontSize: 13,
-    color: '#8E8E93',
-  },
-});

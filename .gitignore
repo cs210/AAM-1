@@ -37,3 +37,4 @@ yarn-error.log*
 # turbo
 .turbo
 /.pnpm-store
+apps/mobile/assets/images/login-background.png

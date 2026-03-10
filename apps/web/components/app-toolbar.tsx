@@ -1,6 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { isValidLocale, routing, type Locale } from "@/i18n/routing";
 import { useQuery } from "convex/react";
 import { api } from "@packages/backend/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -9,22 +11,34 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
     DropdownMenuPortal,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserIcon } from "lucide-react";
 import { YamiLogo } from "@/components/yami-logo";
-import { useRouter } from "next/navigation";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useTheme } from "next-themes";
 
-const themeOptions = [
-    { value: "light", icon: SunIcon, label: "Light" },
-    { value: "dark", icon: MoonIcon, label: "Dark" },
-    { value: "system", icon: MonitorIcon, label: "System" },
-] as const;
+const localeNames: Record<Locale, string> = {
+    en: "English",
+    ja: "日本語",
+    es: "Español",
+};
 
 function ThemeToggle() {
+    const t = useTranslations("common");
     const { theme, setTheme } = useTheme();
+    const themeOptions = [
+        { value: "light" as const, icon: SunIcon, label: t("light") },
+        { value: "dark" as const, icon: MoonIcon, label: t("dark") },
+        { value: "system" as const, icon: MonitorIcon, label: t("system") },
+    ];
 
     return (
         <DropdownMenu>
@@ -63,8 +77,16 @@ function ThemeToggle() {
 }
 
 export function AppToolbar() {
+    const t = useTranslations("common");
+    const locale = useLocale();
     const user = useQuery(api.auth.getCurrentUser);
     const router = useRouter();
+    const pathname = usePathname();
+
+    function onSelectLocale(nextLocale: Locale) {
+        if (nextLocale === locale) return;
+        router.replace(pathname || "/", { locale: nextLocale });
+    }
 
     return (
         <header className="fixed left-1/2 top-4 z-50 w-full max-w-5xl -translate-x-1/2 px-4">
@@ -72,17 +94,16 @@ export function AppToolbar() {
                 <Link href="/" className="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
                     <YamiLogo />
                 </Link>
-                <div className="flex items-center gap-1">
-
+                <div className="flex items-center gap-2">
                     {user === undefined ? (
                         <div className="h-9 w-24 animate-pulse rounded-lg bg-muted" />
                     ) : user === null ? (
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm" render={<Link href="/sign-in" />}>
-                                Sign in
+                                {t("signIn")}
                             </Button>
                             <Button size="sm" render={<Link href="/sign-up" />}>
-                                Sign up
+                                {t("signUp")}
                             </Button>
                         </div>
                     ) : (
@@ -93,12 +114,32 @@ export function AppToolbar() {
                                         <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 ">
                                             <UserIcon className="size-3.5" />
                                         </span>
-                                        {user.name ?? user.email ?? "Account"}
+                                        {user.name ?? user.email ?? t("account")}
                                     </Button>
                                 }
                             />
                             <DropdownMenuPortal>
                                 <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                            {t("language")}
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent align="end">
+                                            <DropdownMenuRadioGroup
+                                                value={locale}
+                                                onValueChange={(value) => {
+                                                    if (isValidLocale(value)) onSelectLocale(value);
+                                                }}
+                                            >
+                                                {routing.locales.map((loc) => (
+                                                    <DropdownMenuRadioItem key={loc} value={loc}>
+                                                        {localeNames[loc] ?? loc}
+                                                    </DropdownMenuRadioItem>
+                                                ))}
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuSub>
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                         variant="destructive"
                                         onClick={async () => {
@@ -112,12 +153,13 @@ export function AppToolbar() {
                                         }}
                                     >
                                         <LogOutIcon />
-                                        Log out
+                                        {t("logOut")}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenuPortal>
                         </DropdownMenu>
                     )}
+                    <LocaleSwitcher />
                     <ThemeToggle />
                 </div>
             </nav>

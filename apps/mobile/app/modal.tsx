@@ -9,7 +9,7 @@ export default function ModalScreen() {
         <Text className="text-2xl font-bold text-foreground mb-4">
           This is a modal
         </Text>
-        <Link href="/" dismissTo asChild>
+        <Link href="/home" dismissTo asChild>
           <Pressable className="mt-4 py-3">
             <Text className="text-primary text-lg">Go to home screen</Text>
           </Pressable>

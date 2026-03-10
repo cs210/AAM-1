@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useAction } from "convex/react"
+import { useTranslations } from "next-intl"
 import { api } from "@packages/backend/convex/_generated/api"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,9 @@ type UserOrganization = {
 }
 
 export function AdminUsers() {
+  const t = useTranslations("dashboard.adminUsers")
+  const tCommon = useTranslations("common")
+  const tRole = useTranslations("dashboard.adminUsers.roles")
   const listPendingInvitations = useAction(api.admin.listPendingInvitationsForAdmin)
   const listUserOrganizations = useAction(api.admin.listUserOrganizationsForAdmin)
   const cancelInvitation = useAction(api.admin.cancelInvitationForAdmin)
@@ -62,7 +66,7 @@ export function AdminUsers() {
       query: { limit: 100, offset: 0 },
     })
     if (res.error) {
-      setError(res.error.message ?? "Failed to load users")
+      setError(res.error.message ?? t("errors.loadUsers"))
       setUsers(null)
       setUserOrganizationsByUserId({})
     } else {
@@ -82,7 +86,7 @@ export function AdminUsers() {
       }
     }
     setLoading(false)
-  }, [listUserOrganizations])
+  }, [listUserOrganizations, t])
 
   const loadPendingInvites = React.useCallback(async () => {
     try {
@@ -113,7 +117,7 @@ export function AdminUsers() {
     })
     setCreating(false)
     if (res.error) {
-      setError(res.error.message ?? "Failed to create user")
+      setError(res.error.message ?? t("errors.createUser"))
     } else {
       setShowCreateForm(false)
       setCreateEmail("")
@@ -125,19 +129,19 @@ export function AdminUsers() {
 
   const handleSetRole = async (userId: string, role: "user" | "admin") => {
     const res = await authClient.admin.setRole({ userId, role })
-    if (res.error) setError(res.error.message ?? "Failed to set role")
+    if (res.error) setError(res.error.message ?? t("errors.setRole"))
     else loadUsers()
   }
 
   const handleBan = async (userId: string) => {
     const res = await authClient.admin.banUser({ userId })
-    if (res.error) setError(res.error.message ?? "Failed to ban")
+    if (res.error) setError(res.error.message ?? t("errors.ban"))
     else loadUsers()
   }
 
   const handleUnban = async (userId: string) => {
     const res = await authClient.admin.unbanUser({ userId })
-    if (res.error) setError(res.error.message ?? "Failed to unban")
+    if (res.error) setError(res.error.message ?? t("errors.unban"))
     else loadUsers()
   }
 
@@ -148,27 +152,39 @@ export function AdminUsers() {
       await cancelInvitation({ invitationId })
       loadPendingInvites()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to cancel invitation")
+      setError(e instanceof Error ? e.message : t("errors.cancelInvitation"))
     } finally {
       setCancellingId(null)
     }
   }
 
   const handleDeleteUser = async (userId: string, email: string) => {
-    if (!window.confirm(`Permanently delete user ${email}? This cannot be undone.`)) return
+    if (!window.confirm(t("confirmDelete", { email }))) return
     setDeletingId(userId)
     setError(null)
     const res = await authClient.admin.removeUser({ userId })
     setDeletingId(null)
-    if (res.error) setError(res.error.message ?? "Failed to delete user")
+    if (res.error) setError(res.error.message ?? t("errors.deleteUser"))
     else loadUsers()
   }
+
+  const getRoleLabel = React.useCallback((role: PendingInvitation["role"] | User["role"]) => {
+    switch (role) {
+      case "member":
+      case "admin":
+      case "owner":
+      case "user":
+        return tRole(role)
+      default:
+        return tRole("user")
+    }
+  }, [tRole])
 
   if (loading && !users) {
     return (
       <Card>
         <CardContent className="py-12">
-          <div className="text-muted-foreground text-center text-sm">Loading users…</div>
+          <div className="text-muted-foreground text-center text-sm">{t("loading")}</div>
         </CardContent>
       </Card>
     )
@@ -178,20 +194,20 @@ export function AdminUsers() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Users</CardTitle>
-          <CardDescription>Manage users, roles, and bans.</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </div>
         <Button onClick={() => setShowCreateForm((v) => !v)}>
-          {showCreateForm ? "Cancel" : "Create user"}
+          {showCreateForm ? tCommon("cancel") : t("createUser")}
         </Button>
       </CardHeader>
       <CardContent>
         {showCreateForm && (
           <form onSubmit={handleCreateUser} className="mb-6 rounded-xl border bg-muted/30 p-4">
-            <p className="mb-3 font-medium">Create user</p>
+            <p className="mb-3 font-medium">{t("createUser")}</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="grid gap-1">
-                <Label htmlFor="admin-create-email">Email</Label>
+                <Label htmlFor="admin-create-email">{t("fields.email")}</Label>
                 <Input
                   id="admin-create-email"
                   type="email"
@@ -201,7 +217,7 @@ export function AdminUsers() {
                 />
               </div>
               <div className="grid gap-1">
-                <Label htmlFor="admin-create-password">Password</Label>
+                <Label htmlFor="admin-create-password">{t("fields.password")}</Label>
                 <Input
                   id="admin-create-password"
                   type="password"
@@ -211,7 +227,7 @@ export function AdminUsers() {
                 />
               </div>
               <div className="grid gap-1">
-                <Label htmlFor="admin-create-name">Name (optional)</Label>
+                <Label htmlFor="admin-create-name">{t("fields.nameOptional")}</Label>
                 <Input
                   id="admin-create-name"
                   value={createName}
@@ -221,10 +237,10 @@ export function AdminUsers() {
             </div>
             <div className="mt-3 flex gap-2">
               <Button type="submit" disabled={creating}>
-                {creating ? "Creating…" : "Create"}
+                {creating ? t("creating") : t("create")}
               </Button>
               <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
             </div>
           </form>
@@ -237,7 +253,7 @@ export function AdminUsers() {
 
         {pendingInvites !== null && pendingInvites.length > 0 && (
           <div className="mb-6">
-            <h3 className="mb-2 text-sm font-medium">Pending invitations</h3>
+            <h3 className="mb-2 text-sm font-medium">{t("pendingInvitations")}</h3>
             <div className="space-y-2">
               {pendingInvites.map((inv) => (
                 <div
@@ -247,7 +263,7 @@ export function AdminUsers() {
                   <div className="min-w-0">
                     <p className="font-medium">{inv.email}</p>
                     <p className="text-muted-foreground text-sm">
-                      {inv.organizationName ?? inv.organizationId} · {inv.role ?? "member"}
+                      {inv.organizationName ?? inv.organizationId} · {getRoleLabel(inv.role ?? "member")}
                     </p>
                   </div>
                   <Button
@@ -256,7 +272,7 @@ export function AdminUsers() {
                     disabled={cancellingId === inv._id}
                     onClick={() => handleCancelInvitation(inv._id)}
                   >
-                    {cancellingId === inv._id ? "Cancelling…" : "Cancel invite"}
+                    {cancellingId === inv._id ? t("cancelling") : t("cancelInvite")}
                   </Button>
                 </div>
               ))}
@@ -265,7 +281,7 @@ export function AdminUsers() {
         )}
 
         {users && users.users.length === 0 && (!pendingInvites || pendingInvites.length === 0) ? (
-          <p className="text-muted-foreground text-sm">No users yet.</p>
+          <p className="text-muted-foreground text-sm">{t("empty")}</p>
         ) : (
           <div className="space-y-3">
             {users?.users.map((u) => (
@@ -277,14 +293,14 @@ export function AdminUsers() {
                   <p className="font-medium">{u.name || u.email} ({u.id})</p>
                   <p className="text-muted-foreground text-sm">{u.email}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    Organizations:{" "}
+                    {t("organizationsLabel")}:{" "}
                     {(userOrganizationsByUserId[u.id] ?? []).length > 0
                       ? (userOrganizationsByUserId[u.id] ?? []).map((organization) => organization.name).join(", ")
-                      : "None"}
+                      : t("none")}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    <Badge variant="secondary">{u.role ?? "user"}</Badge>
-                    {u.banned && <Badge variant="destructive">Banned</Badge>}
+                    <Badge variant="secondary">{getRoleLabel(u.role)}</Badge>
+                    {u.banned && <Badge variant="destructive">{t("banned")}</Badge>}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -293,15 +309,15 @@ export function AdminUsers() {
                     variant="outline"
                     onClick={() => handleSetRole(u.id, u.role === "admin" ? "user" : "admin")}
                   >
-                    Set {u.role === "admin" ? "user" : "admin"}
+                    {t("setRole", { role: getRoleLabel(u.role === "admin" ? "user" : "admin") })}
                   </Button>
                   {u.banned ? (
                     <Button size="sm" variant="outline" onClick={() => handleUnban(u.id)}>
-                      Unban
+                      {t("unban")}
                     </Button>
                   ) : (
                     <Button size="sm" variant="outline" onClick={() => handleBan(u.id)}>
-                      Ban
+                      {t("ban")}
                     </Button>
                   )}
                   <Button
@@ -310,7 +326,7 @@ export function AdminUsers() {
                     onClick={() => handleDeleteUser(u.id, u.email)}
                     disabled={deletingId === u.id}
                   >
-                    {deletingId === u.id ? "Deleting…" : "Delete"}
+                    {deletingId === u.id ? t("deleting") : t("delete")}
                   </Button>
                 </div>
               </div>
