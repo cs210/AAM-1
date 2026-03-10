@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 const display = Syne({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
 const body = Newsreader({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-body" });
 
-const formatDate = (timestamp: number) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
+const formatDate = (timestamp: number, locale: string) =>
+  new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(
     new Date(timestamp),
   );
 
