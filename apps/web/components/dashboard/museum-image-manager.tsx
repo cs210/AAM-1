@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
 import { ArrowDownIcon, ArrowUpIcon, StarIcon, Trash2Icon, UploadIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -44,6 +45,7 @@ function optionalText(value: string) {
 }
 
 export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumImageManagerProps) {
+  const t = useTranslations("dashboard.images")
   const convexMuseumId = museumId as Id<"museums">
   const images = useQuery(api.museums.listMuseumImagesForDashboard, { museumId: convexMuseumId }) as
     | MuseumImageRow[]
@@ -68,7 +70,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
   const handleAddByUrl = async () => {
     const imageUrl = urlDraft.trim()
     if (!imageUrl) {
-      setError("Image URL is required.")
+      setError(t("imageUrlRequired"))
       return
     }
 
@@ -86,7 +88,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
       setUrlDraft("")
       setAltDraft("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add image")
+      setError(e instanceof Error ? e.message : t("addFailed"))
     } finally {
       setSaving(false)
     }
@@ -110,7 +112,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
           body: file,
         })
         if (!uploadResponse.ok) {
-          throw new Error("Failed to upload image file")
+          throw new Error(t("uploadFileFailed"))
         }
         const { storageId } = (await uploadResponse.json()) as { storageId: Id<"_storage"> }
         const result = (await addImage({
@@ -124,7 +126,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
       }
       setAltDraft("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to upload image(s)")
+      setError(e instanceof Error ? e.message : t("uploadFailed"))
     } finally {
       setSaving(false)
     }
@@ -140,7 +142,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
       })) as SetPrimaryMuseumImageResult
       onPrimaryImageChange?.(result.imageUrl)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set primary image")
+      setError(e instanceof Error ? e.message : t("setPrimaryFailed"))
     } finally {
       setSaving(false)
     }
@@ -156,7 +158,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
       })) as DeleteMuseumImageResult
       onPrimaryImageChange?.(result.nextPrimaryImageUrl)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete image")
+      setError(e instanceof Error ? e.message : t("deleteFailed"))
     } finally {
       setSaving(false)
     }
@@ -181,7 +183,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
         orderedImageIds: reordered.map((entry) => entry._id),
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reorder images")
+      setError(e instanceof Error ? e.message : t("reorderFailed"))
     } finally {
       setSaving(false)
     }
@@ -190,28 +192,28 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
   return (
     <div className="space-y-3 rounded-xl border p-4">
       <div>
-        <Label>Images</Label>
+        <Label>{t("title")}</Label>
         <p className="text-muted-foreground mt-1 text-xs">
-          Upload files or add image URLs, reorder the gallery, and set the primary card image.
+          {t("description")}
         </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-[2fr_1fr_auto]">
         <Input
           type="url"
-          placeholder="https://example.com/museum-gallery.jpg"
+          placeholder={t("urlPlaceholder")}
           value={urlDraft}
           onChange={(event) => setUrlDraft(event.target.value)}
           disabled={saving}
         />
         <Input
-          placeholder="Alt text (optional)"
+          placeholder={t("altPlaceholder")}
           value={altDraft}
           onChange={(event) => setAltDraft(event.target.value)}
           disabled={saving}
         />
         <Button type="button" onClick={handleAddByUrl} disabled={saving}>
-          Add URL
+          {t("addUrl")}
         </Button>
       </div>
       <div className="flex items-center gap-3">
@@ -227,7 +229,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
         />
         <span className="text-muted-foreground inline-flex items-center text-xs">
           <UploadIcon className="mr-1 size-3.5" />
-          Upload one or more local images
+          {t("uploadHint")}
         </span>
       </div>
 
@@ -238,9 +240,9 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
       )}
 
       {images === undefined ? (
-        <p className="text-muted-foreground text-sm">Loading image gallery…</p>
+        <p className="text-muted-foreground text-sm">{t("loading")}</p>
       ) : imageList.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No additional images yet.</p>
+        <p className="text-muted-foreground text-sm">{t("empty")}</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {imageList.map((image, index) => (
@@ -251,12 +253,12 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
               />
               <div className="space-y-1">
                 <p className="truncate text-sm font-medium">
-                  {image.alt?.trim() || "Untitled image"}
+                  {image.alt?.trim() || t("untitled")}
                 </p>
                 <p className="text-muted-foreground truncate text-xs">{image.imageUrl}</p>
                 {image.isPrimary && (
                   <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    Primary card image
+                    {t("primaryCardImage")}
                   </p>
                 )}
               </div>
@@ -269,7 +271,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
                   disabled={saving || image.isPrimary}
                 >
                   <StarIcon className="mr-1 size-3.5" />
-                  {image.isPrimary ? "Primary" : "Set primary"}
+                  {image.isPrimary ? t("primary") : t("setPrimary")}
                 </Button>
                 <Button
                   type="button"
@@ -277,7 +279,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
                   variant="outline"
                   onClick={() => handleMove(image, "up")}
                   disabled={saving || index === 0}
-                  aria-label="Move image up"
+                  aria-label={t("moveUp")}
                 >
                   <ArrowUpIcon className="size-4" />
                 </Button>
@@ -287,7 +289,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
                   variant="outline"
                   onClick={() => handleMove(image, "down")}
                   disabled={saving || index === imageList.length - 1}
-                  aria-label="Move image down"
+                  aria-label={t("moveDown")}
                 >
                   <ArrowDownIcon className="size-4" />
                 </Button>
@@ -297,7 +299,7 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
                   variant="destructive"
                   onClick={() => handleDelete(image)}
                   disabled={saving}
-                  aria-label="Delete image"
+                  aria-label={t("delete")}
                 >
                   <Trash2Icon className="size-4" />
                 </Button>

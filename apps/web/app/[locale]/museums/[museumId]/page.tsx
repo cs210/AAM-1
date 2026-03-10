@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import type { Id } from "@packages/backend/convex/_generated/dataModel";
@@ -26,7 +26,7 @@ const formatRange = (start: number, end: number) => {
 };
 
 export default function MuseumDetailPage() {
-  const params = useParams<{ museumId: string }>();
+  const params = useParams<{ locale: string; museumId: string }>();
   const museumId = params?.museumId as Id<"museums"> | undefined;
 
   const museum = useQuery(api.museums.getMuseum, museumId ? { id: museumId } : "skip");

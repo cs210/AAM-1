@@ -49,12 +49,7 @@ function ChartContainer({
   children: React.ReactElement
 }) {
   const uniqueId = React.useId()
-  const chartId = React.useRef(`chart-${id || uniqueId.replace(/:/g, "")}`)
-  const configKey = JSON.stringify(
-    Object.fromEntries(
-      Object.entries(config).map(([k, v]) => [k, v?.color ?? v?.theme])
-    )
-  )
+  const chartId = React.useMemo(() => `chart-${id || uniqueId.replace(/:/g, "")}`, [id, uniqueId])
 
   const style = React.useMemo(() => {
     const vars: string[] = []
@@ -64,12 +59,12 @@ function ChartContainer({
         vars.push(`${varName}: ${value.color}`)
       }
     }
-    return vars.length > 0 ? `[data-chart-id="${chartId.current}"] { ${vars.join("; ")} }` : ""
-  }, [configKey])
+    return vars.length > 0 ? `[data-chart-id="${chartId}"] { ${vars.join("; ")} }` : ""
+  }, [chartId, config])
 
   return (
     <div
-      data-chart-id={chartId.current}
+      data-chart-id={chartId}
       className={cn("w-full", className)}
       {...props}
     >

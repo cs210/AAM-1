@@ -1,0 +1,399 @@
+{
+  "common": {
+    "signIn": "サインイン",
+    "signUp": "新規登録",
+    "logOut": "ログアウト",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "retry": "再試行",
+    "save": "保存",
+    "saving": "保存中…",
+    "language": "言語",
+    "loading": "読み込み中…",
+    "account": "アカウント",
+    "dashboard": "ダッシュボード",
+    "backToLanding": "トップに戻る",
+    "goHome": "ホームへ",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "metadata": {
+    "title": "YAMI — あなたのアート、ミュージアム、アイデンティティ",
+    "description": "人類の文化的関与の初の社会的・自動記録。訪問者としてミュージアムを発見するか、スタッフダッシュボードで施設を運営できます。"
+  },
+  "landing": {
+    "visitor": "訪問者の方へ",
+    "museum": "ミュージアムの方へ",
+    "hero": {
+      "your": "あなたの",
+      "cultural": "文化",
+      "passport": "パスポート",
+      "the": "ザ",
+      "museum": "ミュージアム",
+      "os": "OS",
+      "visitorSubline": "人類の文化的関与の初の社会的・自動記録。すべての来館、すべての名作、ギャラリーで過ごした時間が、ずっとあなたのものに。",
+      "museumSubline": "YAMIは、TMSと同期し、分析を可視化し、すべてのギャラリーにインタラクティブな発見をもたらす訪問者エンゲージメント層をミュージアムに提供します。導入の手間はほぼゼロです。",
+      "getEarlyAccess": "早期アクセスを申し込む",
+      "createAccount": "アカウント作成",
+      "openDashboard": "ダッシュボードを開く",
+      "staffSignIn": "スタッフサインイン"
+    },
+    "footer": {
+      "tagline": "YAMIは、私たちの共有文化とアートの社会的体験を革新しています。ベータテストはまもなく開始。リリース時にオープンソース化予定。"
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "サインイン",
+      "description": "メールアドレスとパスワードを入力してアカウントにサインインしてください。",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "submit": "サインイン",
+      "signingIn": "サインイン中…",
+      "noAccount": "アカウントをお持ちでない場合",
+      "signInFailed": "サインインに失敗しました"
+    },
+    "signUp": {
+      "title": "アカウント作成",
+      "description": "新しいアカウントを作成するための情報を入力してください。",
+      "name": "名前",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "submit": "新規登録",
+      "creating": "アカウント作成中…",
+      "hasAccount": "すでにアカウントをお持ちの場合",
+      "signUpFailed": "新規登録に失敗しました",
+      "profileFailed": "アカウントは作成されましたが、プロフィールの設定に失敗しました。再度サインインをお試しください。"
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "museumDetails": "ミュージアム詳細",
+      "organizations": "組織",
+      "exhibitions": "展覧会",
+      "interactions": "インタラクション",
+      "analytics": "分析",
+      "orgRequests": "組織リクエスト",
+      "users": "ユーザー",
+      "invitations": "招待"
+    },
+    "sidebar": {
+      "museumContext": "ミュージアムコンテキスト",
+      "loadingMuseums": "ミュージアムを読み込み中...",
+      "searchSelectMuseum": "ミュージアムを検索して選択",
+      "noMuseumsFound": "ミュージアムが見つかりません。",
+      "navigation": "ナビゲーション",
+      "adminMode": "管理者モード",
+      "adminModeOn": "オン",
+      "adminModeOff": "オフ",
+      "admin": "管理者",
+      "account": "アカウント",
+      "logOut": "ログアウト"
+    },
+    "shell": {
+      "loadingMuseums": "ミュージアムを読み込み中...",
+      "signInRequired": "サインインが必要です",
+      "signInRequiredDescription": "ダッシュボードにアクセスするにはアカウントとワークスペースが必要です。",
+      "museumStaffOnly": "ミュージアムスタッフ専用",
+      "museumStaffOnlyDescription": "このダッシュボードを使用するには、少なくとも1つの組織ワークスペースに所属している必要があります。以下からアクセスをリクエストするか、招待をお待ちください。ミュージアムスタッフでない場合は、訪問者向けアプリをご利用ください。",
+      "invalidMuseumContext": "無効なミュージアムコンテキスト",
+      "invalidMuseumContextNoMuseums": "ミュージアムが利用できないため、ミュージアムコンテキストは無効です。",
+      "invalidMuseumContextSwitched": "ミュージアムコンテキストが無効です（削除された可能性があります）。利用可能な最初のミュージアムに切り替えました。",
+      "museumNotAssigned": "ミュージアムはまだ割り当てられていません",
+      "selectMuseum": "ミュージアムを選択",
+      "noMuseumsAvailable": "利用可能なミュージアムがありません",
+      "workspaceWarning": "割り当てられたミュージアムが無効です（削除された可能性があります）。管理者にワークスペースの再割り当てを依頼してください。",
+      "completeRequiredMuseumDetails": "必須のミュージアム情報をすべて入力してください。",
+      "unableToCreateWorkspace": "ワークスペースを作成できませんでした。",
+      "somethingWentWrong": "問題が発生しました。",
+      "pendingApproval": "最新のワークスペース申請は承認待ちです。",
+      "museumNamePlaceholder": "ミュージアム名",
+      "cityPlaceholder": "市区町村",
+      "statePlaceholder": "都道府県 / 州",
+      "websitePlaceholder": "ミュージアムのWebサイト（任意）",
+      "staffRolePlaceholder": "あなたの役割（任意）",
+      "submittingRequest": "申請を送信中...",
+      "requestMuseumAccess": "ミュージアムアクセスを申請",
+      "notMuseumStaff": "ミュージアムスタッフではありませんか？",
+      "openVisitorApp": "訪問者アプリを開く",
+      "workspacePendingActivation": "ワークスペースは有効化待ちです",
+      "workspacePendingActivationDescription": "{name} への申請は送信されました。管理者がこの組織を承認するとダッシュボードにアクセスできます。",
+      "openVisitorAppWhileWaiting": "待機中に訪問者アプリを開く",
+      "unnamedOrganization": "名前のない組織",
+      "heroDescription": "ミュージアムのプロフィールを最新に保ち、訪問者がモバイルアプリで常に正確な情報を確認できるようにします。",
+      "workspaceSetupIncomplete": "ワークスペース設定が未完了です",
+      "workspaceSetupIncompleteDescription": "このワークスペースはまだミュージアムに紐付いていません。管理者に、管理画面の Organizations セクションでミュージアムを割り当ててもらってください。",
+      "comingSoon": "近日公開",
+      "comingSoonDescription": "{section}セクションは次のバージョンで提供されます。"
+    },
+    "userDetails": {
+      "notSignedIn": "サインインしていません",
+      "museumTeam": "ミュージアムチーム",
+      "adminBadge": "管理者",
+      "workspace": "ワークスペース",
+      "loadingWorkspaces": "ワークスペースを読み込み中...",
+      "selectWorkspace": "ワークスペースを選択",
+      "museumLabel": "ミュージアム",
+      "notAssignedYet": "未割り当て",
+      "noWorkspace": "ワークスペースなし",
+      "pendingActivation": "有効化待ち"
+    },
+    "organizations": {
+      "title": "あなたのワークスペース",
+      "requestNewOrganization": "新しい組織を申請",
+      "description": "所属している組織と、現在割り当てられているミュージアムを表示します。",
+      "empty": "まだどのワークスペースにも所属していません。",
+      "museumLabel": "ミュージアム",
+      "requestDialogTitle": "新しい組織を申請",
+      "requestDialogDescription": "管理者承認のために、新しいミュージアム用ワークスペースを申請します。",
+      "museumNamePlaceholder": "ミュージアム名",
+      "cityPlaceholder": "市区町村",
+      "statePlaceholder": "都道府県 / 州",
+      "websitePlaceholder": "ミュージアムのWebサイト（任意）",
+      "rolePlaceholder": "あなたの役割（任意）",
+      "submitting": "送信中...",
+      "submitRequest": "申請を送信",
+      "createSuccess": "{name} の組織申請を作成しました。"
+    },
+    "images": {
+      "title": "画像",
+      "description": "ファイルをアップロードするか画像URLを追加し、ギャラリーの並び替えとカードのメイン画像設定を行えます。",
+      "urlPlaceholder": "https://example.com/museum-gallery.jpg",
+      "altPlaceholder": "代替テキスト（任意）",
+      "addUrl": "URLを追加",
+      "uploadHint": "1枚以上のローカル画像をアップロード",
+      "loading": "画像ギャラリーを読み込み中…",
+      "empty": "追加画像はまだありません。",
+      "untitled": "無題の画像",
+      "primaryCardImage": "カードのメイン画像",
+      "primary": "メイン",
+      "setPrimary": "メインに設定",
+      "moveUp": "画像を上へ移動",
+      "moveDown": "画像を下へ移動",
+      "delete": "画像を削除",
+      "imageUrlRequired": "画像URLは必須です。",
+      "addFailed": "画像を追加できませんでした",
+      "uploadFileFailed": "画像ファイルをアップロードできませんでした",
+      "uploadFailed": "画像をアップロードできませんでした",
+      "setPrimaryFailed": "メイン画像を設定できませんでした",
+      "deleteFailed": "画像を削除できませんでした",
+      "reorderFailed": "画像を並び替えできませんでした"
+    },
+    "museumDetails": {
+      "title": "ミュージアム情報",
+      "description": "この情報は訪問者向けアプリのプロフィールに表示されます。",
+      "viewPage": "ページを見る",
+      "loading": "ミュージアム詳細を読み込み中…",
+      "emptyStateTitle": "ミュージアム詳細",
+      "emptyStateDescription": "詳細を編集するミュージアムコンテキストを選択してください。",
+      "invalidDescription": "このミュージアムコンテキストは無効であるか、すでに存在しません。",
+      "save": "ミュージアム詳細を保存",
+      "saveSuccess": "ミュージアム詳細を保存しました。",
+      "fields": {
+        "name": "ミュージアム名",
+        "tagline": "タグライン",
+        "description": "短い説明",
+        "phone": "公開電話番号",
+        "email": "公開メールアドレス",
+        "website": "Webサイト",
+        "timezone": "タイムゾーン",
+        "primaryLanguage": "アプリの主要言語",
+        "category": "カテゴリ",
+        "address": "住所",
+        "city": "市区町村",
+        "state": "都道府県 / 州",
+        "postalCode": "郵便番号",
+        "latitude": "緯度",
+        "longitude": "経度",
+        "operatingHours": "営業時間",
+        "accessibilityFeatures": "アクセシビリティ機能",
+        "accessibilityNotes": "追加のアクセシビリティメモ"
+      },
+      "placeholders": {
+        "selectTimezone": "タイムゾーンを選択",
+        "selectLanguage": "言語を選択",
+        "category": "art, history, science"
+      },
+      "hours": {
+        "day": "曜日",
+        "open": "営業",
+        "from": "開始",
+        "to": "終了"
+      },
+      "days": {
+        "monday": "月曜日",
+        "tuesday": "火曜日",
+        "wednesday": "水曜日",
+        "thursday": "木曜日",
+        "friday": "金曜日",
+        "saturday": "土曜日",
+        "sunday": "日曜日"
+      },
+      "timezones": {
+        "pacific": "太平洋時間 (PT)",
+        "mountain": "山岳部時間 (MT)",
+        "central": "中部時間 (CT)",
+        "eastern": "東部時間 (ET)"
+      },
+      "languages": {
+        "english": "英語",
+        "spanish": "スペイン語",
+        "french": "フランス語",
+        "german": "ドイツ語"
+      },
+      "accessibilityOptions": {
+        "wheelchair": "車椅子対応の入口",
+        "elevators": "エレベーターあり",
+        "accessible-restrooms": "バリアフリートイレ",
+        "assistive-listening": "補聴支援デバイス",
+        "braille-signage": "点字 / 触知案内",
+        "sensory-hours": "感覚過敏に配慮した来館時間"
+      },
+      "errors": {
+        "nameRequired": "ミュージアム名は必須です。",
+        "categoryRequired": "カテゴリは必須です。",
+        "cityStateRequired": "市区町村と都道府県 / 州は必須です。",
+        "latitudeRange": "緯度は -90 から 90 の数値で入力してください。",
+        "longitudeRange": "経度は -180 から 180 の数値で入力してください。",
+        "saveFailed": "ミュージアム詳細を保存できませんでした。"
+      }
+    },
+    "adminInvitations": {
+      "title": "招待",
+      "description": "メールでユーザーを組織に招待します。",
+      "loading": "組織を読み込み中…",
+      "empty": "まだ組織がありません。先に組織申請を承認してください。",
+      "sending": "送信中…",
+      "send": "招待を送信",
+      "success": "{email} に招待を送信しました",
+      "fields": {
+        "email": "メールアドレス",
+        "organization": "組織",
+        "role": "権限"
+      },
+      "placeholders": {
+        "email": "user@example.com",
+        "organization": "組織を選択"
+      },
+      "roles": {
+        "member": "メンバー",
+        "admin": "管理者",
+        "owner": "オーナー"
+      },
+      "errors": {
+        "sendFailed": "招待を送信できませんでした"
+      }
+    },
+    "adminUsers": {
+      "title": "ユーザー",
+      "description": "ユーザー、権限、BAN を管理します。",
+      "createUser": "ユーザーを作成",
+      "creating": "作成中…",
+      "create": "作成",
+      "loading": "ユーザーを読み込み中…",
+      "pendingInvitations": "保留中の招待",
+      "cancelling": "キャンセル中…",
+      "cancelInvite": "招待を取り消す",
+      "empty": "まだユーザーがいません。",
+      "organizationsLabel": "組織",
+      "none": "なし",
+      "banned": "BAN中",
+      "setRole": "{role} に設定",
+      "unban": "BAN解除",
+      "ban": "BAN",
+      "deleting": "削除中…",
+      "delete": "削除",
+      "confirmDelete": "ユーザー {email} を完全に削除しますか？この操作は元に戻せません。",
+      "fields": {
+        "email": "メールアドレス",
+        "password": "パスワード",
+        "nameOptional": "名前（任意）"
+      },
+      "roles": {
+        "member": "member",
+        "admin": "admin",
+        "owner": "owner",
+        "user": "user"
+      },
+      "errors": {
+        "loadUsers": "ユーザーを読み込めませんでした",
+        "createUser": "ユーザーを作成できませんでした",
+        "setRole": "権限を設定できませんでした",
+        "ban": "BANできませんでした",
+        "unban": "BAN解除できませんでした",
+        "cancelInvitation": "招待を取り消せませんでした",
+        "deleteUser": "ユーザーを削除できませんでした"
+      }
+    },
+    "adminOrgRequests": {
+      "loading": "組織を読み込み中…",
+      "requestsTitle": "組織申請",
+      "requestsDescription": "ユーザーからの保留中、承認済み、却下済みの申請です。",
+      "hideRequests": "申請を隠す",
+      "showRequests": "申請を表示（保留中 {count} 件）",
+      "noRequests": "組織申請はありません。",
+      "organizationsTitle": "組織",
+      "organizationsDescription": "各組織のミュージアム連携とメンバー管理を行います。",
+      "adminDataUnavailable": "組織管理データを読み込めませんでした。",
+      "noOrganizations": "組織が見つかりません。",
+      "userLabel": "ユーザー",
+      "assignMuseumNowOptional": "今すぐミュージアムを割り当てる（任意）",
+      "assignLater": "後で割り当てる",
+      "approve": "承認",
+      "reject": "却下",
+      "currentMuseum": "現在のミュージアム",
+      "invalidMuseumContext": "無効なミュージアムコンテキスト",
+      "unassigned": "未割り当て",
+      "selectMuseum": "ミュージアムを選択",
+      "manageMembers": "メンバーを管理",
+      "organizationFallback": "組織",
+      "unnamedOrganization": "名前のない組織",
+      "membersDialogDescription": "この組織のメンバー確認、メール検索、追加、削除を行います。",
+      "addUserByEmail": "メールでユーザーを追加",
+      "searchEmailPlaceholder": "メールを検索（2文字以上）",
+      "searching": "検索中...",
+      "search": "検索",
+      "adding": "追加中...",
+      "add": "追加",
+      "noMatchingUsers": "一致するユーザーがいません。",
+      "members": "メンバー",
+      "loadingMembers": "メンバーを読み込み中...",
+      "unableToLoadMembers": "メンバーを読み込めませんでした。",
+      "noMembers": "まだメンバーがいません。",
+      "removing": "削除中...",
+      "remove": "削除",
+      "memberAdded": "{email} を {organization} に追加しました。",
+      "memberRemoved": "{email} を組織から削除しました。",
+      "roles": {
+        "member": "メンバー",
+        "admin": "管理者",
+        "owner": "オーナー"
+      },
+      "statuses": {
+        "pending": "保留中",
+        "approved": "承認済み",
+        "rejected": "却下済み"
+      },
+      "errors": {
+        "loadOrganizations": "組織を読み込めませんでした",
+        "loadMembers": "メンバーを読み込めませんでした",
+        "searchUsers": "ユーザーを検索できませんでした",
+        "addUser": "ユーザーを追加できませんでした",
+        "removeUser": "ユーザーを削除できませんでした",
+        "updateRequest": "申請を更新できませんでした",
+        "updateMuseumLink": "組織のミュージアム連携を更新できませんでした"
+      }
+    }
+  },
+  "acceptInvitation": {
+    "invalidLink": "無効なリンク",
+    "invalidLinkDescription": "この招待リンクは無効であるか、IDが含まれていません。",
+    "title": "組織への招待",
+    "accepting": "招待を承諾中…",
+    "joined": "組織に参加しました。",
+    "goToDashboard": "ダッシュボードへ",
+    "missingLink": "招待リンクがありません。",
+    "couldNotAccept": "招待を承諾できませんでした。"
+  }
+}

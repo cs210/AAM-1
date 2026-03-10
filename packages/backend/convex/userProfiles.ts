@@ -23,7 +23,7 @@ export const getOrCreateUserProfile = mutation({
         updatedAt: Date.now(),
       };
       const profileId = await ctx.db.insert("userProfiles", profileData);
-      return { _id: profileId, ...profileData };
+      return { _id: profileId, _creationTime: Date.now(), ...profileData };
     }
 
     return profile;
@@ -94,7 +94,7 @@ export const updateUserProfile = mutation({
         updatedAt: Date.now(),
       };
       const profileId = await ctx.db.insert("userProfiles", newProfile);
-      return { _id: profileId, ...newProfile };
+      return { _id: profileId, _creationTime: Date.now(), ...newProfile };
     }
 
     // Update existing profile
