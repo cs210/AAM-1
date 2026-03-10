@@ -11,8 +11,9 @@ export interface CheckinPostData {
   userId: string;
   userName: string;
   userImage?: string;
-  museumId: string;
-  museumName: string;
+  contentType: string;
+  contentId: string;
+  contentName: string;
   rating?: number;
   review?: string;
   createdAt: number;
@@ -37,7 +38,7 @@ type CheckinPostProps = {
 
 export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress }: CheckinPostProps) => {
   const handlePress = () => {
-    router.push(`/(museums)/${checkin.museumId}`);
+    router.push(`/(museums)/${checkin.contentId}`);
   };
 
   const colorScheme = CARD_COLORS[cardIndex % CARD_COLORS.length];
@@ -99,10 +100,7 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress 
               )}
             </View>
             <Text className={cn('text-sm font-medium opacity-70', colorScheme.text)} numberOfLines={1}>
-              {checkin.museumName}
-              {checkin.editedAt != null ? (
-                <Text className="text-sm italic opacity-70"> · Edited</Text>
-              ) : null}
+              {checkin.contentName}
             </Text>
           </View>
         </View>
