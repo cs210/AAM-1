@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   signInButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

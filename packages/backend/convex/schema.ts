@@ -164,6 +164,7 @@ export default defineSchema({
     friendUserIds: v.array(v.string()),
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
     createdAt: v.number(), // timestamp of check-in creation
+    editedAt: v.optional(v.number()), // set when user edits rating/review
   })
     .index("by_user", ["userId"])
     .index("by_content", ["contentType", "contentId"])

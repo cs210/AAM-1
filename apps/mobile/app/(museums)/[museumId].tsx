@@ -1,42 +1,73 @@
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon } from 'lucide-react-native';
+import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon } from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
+import { EditCheckinModal } from '../../components/edit-checkin-modal';
+import { useCheckInActions } from '../../hooks/useCheckInActions';
+
+const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 
 export default function MuseumDetailScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
-  
-  // Fetch museum from Convex
+  const id = typeof museumId === 'string' ? museumId : Array.isArray(museumId) ? museumId[0] : undefined;
+
+  // If this route was hit with a tab segment (e.g. from redirect), go to home
+  useEffect(() => {
+    if (id && TAB_ROUTE_SEGMENTS.has(id)) {
+      router.replace('/(tabs)/home');
+    }
+  }, [id]);
+
+  const isTabSegment = id != null && TAB_ROUTE_SEGMENTS.has(id);
+  const effectiveId = isTabSegment ? undefined : id;
+
+  // Fetch museum from Convex (skip when param is a tab segment)
   const museum = useQuery(api.museums.getMuseum, 
-    museumId ? { id: museumId as Id<"museums"> } : "skip"
+    effectiveId ? { id: effectiveId as Id<"museums"> } : "skip"
   );
   
   // Fetch events for this museum
   const events = useQuery(api.events.getEventsByMuseum, 
-    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
+    effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
-    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
+    effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
+
+  // Current user and their existing check-in at this museum (if any)
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const userCheckIns = useQuery(
+    api.checkIns.getUserMuseumCheckIns,
+    effectiveId && currentUser ? { userId: currentUser._id, museumId: effectiveId as Id<'museums'> } : 'skip'
+  );
+  const existingCheckIn = useMemo(() => {
+    if (!userCheckIns || userCheckIns.length === 0) return null;
+    return userCheckIns.reduce((latest, c) =>
+      (c.createdAt > latest.createdAt ? c : latest)
+    );
+  }, [userCheckIns]);
+
+  const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
+  const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
   
   // Follow/unfollow mutations
   const followMuseum = useMutation(api.follows.followMuseum);
   const unfollowMuseum = useMutation(api.follows.unfollowMuseum);
 
   const handleFollowPress = async () => {
-    if (!museumId) return;
+    if (!effectiveId) return;
     try {
       if (isFollowing) {
-        await unfollowMuseum({ museumId: museumId as Id<"museums"> });
+        await unfollowMuseum({ museumId: effectiveId as Id<"museums"> });
       } else {
-        await followMuseum({ museumId: museumId as Id<"museums"> });
+        await followMuseum({ museumId: effectiveId as Id<"museums"> });
       }
     } catch (error) {
       console.error('Follow action failed:', error);
@@ -44,11 +75,15 @@ export default function MuseumDetailScreen() {
   };
 
   const handleCheckInPress = () => {
-    if (!museumId) return;
-    router.push({
-      pathname: '/(museums)/[museumId]/checkin',
-      params: { museumId },
-    });
+    if (!effectiveId) return;
+    if (existingCheckIn) {
+      setEditingCheckIn(existingCheckIn);
+    } else {
+      router.push({
+        pathname: '/(museums)/[museumId]/checkin',
+        params: { museumId: effectiveId },
+      });
+    }
   };
 
   // Loading state
@@ -57,7 +92,7 @@ export default function MuseumDetailScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#A67C52" />
+          <ActivityIndicator size="large" color="#D4915A" />
           <Text style={styles.loadingText}>Loading museum...</Text>
         </View>
       </SafeAreaView>
@@ -135,7 +170,7 @@ export default function MuseumDetailScreen() {
           </Text>
         </Pressable>
 
-        {/* Check-In Button */}
+        {/* Check-In / Edit Check-In Button */}
         <Pressable 
           style={({ pressed }) => [
             styles.checkInButton,
@@ -143,8 +178,17 @@ export default function MuseumDetailScreen() {
           ]}
           onPress={handleCheckInPress}
         >
-          <CheckCircle2Icon size={20} color="#222" />
-          <Text style={styles.checkInButtonText}>Check In</Text>
+          {existingCheckIn ? (
+            <>
+              <PencilIcon size={20} color="#222" />
+              <Text style={styles.checkInButtonText}>Edit your check-in</Text>
+            </>
+          ) : (
+            <>
+              <CheckCircle2Icon size={20} color="#222" />
+              <Text style={styles.checkInButtonText}>Check In</Text>
+            </>
+          )}
         </Pressable>
 
         {/* Upcoming Events Section */}
@@ -152,12 +196,13 @@ export default function MuseumDetailScreen() {
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
           
           {events && events.length > 0 ? (
-            events.map((event) => (
+            events.map((event, index) => (
               <EventCard
                 key={event._id}
-                event={{ ...event, museumId } as EventCardData}
+                event={{ ...event, museumId: id } as EventCardData}
                 showMuseum={false}
                 compactDate={false}
+                cardIndex={index}
               />
             ))
           ) : (
@@ -167,6 +212,20 @@ export default function MuseumDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      <EditCheckinModal
+        visible={editingCheckIn != null}
+        initialRating={editingCheckIn?.rating ?? null}
+        initialReview={editingCheckIn?.review}
+        onSave={(rating, review) =>
+          editingCheckIn &&
+          saveCheckIn(editingCheckIn._id, rating, review)
+        }
+        onDelete={() =>
+          editingCheckIn && deleteCheckIn(editingCheckIn._id)
+        }
+        onClose={() => setEditingCheckIn(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -245,7 +304,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#A67C52',
+    color: '#D4915A',
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -266,7 +325,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   followButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -337,7 +396,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
-    backgroundColor: '#A67C52',
+    backgroundColor: '#D4915A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,

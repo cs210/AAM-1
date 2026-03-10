@@ -1,4 +1,6 @@
 import { ConvexError, v } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
+import { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
@@ -119,6 +121,53 @@ export const getUserCheckIns = query({
   },
 });
 
+// Get check-ins with museum details for profile "cultural passport" (own or another user)
+export const getProfileVisits = query({
+  args: { userId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const currentUser = await authComponent.safeGetAuthUser(ctx);
+    const targetUserId = args.userId ?? currentUser?._id;
+    if (!targetUserId) return [];
+
+    const checkIns = await getCheckInsRaw(ctx, { userId: targetUserId });
+
+    const visits = await Promise.all(
+      checkIns.map(async (ci) => {
+        const museum = await ctx.db.get(ci.museumId);
+        const city = museum?.location?.city;
+        return {
+          checkIn: {
+            _id: ci._id,
+            museumId: ci.museumId,
+            rating: ci.rating,
+            visitDate: ci.visitDate,
+            createdAt: ci.createdAt,
+            review: ci.review,
+            editedAt: ci.editedAt,
+          },
+          museum: museum
+            ? {
+                _id: museum._id,
+                name: museum.name,
+                imageUrl: museum.imageUrl,
+                category: museum.category,
+                city,
+              }
+            : null,
+        };
+      })
+    );
+
+    const valid = visits.filter((entry) => entry.museum != null) as {
+      checkIn: { _id: Id<"museumCheckIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
+      museum: { _id: Id<"museums">; name: string; imageUrl?: string; category: string; city?: string };
+    }[];
+
+    valid.sort((a, b) => b.checkIn.visitDate - a.checkIn.visitDate);
+    return valid;
+  },
+});
+
 // Get all check-ins for a museum
 export const getMuseumCheckIns = query({
   args: { museumId: v.id("museums") },
@@ -172,12 +221,16 @@ export const updateCheckIn = mutation({
     if (checkIn.userId !== user._id)
       throw new ConvexError("Error thrown in updateCheckIn(): Unauthorized to update this check-in");
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (args.rating !== undefined) updateData.rating = args.rating;
     if (args.review !== undefined) updateData.review = args.review;
     if (args.imageUrls !== undefined) updateData.imageUrls = args.imageUrls;
     if (args.friendUserIds !== undefined)
       updateData.friendUserIds = args.friendUserIds;
+    // Only mark as edited when something actually changed
+    if (Object.keys(updateData).length > 0) {
+      updateData.editedAt = Date.now();
+    }
 
     await ctx.db.patch(args.checkInId, updateData);
 
@@ -509,6 +562,7 @@ export const getFollowingCheckins = query({
           rating: ci.rating,
           review: ci.review,
           createdAt: ci.createdAt,
+          editedAt: ci.editedAt,
         };
       })
     );

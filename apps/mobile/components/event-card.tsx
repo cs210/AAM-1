@@ -73,11 +73,11 @@ export function EventCard({ event, showMuseum = true, compactDate = true, classN
       disabled={!event.museumId}
     >
       <View className={cn('px-3 py-1.5 rounded-xl self-start mb-3', colorScheme.badgeBg)}>
-        <Text className={cn('text-[11px] font-bold uppercase tracking-wide', colorScheme.text)}>
+        <Text className={cn('text-xs font-bold uppercase tracking-wide', colorScheme.text)}>
           {event.category}
         </Text>
       </View>
-      <Text className={cn('text-lg font-semibold mb-3 leading-6', colorScheme.text)} numberOfLines={2}>
+      <Text className={cn('text-base font-semibold mb-3 leading-6', colorScheme.text)} numberOfLines={2}>
         {event.title}
       </Text>
       {showMuseum && event.museum && (

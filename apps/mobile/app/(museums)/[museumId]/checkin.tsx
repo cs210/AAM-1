@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,13 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ArrowLeftIcon, StarIcon, XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
+
 export default function CheckInScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
+  const rawId = typeof museumId === 'string' ? museumId : Array.isArray(museumId) ? museumId[0] : undefined;
+  const isTabSegment = rawId != null && TAB_ROUTE_SEGMENTS.has(rawId);
+  const id = isTabSegment ? undefined : rawId;
   const [rating, setRating] = useState<number | null>(null);
   const [review, setReview] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
@@ -26,9 +31,15 @@ export default function CheckInScreen() {
   const [visitDate, setVisitDate] = useState(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch museum details
+  useEffect(() => {
+    if (isTabSegment) {
+      router.replace('/(tabs)/home');
+    }
+  }, [isTabSegment]);
+
+  // Fetch museum details (skip when param is a tab segment)
   const museum = useQuery(api.museums.getMuseum, 
-    museumId ? { id: museumId as Id<"museums"> } : "skip"
+    id ? { id: id as Id<"museums"> } : "skip"
   );
 
   // Fetch all users for friend selection
@@ -51,7 +62,7 @@ export default function CheckInScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!museumId) {
+    if (!id) {
       Alert.alert('Error', 'Museum ID not found');
       return;
     }
