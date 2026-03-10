@@ -73,7 +73,8 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
           data={filteredUsers}
           renderItem={({ item }) => {
             // don't show the current user as a potential user
-            if (item.userId == currUser._id) {
+            // must consider the case where currUser is undefined (not logged in)
+            if (currUser && item.userId === currUser._id) {
               return (<></>);
             }
             const rawName = item.name || item.email || '';
