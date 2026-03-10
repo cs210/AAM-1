@@ -1,6 +1,6 @@
 
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles } from 'lucide-react-native';
@@ -121,6 +121,12 @@ export default function WrappedScreen() {
     viewedUserId ? { userId: viewedUserId } : 'skip'
   );
 
+  // Taste profile (for display next to name)
+  const tasteProfile = useQuery(
+    api.wrapped.getTasteProfileForUser,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
 
@@ -224,9 +230,16 @@ export default function WrappedScreen() {
             )}
           </View>
           
-          {/* Name and Email */}
+          {/* Name and Taste profile badge */}
           <View style={styles.nameSection}>
-            <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+            <View style={styles.nameAndBadgeRow}>
+              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+              {tasteProfile?.profileName ? (
+                <View style={styles.tasteProfileBadge}>
+                  <Text style={styles.tasteProfileBadgeText}>{tasteProfile.profileName}</Text>
+                </View>
+              ) : null}
+            </View>
             {viewedUserId === currentUserId && profile?.email && (
               <Text style={styles.profileEmail}>{profile.email}</Text>
             )}
@@ -431,11 +444,32 @@ const styles = StyleSheet.create({
   nameSection: {
     marginBottom: 8,
   },
+  nameAndBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 2,
+  },
   profileName: {
     fontSize: 22,
     fontWeight: '600',
     color: '#1A1A1A',
-    marginBottom: 2,
+    flexShrink: 1,
+  },
+  tasteProfileBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(212, 145, 90, 0.15)',
+    borderRadius: 14,
+  },
+  tasteProfileBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#D4915A',
   },
   profileEmail: {
     fontSize: 13,
