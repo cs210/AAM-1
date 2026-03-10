@@ -19,8 +19,8 @@ export const INTERACTION_TYPES: {
   { type: "info_audio", label: "Info / Audio", icon: HeadphonesIcon },
 ]
 
-export function formatDate(ts: number) {
-  return new Date(ts).toLocaleDateString("en-US", {
+export function formatDate(ts: number, locale?: string) {
+  return new Date(ts).toLocaleDateString(locale ?? "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

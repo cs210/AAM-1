@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { useQuery } from "convex/react"
 import { PlusIcon } from "lucide-react"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function DashboardExhibitions() {
+  const t = useTranslations("dashboard.exhibitions")
   const museumId = useDashboardMuseumId()
   const exhibitions = useQuery(
     api.exhibitions.listExhibitionsByMuseum,
@@ -23,8 +25,8 @@ export function DashboardExhibitions() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Exhibitions</CardTitle>
-          <CardDescription>Select a museum context to manage exhibitions and halls.</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("selectMuseumDescription")}</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -34,10 +36,8 @@ export function DashboardExhibitions() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Exhibitions</CardTitle>
-          <CardDescription>
-            Organize exhibition structure and halls. Use the Interactions tab to attach visitor interactions.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {showAddExhibition ? (
@@ -49,13 +49,13 @@ export function DashboardExhibitions() {
           ) : (
             <Button variant="outline" className="gap-1.5" onClick={() => setShowAddExhibition(true)}>
               <PlusIcon className="size-4" />
-              Add exhibition
+              {t("addExhibition")}
             </Button>
           )}
           {exhibitions === undefined ? (
-            <p className="text-muted-foreground text-sm">Loading exhibitions...</p>
+            <p className="text-muted-foreground text-sm">{t("loadingExhibitions")}</p>
           ) : exhibitions.length === 0 && !showAddExhibition ? (
-            <p className="text-muted-foreground text-sm">No exhibitions yet. Add one to start organizing halls.</p>
+            <p className="text-muted-foreground text-sm">{t("noExhibitions")}</p>
           ) : (
             <div className="space-y-3">
               {exhibitions.map((ex) => (

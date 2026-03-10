@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
@@ -19,6 +20,8 @@ export function AddExhibitionForm({
   sortOrder: number
   onDone: () => void
 }) {
+  const t = useTranslations("dashboard.interactions.addExhibitionForm")
+  const tCommon = useTranslations("common")
   const createExhibition = useMutation(api.exhibitions.createExhibition)
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -33,7 +36,7 @@ export function AddExhibitionForm({
     setError(null)
     const n = name.trim()
     if (!n) {
-      setError("Name is required.")
+      setError(t("nameRequired"))
       return
     }
     setSaving(true)
@@ -49,7 +52,7 @@ export function AddExhibitionForm({
       })
       onDone()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create exhibition.")
+      setError(err instanceof Error ? err.message : t("createFailed"))
     } finally {
       setSaving(false)
     }
@@ -58,33 +61,33 @@ export function AddExhibitionForm({
   return (
     <Card className="border-dashed">
       <CardHeader>
-        <CardTitle className="text-sm">New exhibition</CardTitle>
-        <CardDescription>Add an exhibition to attach halls and interactions to.</CardDescription>
+        <CardTitle className="text-sm">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ex-name">Name</Label>
+            <Label htmlFor="ex-name">{t("name")}</Label>
             <Input
               id="ex-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Modern Art 2025"
+              placeholder={t("namePlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ex-desc">Description (optional)</Label>
+            <Label htmlFor="ex-desc">{t("descriptionOptional")}</Label>
             <Textarea
               id="ex-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description"
+              placeholder={t("descriptionPlaceholder")}
               rows={2}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ex-start">Start date (optional)</Label>
+              <Label htmlFor="ex-start">{t("startDateOptional")}</Label>
               <Input
                 id="ex-start"
                 type="date"
@@ -93,7 +96,7 @@ export function AddExhibitionForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ex-end">End date (optional)</Label>
+              <Label htmlFor="ex-end">{t("endDateOptional")}</Label>
               <Input
                 id="ex-end"
                 type="date"
@@ -103,21 +106,21 @@ export function AddExhibitionForm({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ex-image">Image URL (optional)</Label>
+            <Label htmlFor="ex-image">{t("imageUrlOptional")}</Label>
             <Input
               id="ex-image"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
+              placeholder={t("imageUrlPlaceholder")}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={saving}>
-              {saving ? "Creating..." : "Create exhibition"}
+              {saving ? t("creating") : t("create")}
             </Button>
             <Button type="button" variant="outline" onClick={onDone}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
           </div>
         </form>

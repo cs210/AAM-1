@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
@@ -33,6 +34,9 @@ export function HallRow({
   hall: HallData
   showInteractions?: boolean
 }) {
+  const t = useTranslations("dashboard.interactions.hallRow")
+  const tTypes = useTranslations("dashboard.interactions.interactionTypes")
+  const tCommon = useTranslations("common")
   const interactions = useQuery(
     api.exhibitions.listInteractionsByHall,
     showInteractions ? { hallId: hall._id } : "skip"
@@ -81,7 +85,7 @@ export function HallRow({
         <>
           <div className="flex flex-wrap gap-2">
             {interactions === undefined ? (
-              <span className="text-sm text-muted-foreground">Loading...</span>
+              <span className="text-sm text-muted-foreground">{t("loading")}</span>
             ) : (
               interactions.map((ia) => {
                 const meta = INTERACTION_TYPES.find((m) => m.type === ia.type)
@@ -94,7 +98,7 @@ export function HallRow({
                     <Icon className="size-3.5 text-muted-foreground" />
                     <span>{ia.title}</span>
                     <Badge variant="secondary" className="text-[10px]">
-                      {meta?.label ?? ia.type}
+                      {tTypes(ia.type)}
                     </Badge>
                     <Button
                       variant="ghost"
@@ -118,19 +122,19 @@ export function HallRow({
               onClick={() => setShowTypePicker(true)}
             >
               <PlusIcon className="size-4" />
-              Attach interaction
+              {t("attachInteraction")}
             </Button>
           )}
 
           {showTypePicker && !selectedType && (
             <Card className="border-dashed">
               <CardHeader>
-                <CardTitle className="text-sm">Choose interaction type</CardTitle>
-                <CardDescription>Pick one to add to this hall.</CardDescription>
+                <CardTitle className="text-sm">{t("chooseTypeTitle")}</CardTitle>
+                <CardDescription>{t("chooseTypeDescription")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {INTERACTION_TYPES.map(({ type, label, icon: Icon }) => (
+                  {INTERACTION_TYPES.map(({ type, icon: Icon }) => (
                     <Button
                       key={type}
                       variant="outline"
@@ -141,12 +145,12 @@ export function HallRow({
                       }}
                     >
                       <Icon className="size-5 text-muted-foreground" />
-                      <span className="text-xs">{label}</span>
+                      <span className="text-xs">{tTypes(type)}</span>
                     </Button>
                   ))}
                 </div>
                 <Button variant="ghost" size="sm" className="mt-2" onClick={() => setShowTypePicker(false)}>
-                  Cancel
+                  {tCommon("cancel")}
                 </Button>
               </CardContent>
             </Card>
@@ -156,7 +160,7 @@ export function HallRow({
             <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="text-sm">
-                  New {INTERACTION_TYPES.find((m) => m.type === selectedType)?.label ?? selectedType}
+                  {t("newType", { type: tTypes(selectedType) })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -172,19 +176,19 @@ export function HallRow({
           )}
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Interactions are configured in the Interactions tab.</p>
+        <p className="text-sm text-muted-foreground">{t("interactionsConfigureInTab")}</p>
       )}
 
       <AlertDialog open={removeHallOpen} onOpenChange={setRemoveHallOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove hall</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeHallTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove "{hall.name}" and its interactions.
+              {t("removeHallDescription", { name: hall.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
@@ -192,7 +196,7 @@ export function HallRow({
                 setRemoveHallOpen(false)
               }}
             >
-              Remove
+              {t("remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -201,13 +205,13 @@ export function HallRow({
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove interaction</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeInteractionTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This interaction will be removed from this hall. This cannot be undone.
+              {t("removeInteractionDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
@@ -216,7 +220,7 @@ export function HallRow({
                 setDeleteId(null)
               }}
             >
-              Remove
+              {t("remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

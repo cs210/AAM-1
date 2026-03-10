@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations, useLocale } from "next-intl"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import { CalendarDaysIcon, ChevronDownIcon, ChevronRightIcon, PlusIcon, Trash2Icon } from "lucide-react"
@@ -34,6 +35,9 @@ export function ExhibitionCard({
   exhibition: ExhibitionRow
   showInteractions?: boolean
 }) {
+  const t = useTranslations("dashboard.interactions.exhibitionCard")
+  const tCommon = useTranslations("common")
+  const locale = useLocale()
   const [expanded, setExpanded] = React.useState(false)
   const [showAddHall, setShowAddHall] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
@@ -44,11 +48,12 @@ export function ExhibitionCard({
   )
   const removeExhibition = useMutation(api.exhibitions.removeExhibition)
 
+  const formatDateLocal = (ts: number) => formatDate(ts, locale)
   const dateRange =
     exhibition.startDate && exhibition.endDate
-      ? `${formatDate(exhibition.startDate)} – ${formatDate(exhibition.endDate)}`
+      ? `${formatDateLocal(exhibition.startDate)} – ${formatDateLocal(exhibition.endDate)}`
       : exhibition.startDate
-        ? `From ${formatDate(exhibition.startDate)}`
+        ? t("fromDate", { date: formatDateLocal(exhibition.startDate) })
         : null
 
   return (
@@ -79,7 +84,7 @@ export function ExhibitionCard({
               {dateRange && <span>{dateRange}</span>}
               {expanded && halls !== undefined && (
                 <Badge variant="secondary" className="text-xs">
-                  {halls.length} hall{halls.length !== 1 ? "s" : ""}
+                  {t("hallsCount", { count: halls.length })}
                 </Badge>
               )}
             </CardDescription>
@@ -109,7 +114,7 @@ export function ExhibitionCard({
                 }}
               >
                 <PlusIcon className="size-4" />
-                Add hall
+                {t("addHall")}
               </Button>
             )}
 
@@ -128,7 +133,7 @@ export function ExhibitionCard({
                 }}
               >
                 <Trash2Icon className="mr-1 size-3.5" />
-                Remove exhibition
+                {t("removeExhibition")}
               </Button>
             </div>
           </CardContent>
@@ -138,13 +143,13 @@ export function ExhibitionCard({
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove exhibition</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeExhibitionTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove "{exhibition.name}" and all its halls and interactions. This cannot be undone.
+              {t("removeExhibitionDescription", { name: exhibition.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
@@ -152,7 +157,7 @@ export function ExhibitionCard({
                 setShowDelete(false)
               }}
             >
-              Remove
+              {t("remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

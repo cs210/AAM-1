@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
@@ -19,6 +20,8 @@ export function AddHallForm({
   sortOrder: number
   onDone: () => void
 }) {
+  const t = useTranslations("dashboard.interactions.addHallForm")
+  const tCommon = useTranslations("common")
   const createHall = useMutation(api.exhibitions.createHall)
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -30,7 +33,7 @@ export function AddHallForm({
     setError(null)
     const n = name.trim()
     if (!n) {
-      setError("Name is required.")
+      setError(t("nameRequired"))
       return
     }
     setSaving(true)
@@ -43,7 +46,7 @@ export function AddHallForm({
       })
       onDone()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create hall.")
+      setError(err instanceof Error ? err.message : t("createFailed"))
     } finally {
       setSaving(false)
     }
@@ -52,37 +55,37 @@ export function AddHallForm({
   return (
     <Card className="border-dashed">
       <CardHeader>
-        <CardTitle className="text-sm">New hall</CardTitle>
-        <CardDescription>Add a hall to this exhibition to attach interactions.</CardDescription>
+        <CardTitle className="text-sm">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="hall-name">Name</Label>
+            <Label htmlFor="hall-name">{t("name")}</Label>
             <Input
               id="hall-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Hall A, Gallery 1"
+              placeholder={t("namePlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hall-desc">Description (optional)</Label>
+            <Label htmlFor="hall-desc">{t("descriptionOptional")}</Label>
             <Textarea
               id="hall-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description"
+              placeholder={t("descriptionPlaceholder")}
               rows={2}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={saving}>
-              {saving ? "Creating..." : "Create hall"}
+              {saving ? t("creating") : t("create")}
             </Button>
             <Button type="button" variant="outline" onClick={onDone}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
           </div>
         </form>
