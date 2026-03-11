@@ -29,13 +29,14 @@ const EmptyState = () => (
 export default function HomeScreen() {
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
+  const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
   const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
   // Loading state
-  if (events === undefined || followingCheckins === undefined || currentUser === undefined) {
+  if (events === undefined || followingCheckins === undefined || currentUser === undefined || currentUserProfile === undefined) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -94,8 +95,8 @@ export default function HomeScreen() {
             style={styles.profileButton}
             onPress={() => router.push('/(tabs)/profile')}
           >
-            {(currentUser as { imageUrl?: string; image?: string })?.imageUrl ?? (currentUser as { image?: string })?.image ? (
-              <Image source={{ uri: ((currentUser as { imageUrl?: string; image?: string })?.imageUrl ?? (currentUser as { image?: string })?.image)! }} style={styles.profileImage} />
+            {currentUserProfile?.imageUrl ? (
+              <Image source={{ uri: currentUserProfile.imageUrl }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileImagePlaceholder}>
                 <Text style={styles.profileInitial}>

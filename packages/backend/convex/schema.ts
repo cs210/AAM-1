@@ -140,6 +140,7 @@ export default defineSchema({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    bannerUrl: v.optional(v.string()),
     museumData: v.optional(v.object({
       totalCheckIns: v.number(),
       totalMuseums: v.number(),
