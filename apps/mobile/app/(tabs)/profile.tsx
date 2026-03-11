@@ -10,6 +10,7 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const { width } = Dimensions.get('window');
 
@@ -140,6 +141,9 @@ export default function WrappedScreen() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
+  const MAX_AVATAR_DIMENSION = 512;
+  const MAX_BANNER_WIDTH = 1200;
+
   const pickAndUploadImage = async (type: 'avatar' | 'banner') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -150,7 +154,8 @@ export default function WrappedScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: type === 'avatar' ? [1, 1] : [16, 9],
-      quality: 0.8,
+      // Initial picker quality; final compression is handled by ImageManipulator below.
+      quality: 0.6,
     });
     if (result.canceled) return;
 
@@ -159,11 +164,64 @@ export default function WrappedScreen() {
       if (type === 'avatar') setUploadingAvatar(true);
       else setUploadingBanner(true);
 
+      // Resize and compress image before upload to enforce size limits.
+      const { width: originalWidth, height: originalHeight, uri: originalUri } = asset;
+
+      const actions: ImageManipulator.Action[] = [];
+
+      if (type === 'avatar') {
+        if (originalWidth && originalHeight) {
+          const maxSide = Math.max(originalWidth, originalHeight);
+          if (maxSide > MAX_AVATAR_DIMENSION) {
+            const scale = MAX_AVATAR_DIMENSION / maxSide;
+            actions.push({
+              resize: {
+                width: Math.round(originalWidth * scale),
+                height: Math.round(originalHeight * scale),
+              },
+            });
+          }
+        } else {
+          actions.push({
+            resize: {
+              width: MAX_AVATAR_DIMENSION,
+              height: MAX_AVATAR_DIMENSION,
+            },
+          });
+        }
+      } else {
+        if (originalWidth && originalWidth > MAX_BANNER_WIDTH && originalHeight) {
+          const scale = MAX_BANNER_WIDTH / originalWidth;
+          actions.push({
+            resize: {
+              width: MAX_BANNER_WIDTH,
+              height: Math.round(originalHeight * scale),
+            },
+          });
+        } else if (!originalWidth || !originalHeight) {
+          actions.push({
+            resize: {
+              width: MAX_BANNER_WIDTH,
+              height: MAX_BANNER_WIDTH,
+            },
+          });
+        }
+      }
+
+      const manipulated = await ImageManipulator.manipulateAsync(
+        originalUri,
+        actions,
+        {
+          compress: type === 'avatar' ? 0.5 : 0.6,
+          format: ImageManipulator.SaveFormat.JPEG,
+        },
+      );
+
       const uploadUrl = await generateUploadUrl();
       const response = await fetch(uploadUrl, {
         method: 'POST',
-        headers: { 'Content-Type': asset.mimeType ?? 'image/jpeg' },
-        body: await (await fetch(asset.uri)).blob(),
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: await (await fetch(manipulated.uri)).blob(),
       });
       const { storageId } = await response.json();
 
