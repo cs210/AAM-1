@@ -41,6 +41,7 @@
   "devDependencies": {
     "@packages/eslint-config": "workspace:*",
     "@tailwindcss/postcss": "^4",
+    "eslint-plugin-no-hardcoded-strings": "^1.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

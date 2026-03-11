@@ -4,6 +4,7 @@ import { AdminInvitations } from "@/components/dashboard/admin-invitations"
 import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
 import { AdminUsers } from "@/components/dashboard/admin-users"
 import { dashboardPathToTabId, dashboardTabMessageKeys } from "@/components/dashboard/constants"
+import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics"
 import { DashboardExhibitions } from "@/components/dashboard/dashboard-exhibitions"
 import { DashboardInteractions } from "@/components/dashboard/dashboard-interactions"
 import { DashboardOrganizations } from "@/components/dashboard/dashboard-organizations"
@@ -42,6 +43,9 @@ export default async function DashboardSectionPage({
   }
   if (tabId === "interactions") {
     return <DashboardInteractions />
+  }
+  if (tabId === "analytics") {
+    return <DashboardAnalytics />
   }
 
   const t = await getTranslations("dashboard.shell")

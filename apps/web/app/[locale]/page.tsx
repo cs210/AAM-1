@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { Link } from "@/i18n/navigation"
 import { Button } from "@/components/ui/button"
+import { LocaleSwitcher } from "@/components/locale-switcher"
 import { YamiLogo } from "@/components/yami-logo"
 import {
   MapPinIcon,
@@ -23,6 +25,7 @@ import {
 type Mode = "visitor" | "museum"
 
 function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const t = useTranslations("landing")
   return (
     <div className="relative flex items-center rounded-full border bg-muted/60 p-0.5 backdrop-blur-sm">
       <div
@@ -41,7 +44,7 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
             mode === m ? "text-background" : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          {m === "visitor" ? "For Visitors" : "For Museums"}
+          {t(m)}
         </button>
       ))}
     </div>
@@ -53,40 +56,45 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
  * Giant stacked hero → Bento grid → Stat ticker → Giant quote
  * ═══════════════════════════════════════════════════════════════════════════*/
 function VisitorLanding() {
+  const t = useTranslations("landing.hero")
+  const tBento = useTranslations("landing.visitorBento")
+  const tStats = useTranslations("landing.visitorStats")
+  const tQuote = useTranslations("landing.visitorQuote")
   const bentoFeatures = [
     {
       icon: MapPinIcon,
-      label: "Passport",
-      title: "The Global Cultural Passport",
-      desc: "Every gallery visit, every ticket scanned, every masterpiece — automatically logged. Miles walked, hours in galleries, your most-visited movements.",
+      label: tBento("passportLabel"),
+      title: tBento("passportTitle"),
+      desc: tBento("passportDesc"),
       span: "md:col-span-2 md:row-span-2",
       size: "lg" as const,
     },
     {
       icon: TrophyIcon,
-      label: "Rewards",
-      title: "Gamified Discovery",
-      desc: "Turn a casual stroll into a quest. Earn badges and rewards for exploring collections.",
+      label: tBento("rewardsLabel"),
+      title: tBento("rewardsTitle"),
+      desc: tBento("rewardsDesc"),
       span: "",
       size: "sm" as const,
     },
     {
       icon: BrainCircuitIcon,
-      label: "AI",
-      title: "The AI Docent",
-      desc: "Your personal curator — suggesting your next must-see exhibit based on your taste and history.",
+      label: tBento("aiLabel"),
+      title: tBento("aiTitle"),
+      desc: tBento("aiDesc"),
       span: "",
       size: "sm" as const,
     },
     {
       icon: ShareIcon,
-      label: "Social",
-      title: "Social Connectivity",
-      desc: "Share your passport, compare museum journeys with friends, see what's trending in your circle, and plan visits together.",
+      label: tBento("socialLabel"),
+      title: tBento("socialTitle"),
+      desc: tBento("socialDesc"),
       span: "md:col-span-2",
       size: "md" as const,
     },
   ]
+  const statKeys = ["miles", "hours", "masterpieces", "badges", "friends"] as const
 
   return (
     <div key="visitor">
@@ -94,16 +102,16 @@ function VisitorLanding() {
       <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 md:px-8 md:pb-20 md:pt-20">
         <div className="animate-landing-fade-up flex flex-col gap-0 leading-[0.88] tracking-tighter">
           <span className="font-display text-[clamp(3rem,12vw,10rem)] font-normal text-foreground/10">
-            Your
+            {t("your")}
           </span>
           <span className="font-display -mt-2 text-[clamp(3rem,12vw,10rem)] font-normal text-primary md:-mt-6">
-            Cultural
+            {t("cultural")}
           </span>
           <span
             className="font-display -mt-2 text-[clamp(3rem,12vw,10rem)] font-normal md:-mt-6"
             style={{ WebkitTextStroke: "1.5px currentColor", WebkitTextFillColor: "transparent" }}
           >
-            Passport
+            {t("passport")}
           </span>
         </div>
         <div className="mt-6 flex flex-col gap-6 md:mt-10 md:flex-row md:items-end md:justify-between">
@@ -111,8 +119,7 @@ function VisitorLanding() {
             className="animate-landing-fade-up max-w-lg text-base leading-relaxed text-muted-foreground md:text-lg"
             style={{ animationDelay: "200ms" }}
           >
-            The first social, automated record of human cultural engagement.
-            Every visit, every masterpiece, every hour in the gallery — yours forever.
+            {t("visitorSubline")}
           </p>
           <div
             className="animate-landing-fade-up flex shrink-0 flex-wrap gap-3"
@@ -120,10 +127,10 @@ function VisitorLanding() {
           >
             <Button size="lg" className="gap-2 rounded-full px-6">
               <TicketIcon className="size-4" />
-              Get early access
+              {t("getEarlyAccess")}
             </Button>
             <Button variant="outline" size="lg" className="gap-2 rounded-full px-6" render={<Link href="/sign-up" />}>
-              Create account
+              {t("createAccount")}
               <ArrowRightIcon className="size-4" />
             </Button>
           </div>
@@ -173,10 +180,10 @@ function VisitorLanding() {
       {/* Stat ticker */}
       <section className="overflow-hidden border-b py-6">
         <div className="animate-landing-fade-in flex items-center justify-center gap-8 whitespace-nowrap px-4 md:gap-16">
-          {["Miles walked in galleries", "Hours in front of canvases", "Masterpieces encountered", "Badges earned", "Friends connected"].map((stat) => (
-            <span key={stat} className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-muted-foreground">
+          {statKeys.map((key) => (
+            <span key={key} className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-muted-foreground">
               <span className="size-1 rounded-full bg-primary" />
-              {stat}
+              {tStats(key)}
             </span>
           ))}
         </div>
@@ -186,13 +193,13 @@ function VisitorLanding() {
       <section className="mx-auto max-w-4xl px-4 py-20 md:py-28">
         <div className="animate-landing-scale-in relative">
           <span className="font-display pointer-events-none absolute -top-10 -left-4 text-[8rem] leading-none text-primary/10 select-none md:-top-16 md:-left-8 md:text-[12rem]">
-            &ldquo;
+            {tQuote("openQuote")}
           </span>
           <blockquote className="font-display relative z-10 text-center text-2xl leading-snug md:text-5xl md:leading-[1.15]">
-            Once a visitor enters the gallery, they become invisible.
+            {tQuote("quote")}
           </blockquote>
           <p className="mt-8 text-center text-sm uppercase tracking-[0.2em] text-muted-foreground">
-            YAMI illuminates the entire journey.
+            {tQuote("attribution")}
           </p>
         </div>
       </section>
@@ -205,39 +212,57 @@ function VisitorLanding() {
  * Giant stacked hero → Bento grid → Stat ticker → Giant quote
  * ═══════════════════════════════════════════════════════════════════════════*/
 function MuseumLanding() {
+  const t = useTranslations("landing.hero")
+  const tBento = useTranslations("landing.museumBento")
+  const tStats = useTranslations("landing.museumStats")
+  const tCallout = useTranslations("landing.museumCallout")
+  const tHow = useTranslations("landing.museumHowItWorks")
+  const tQuote = useTranslations("landing.museumQuote")
   const bentoFeatures = [
     {
       icon: RefreshCwIcon,
-      label: "TMS Sync",
-      title: "Sync with The Museum System",
-      desc: "Connect directly to TMS and keep your collection data in sync. No duplicate entry, no data drift. Your source of truth stays your source of truth — YAMI just makes it visible to visitors.",
+      label: tBento("tmsLabel"),
+      title: tBento("tmsTitle"),
+      desc: tBento("tmsDesc"),
       span: "md:col-span-2 md:row-span-2",
       size: "lg" as const,
     },
     {
       icon: BarChart3Icon,
-      label: "Analytics",
-      title: "Engagement Analytics",
-      desc: "Understand which exhibitions resonate, how visitors interact, and what drives return visits.",
+      label: tBento("analyticsLabel"),
+      title: tBento("analyticsTitle"),
+      desc: tBento("analyticsDesc"),
       span: "",
       size: "sm" as const,
     },
     {
       icon: BabyIcon,
-      label: "Kids",
-      title: "Interactive Activities for Kids",
-      desc: "Scavenger hunts, badge challenges, and guided quests that turn galleries into playgrounds.",
+      label: tBento("kidsLabel"),
+      title: tBento("kidsTitle"),
+      desc: tBento("kidsDesc"),
       span: "",
       size: "sm" as const,
     },
     {
       icon: SearchIcon,
-      label: "Discovery",
-      title: "Exhibition & Activity Discovery",
-      desc: "Help visitors find exhibitions, events, and activities before they arrive and while they explore. Better discoverability means more foot traffic and deeper engagement.",
+      label: tBento("discoveryLabel"),
+      title: tBento("discoveryTitle"),
+      desc: tBento("discoveryDesc"),
       span: "md:col-span-2",
       size: "md" as const,
     },
+  ]
+  const statKeys = ["tms", "analytics", "kids", "discovery", "overhead"] as const
+  const calloutItems: { value: string; labelKey: "extraHardware" | "nativeSync" | "engagementData" | "kidFriendly" }[] = [
+    { value: "0", labelKey: "extraHardware" },
+    { value: "TMS", labelKey: "nativeSync" },
+    { value: "Live", labelKey: "engagementData" },
+    { value: "∞", labelKey: "kidFriendly" },
+  ]
+  const steps = [
+    { num: "01", icon: ShieldCheckIcon, titleKey: "step1Title" as const, bodyKey: "step1Body" as const },
+    { num: "02", icon: RefreshCwIcon, titleKey: "step2Title" as const, bodyKey: "step2Body" as const },
+    { num: "03", icon: SparklesIcon, titleKey: "step3Title" as const, bodyKey: "step3Body" as const },
   ]
 
   return (
@@ -246,16 +271,16 @@ function MuseumLanding() {
       <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 md:px-8 md:pb-20 md:pt-20">
         <div className="animate-landing-fade-up flex flex-col gap-0 leading-[0.88] tracking-tighter">
           <span className="font-display text-[clamp(3rem,12vw,10rem)] font-normal text-foreground/10">
-            The
+            {t("the")}
           </span>
           <span className="font-display -mt-2 text-[clamp(3rem,12vw,10rem)] font-normal text-primary md:-mt-6">
-            Museum
+            {t("museum")}
           </span>
           <span
             className="font-display -mt-2 text-[clamp(3rem,12vw,10rem)] font-normal md:-mt-6"
             style={{ WebkitTextStroke: "1.5px currentColor", WebkitTextFillColor: "transparent" }}
           >
-            OS
+            {t("os")}
           </span>
         </div>
         <div className="mt-6 flex flex-col gap-6 md:mt-10 md:flex-row md:items-end md:justify-between">
@@ -263,9 +288,7 @@ function MuseumLanding() {
             className="animate-landing-fade-up max-w-lg text-base leading-relaxed text-muted-foreground md:text-lg"
             style={{ animationDelay: "200ms" }}
           >
-            YAMI gives your museum a visitor engagement layer that syncs with
-            TMS, surfaces analytics, and brings interactive discovery to every
-            gallery — with near-zero overhead to implement.
+            {t("museumSubline")}
           </p>
           <div
             className="animate-landing-fade-up flex shrink-0 flex-wrap gap-3"
@@ -273,10 +296,10 @@ function MuseumLanding() {
           >
             <Button size="lg" className="gap-2 rounded-full px-6" render={<Link href="/dashboard" />}>
               <LayoutDashboardIcon className="size-4" />
-              Open dashboard
+              {t("openDashboard")}
             </Button>
             <Button variant="outline" size="lg" className="gap-2 rounded-full px-6" render={<Link href="/sign-in" />}>
-              Staff sign in
+              {t("staffSignIn")}
               <ArrowRightIcon className="size-4" />
             </Button>
           </div>
@@ -326,10 +349,10 @@ function MuseumLanding() {
       {/* Stat ticker */}
       <section className="overflow-hidden border-b py-6">
         <div className="animate-landing-fade-in flex items-center justify-center gap-8 whitespace-nowrap px-4 md:gap-16">
-          {["TMS integration", "Engagement analytics", "Kids activities", "Exhibition discovery", "Low overhead"].map((stat) => (
-            <span key={stat} className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-muted-foreground">
+          {statKeys.map((key) => (
+            <span key={key} className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-muted-foreground">
               <span className="size-1 rounded-full bg-primary" />
-              {stat}
+              {tStats(key)}
             </span>
           ))}
         </div>
@@ -338,16 +361,11 @@ function MuseumLanding() {
       {/* Invite-only callout */}
       <section className="border-b bg-foreground text-background dark:bg-card dark:text-card-foreground">
         <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-current/10 md:grid-cols-4">
-          {[
-            { value: "0", label: "Extra hardware" },
-            { value: "TMS", label: "Native sync" },
-            { value: "Live", label: "Engagement data" },
-            { value: "∞", label: "Kid-friendly activities" },
-          ].map((s) => (
-            <div key={s.label} className="px-4 py-8 text-center md:py-12">
+          {calloutItems.map((s) => (
+            <div key={s.labelKey} className="px-4 py-8 text-center md:py-12">
               <p className="font-display text-3xl md:text-5xl">{s.value}</p>
               <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.25em] opacity-50">
-                {s.label}
+                {tCallout(s.labelKey)}
               </p>
             </div>
           ))}
@@ -357,29 +375,10 @@ function MuseumLanding() {
       {/* How it works — numbered */}
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
         <p className="animate-landing-fade-up font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
-          How it works
+          {tHow("title")}
         </p>
         <div className="mt-10 grid gap-12 md:mt-16 md:gap-20">
-          {[
-            {
-              num: "01",
-              icon: ShieldCheckIcon,
-              title: "Request access.",
-              body: "Sign up and submit your museum details. Our team reviews and activates your workspace — no technical setup required.",
-            },
-            {
-              num: "02",
-              icon: RefreshCwIcon,
-              title: "Connect your TMS.",
-              body: "YAMI syncs with The Museum System so your collection data flows in automatically. No duplicate entry, no migration headaches.",
-            },
-            {
-              num: "03",
-              icon: SparklesIcon,
-              title: "Engage visitors.",
-              body: "Interactive activities for kids, exhibition discovery tools, and engagement analytics — all live in your dashboard from day one.",
-            },
-          ].map((step, i) => {
+          {steps.map((step, i) => {
             const Icon = step.icon
             return (
               <div
@@ -394,9 +393,9 @@ function MuseumLanding() {
                   <Icon className="size-4 text-muted-foreground md:mr-1" />
                 </div>
                 <div>
-                  <h3 className="font-display text-xl md:text-3xl">{step.title}</h3>
+                  <h3 className="font-display text-xl md:text-3xl">{tHow(step.titleKey)}</h3>
                   <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                    {step.body}
+                    {tHow(step.bodyKey)}
                   </p>
                 </div>
               </div>
@@ -409,13 +408,13 @@ function MuseumLanding() {
       <section className="mx-auto max-w-4xl px-4 py-20 md:py-28">
         <div className="animate-landing-scale-in relative">
           <span className="font-display pointer-events-none absolute -top-10 -left-4 text-[8rem] leading-none text-primary/10 select-none md:-top-16 md:-left-8 md:text-[12rem]">
-            &ldquo;
+            {tQuote("openQuote")}
           </span>
           <blockquote className="font-display relative z-10 text-center text-2xl leading-snug md:text-5xl md:leading-[1.15]">
-            Make every visit unforgettable — without adding to your workload.
+            {tQuote("quote")}
           </blockquote>
           <p className="mt-8 text-center text-sm uppercase tracking-[0.2em] text-muted-foreground">
-            Low overhead. High engagement. That&apos;s YAMI for museums.
+            {tQuote("attribution")}
           </p>
         </div>
       </section>
@@ -427,6 +426,8 @@ function MuseumLanding() {
  * PAGE
  * ═══════════════════════════════════════════════════════════════════════════*/
 export default function LandingPage() {
+  const t = useTranslations("landing.footer")
+  const tCommon = useTranslations("common")
   const [mode, setMode] = useState<Mode>("visitor")
 
   return (
@@ -438,6 +439,7 @@ export default function LandingPage() {
 
       <div className="flex items-center justify-center gap-4 px-4 pt-4">
         <ModeToggle mode={mode} onChange={setMode} />
+        <LocaleSwitcher />
       </div>
 
       <div key={mode}>
@@ -448,13 +450,12 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4">
           <YamiLogo />
           <p className="text-muted-foreground text-xs leading-relaxed">
-            YAMI is revolutionizing the social experience of our shared culture and art.
-            Beta testing begins soon. Open source on release.
+            {t("tagline")}
           </p>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" render={<Link href="/sign-in" />}>Sign in</Button>
-            <Button variant="ghost" size="sm" render={<Link href="/sign-up" />}>Sign up</Button>
-            <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>Dashboard</Button>
+            <Button variant="ghost" size="sm" render={<Link href="/sign-in" />}>{tCommon("signIn")}</Button>
+            <Button variant="ghost" size="sm" render={<Link href="/sign-up" />}>{tCommon("signUp")}</Button>
+            <Button variant="ghost" size="sm" render={<Link href="/dashboard" />}>{tCommon("dashboard")}</Button>
           </div>
         </div>
       </footer>

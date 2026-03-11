@@ -293,7 +293,7 @@ export function AdminUsers() {
                   <p className="font-medium">{u.name || u.email} ({u.id})</p>
                   <p className="text-muted-foreground text-sm">{u.email}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    {t("organizationsLabel")}:{" "}
+                    {t("organizationsLabel")}
                     {(userOrganizationsByUserId[u.id] ?? []).length > 0
                       ? (userOrganizationsByUserId[u.id] ?? []).map((organization) => organization.name).join(", ")
                       : t("none")}
