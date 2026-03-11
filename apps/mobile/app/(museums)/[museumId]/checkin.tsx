@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
@@ -16,6 +17,7 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ArrowLeftIcon, StarIcon, XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 
@@ -27,6 +29,7 @@ export default function CheckInScreen() {
   const [rating, setRating] = useState<number | null>(null);
   const [review, setReview] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [visitDate, setVisitDate] = useState(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +50,7 @@ export default function CheckInScreen() {
 
   // Create check-in mutation
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
+  const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -61,6 +65,65 @@ export default function CheckInScreen() {
     );
   };
 
+  const pickImages = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission required',
+        'Please allow photo library access to add images to your check-in.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setSelectedImages(result.assets.slice(0, 5));
+    }
+  };
+
+  const removeImage = (uri: string) => {
+    setSelectedImages((prev) => prev.filter((asset) => asset.uri !== uri));
+  };
+
+  const uploadSelectedImages = async (): Promise<Id<'_storage'>[]> => {
+    if (selectedImages.length === 0) {
+      return [];
+    }
+
+    const storageIds: Id<'_storage'>[] = [];
+
+    for (const asset of selectedImages) {
+      const uploadUrl = await generateCheckInImageUploadUrl({});
+      const fileResponse = await fetch(asset.uri);
+      const fileBlob = await fileResponse.blob();
+
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': asset.mimeType ?? 'image/jpeg',
+        },
+        body: fileBlob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload one of the selected images.');
+      }
+
+      const { storageId } = (await uploadResponse.json()) as {
+        storageId: Id<'_storage'>;
+      };
+      storageIds.push(storageId);
+    }
+
+    return storageIds;
+  };
+
   const handleSubmit = async () => {
     if (!id) {
       Alert.alert('Error', 'Museum ID not found');
@@ -69,11 +132,14 @@ export default function CheckInScreen() {
 
     setIsSubmitting(true);
     try {
+      const imageStorageIds = await uploadSelectedImages();
+
       await createCheckIn({
         contentType: "museum",
         contentId: museumId as Id<"museums">,
         rating: rating || undefined,
         review: review.trim() || undefined,
+        imageStorageIds: imageStorageIds.length > 0 ? imageStorageIds : undefined,
         friendUserIds: selectedFriends,
         visitDate: visitDate.getTime(),
       });
@@ -177,6 +243,45 @@ export default function CheckInScreen() {
             numberOfLines={5}
           />
           <Text style={styles.charCount}>{review.length}/500</Text>
+        </View>
+
+        {/* Photos Section */}
+        <View style={styles.section}>
+          <View style={styles.photosHeader}>
+            <Text style={styles.sectionTitle}>Photos</Text>
+            <Pressable
+              style={styles.addPhotoButton}
+              onPress={pickImages}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.addPhotoButtonText}>
+                {selectedImages.length > 0 ? 'Replace Photos' : 'Add Photos'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {selectedImages.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.photoPreviewRow}
+            >
+              {selectedImages.map((asset) => (
+                <View key={asset.uri} style={styles.photoPreviewItem}>
+                  <Image source={{ uri: asset.uri }} style={styles.photoPreviewImage} />
+                  <Pressable
+                    style={styles.removePhotoButton}
+                    onPress={() => removeImage(asset.uri)}
+                    hitSlop={8}
+                  >
+                    <XIcon size={12} color="#FFF" />
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.photoHint}>Add up to 5 photos to your check-in.</Text>
+          )}
         </View>
 
         {/* Date Section */}
@@ -327,6 +432,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222',
     marginBottom: 12,
+  },
+  photosHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  addPhotoButton: {
+    backgroundColor: '#EEF5FF',
+    borderWidth: 1,
+    borderColor: '#C7DEFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  addPhotoButtonText: {
+    color: '#005FCC',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  photoHint: {
+    fontSize: 13,
+    color: '#8E8E93',
+  },
+  photoPreviewRow: {
+    gap: 10,
+  },
+  photoPreviewItem: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#F0F0F0',
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ratingContainer: {
     flexDirection: 'row',
