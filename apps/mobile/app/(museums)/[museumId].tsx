@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
@@ -35,6 +35,12 @@ export default function MuseumDetailScreen() {
   const events = useQuery(api.events.getEventsByMuseum, 
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
+
+  // Fetch all check-ins for this museum (for visitor photo gallery)
+  const museumCheckIns = useQuery(
+    api.checkIns.getMuseumCheckIns,
+    effectiveId ? { museumId: effectiveId as Id<'museums'> } : 'skip'
+  );
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
@@ -54,7 +60,24 @@ export default function MuseumDetailScreen() {
     );
   }, [userCheckIns]);
 
+  const museumCheckInPhotoUrls = useMemo(() => {
+    if (!museumCheckIns || museumCheckIns.length === 0) return [];
+
+    const sorted = [...museumCheckIns].sort((a, b) => b.createdAt - a.createdAt);
+    const photoUrls: string[] = [];
+
+    for (const checkIn of sorted as Array<{ imageUrls?: string[] }>) {
+      if (Array.isArray(checkIn.imageUrls) && checkIn.imageUrls.length > 0) {
+        photoUrls.push(...checkIn.imageUrls);
+      }
+      if (photoUrls.length >= 12) break;
+    }
+
+    return photoUrls.slice(0, 12);
+  }, [museumCheckIns]);
+
   const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
   
   // Follow/unfollow mutations
@@ -210,8 +233,52 @@ export default function MuseumDetailScreen() {
               <Text style={styles.emptyEventsText}>No upcoming events</Text>
             </View>
           )}
+
+          <View style={styles.photosSection}>
+            <Text style={styles.photosSectionTitle}>Visitor Photos</Text>
+            {museumCheckInPhotoUrls.length > 0 ? (
+              <View style={styles.photoGrid}>
+                {museumCheckInPhotoUrls.map((url, index) => (
+                  <Pressable
+                    key={`${url}-${index}`}
+                    onPress={() => setPreviewImageUrl(url)}
+                    style={styles.photoGridItem}
+                  >
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.photoGridImage}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyPhotos}>
+                <Text style={styles.emptyPhotosText}>No check-in photos yet</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={previewImageUrl != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImageUrl(null)}
+      >
+        <Pressable
+          style={styles.fullscreenPreviewOverlay}
+          onPress={() => setPreviewImageUrl(null)}
+        >
+          {previewImageUrl ? (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.fullscreenPreviewImage}
+              resizeMode="contain"
+            />
+          ) : null}
+        </Pressable>
+      </Modal>
 
       <EditCheckinModal
         visible={editingCheckIn != null}
@@ -367,6 +434,52 @@ const styles = StyleSheet.create({
   },
   eventsSection: {
     marginBottom: 16,
+  },
+  photosSection: {
+    marginTop: 20,
+  },
+  photosSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoGridItem: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  photoGridImage: {
+    width: 104,
+    height: 104,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  fullscreenPreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  fullscreenPreviewImage: {
+    width: '100%',
+    height: '80%',
+  },
+  emptyPhotos: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  emptyPhotosText: {
+    fontSize: 14,
+    color: '#8E8E93',
   },
   sectionTitle: {
     fontSize: 20,
