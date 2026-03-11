@@ -285,7 +285,7 @@ export const populateFakeRatings = mutation({
             contentType: "museum",
             contentId: museum._id,
             rating,
-            imageUrls: [],
+            imageIds: [],
             friendUserIds: [],
             createdAt: now,
           });
