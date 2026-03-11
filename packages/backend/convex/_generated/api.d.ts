@@ -19,10 +19,10 @@ import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as organizationRequests from "../organizationRequests.js";
-import type * as ratings from "../ratings.js";
 import type * as recsys from "../recsys.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as wrapped from "../wrapped.js";
 
 import type {
   ApiFromModules,
@@ -42,10 +42,10 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   museums: typeof museums;
   organizationRequests: typeof organizationRequests;
-  ratings: typeof ratings;
   recsys: typeof recsys;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
+  wrapped: typeof wrapped;
 }>;
 
 /**

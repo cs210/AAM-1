@@ -251,17 +251,19 @@ export const listMuseumsWithStats = query({
     // Get stats for each museum
     const museumsWithStats = await Promise.all(
       museums.map(async (museum) => {
-        const ratings = await ctx.db
-          .query("userRatings")
+        const checkIns = await ctx.db
+          .query("checkIns")
           .withIndex("by_content", (q) =>
             q.eq("contentType", "museum").eq("contentId", museum._id)
           )
           .collect();
 
-        const ratingCount = ratings.length;
+        const ratingCount = checkIns.filter(ci => ci.rating !== undefined).length;
         const averageRating =
           ratingCount > 0
-            ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratingCount
+            ? checkIns
+                .filter(ci => ci.rating !== undefined)
+                .reduce((sum, r) => sum + (r.rating || 0), 0) / ratingCount
             : null;
 
         return {

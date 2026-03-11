@@ -90,18 +90,6 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_dates", ["startDate", "endDate"]),
 
-  // User Ratings (user-specific)
-  userRatings: defineTable({
-    userId: v.string(), // Better Auth user ID
-    contentType: v.union(v.literal("museum"), v.literal("event")),
-    contentId: v.string(), // Museum or event ID
-    rating: v.number(), // 1-5 stars
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_user", ["userId"])
-    .index("by_content", ["contentType", "contentId"])
-    .index("by_user_and_content", ["userId", "contentType", "contentId"]),
 
   // Organization access requests (museum workspace requests).
   // betterAuthOrgId = reference to Better Auth component organization (resolve via organizationRequests.resolveOrganization).
@@ -157,7 +145,7 @@ export default defineSchema({
       totalMuseums: v.number(),
       checkIns: v.record(
         v.string(), // museumId as key
-        v.array(v.id("museumCheckIns")) // array of check-in IDs
+        v.array(v.id("checkIns")) // array of check-in IDs
       ),
     })),
     updatedAt: v.number(),
@@ -202,22 +190,23 @@ export default defineSchema({
     .index("by_hall", ["hallId"])
     .index("by_hall_sortOrder", ["hallId", "sortOrder"]),
 
-  // Museum check-ins (individual records for reference)
-  museumCheckIns: defineTable({
+  // Check-ins (museum or event)
+  checkIns: defineTable({
     userId: v.string(), // Better Auth user ID
-    museumId: v.id("museums"),
+    contentType: v.union(v.literal("museum"), v.literal("event")), // Type of check-in
+    contentId: v.union(v.id("museums"), v.id("events")), // Id of museum or event
     rating: v.optional(v.number()), // 1-5 stars
     review: v.optional(v.string()),
     imageUrls: v.array(v.string()),
     friendUserIds: v.array(v.string()),
-    visitDate: v.number(), // timestamp of museum visit
+    visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
     createdAt: v.number(), // timestamp of check-in creation
     editedAt: v.optional(v.number()), // set when user edits rating/review
   })
     .index("by_user", ["userId"])
-    .index("by_museum", ["museumId"])
-      .index("by_user_and_museum", ["userId", "museumId"])
-      .index("by_user_and_date", ["userId", "visitDate"]),
+    .index("by_content", ["contentType", "contentId"])
+    .index("by_user_and_content", ["userId", "contentType", "contentId"])
+    .index("by_user_and_date", ["userId", "visitDate"]),
 
   // Per-user museum interest survey responses
   userInterests: defineTable({
