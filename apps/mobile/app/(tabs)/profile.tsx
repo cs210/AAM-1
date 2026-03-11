@@ -121,6 +121,12 @@ export default function WrappedScreen() {
     viewedUserId ? { userId: viewedUserId } : 'skip'
   );
 
+  // Taste profile (for display next to name)
+  const tasteProfile = useQuery(
+    api.wrapped.getTasteProfileForUser,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
 
@@ -209,6 +215,18 @@ export default function WrappedScreen() {
                     >
                       <Text style={styles.dropdownItemText}>Preferences</Text>
                     </TouchableOpacity>
+                    <View style={styles.dropdownDivider} />
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={async () => {
+                        setShowSettingsDropdown(false);
+                        const { authClient } = await import('@/lib/auth-client');
+                        await authClient.signOut();
+                        router.replace('/sign-in');
+                      }}
+                    >
+                      <Text style={[styles.dropdownItemText, styles.logoutText]}>Log out</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>
@@ -224,9 +242,16 @@ export default function WrappedScreen() {
             )}
           </View>
           
-          {/* Name and Email */}
+          {/* Name and Taste profile badge */}
           <View style={styles.nameSection}>
-            <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+            <View style={styles.nameAndBadgeRow}>
+              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+              {tasteProfile?.profileName ? (
+                <View style={styles.tasteProfileBadge}>
+                  <Text style={styles.tasteProfileBadgeText}>{tasteProfile.profileName}</Text>
+                </View>
+              ) : null}
+            </View>
             {viewedUserId === currentUserId && profile?.email && (
               <Text style={styles.profileEmail}>{profile.email}</Text>
             )}
@@ -313,10 +338,10 @@ export default function WrappedScreen() {
         initialReview={editingVisit?.checkIn.review}
         onSave={(rating, review) =>
           editingVisit &&
-          saveCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>, rating, review)
+          saveCheckIn(editingVisit.checkIn._id as Id<'checkIns'>, rating, review)
         }
         onDelete={() =>
-          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>)
+          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
         }
         onClose={() => setEditingVisit(null)}
       />
@@ -428,14 +453,43 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     fontWeight: '500',
   },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 4,
+  },
+  logoutText: {
+    color: '#DC2626',
+  },
   nameSection: {
     marginBottom: 8,
+  },
+  nameAndBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 2,
   },
   profileName: {
     fontSize: 22,
     fontWeight: '600',
     color: '#1A1A1A',
-    marginBottom: 2,
+    flexShrink: 1,
+  },
+  tasteProfileBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(212, 145, 90, 0.15)',
+    borderRadius: 14,
+  },
+  tasteProfileBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#D4915A',
   },
   profileEmail: {
     fontSize: 13,
@@ -457,6 +511,17 @@ const styles = StyleSheet.create({
   countLabel: {
     fontSize: 14,
     color: '#888',
+  },
+  followButtonBase: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+  },
+  viewWrappedButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   followButtonBase: {
     paddingHorizontal: 32,
@@ -672,7 +737,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   passportEmptyButton: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#D4915A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,

@@ -2,7 +2,7 @@ import { GeospatialIndex } from "@convex-dev/geospatial";
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { api, components, internal } from "./_generated/api";
 import { authComponent } from "./auth";
 import { updateRequestStatusHelper } from "./organizationRequests";
@@ -520,16 +520,16 @@ export const deleteMuseumForAdmin = mutation({
     const existingMuseum = await ctx.db.get(args.museumId);
     if (!existingMuseum) throw new Error("Museum not found");
 
-    const museumIdString = args.museumId as string;
+    const museumIdString = args.museumId as Id<"museums">;
 
-    const museumRatings = await ctx.db
-      .query("userRatings")
+    const museumCheckIns = await ctx.db
+      .query("checkIns")
       .withIndex("by_content", (q) =>
         q.eq("contentType", "museum").eq("contentId", museumIdString)
       )
       .collect();
-    for (const rating of museumRatings) {
-      await ctx.db.delete(rating._id);
+    for (const checkIn of museumCheckIns) {
+      await ctx.db.delete(checkIn._id);
     }
 
     const follows = await ctx.db
@@ -568,16 +568,16 @@ export const deleteMuseumForAdmin = mutation({
       .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
       .collect();
     for (const event of events) {
-      const eventIdString = event._id as string;
+      const eventIdString = event._id as Id<"events">;
 
-      const eventRatings = await ctx.db
-        .query("userRatings")
+      const eventCheckIns = await ctx.db
+        .query("checkIns")
         .withIndex("by_content", (q) =>
           q.eq("contentType", "event").eq("contentId", eventIdString)
         )
         .collect();
-      for (const rating of eventRatings) {
-        await ctx.db.delete(rating._id);
+      for (const checkIn of eventCheckIns) {
+        await ctx.db.delete(checkIn._id);
       }
 
       await geospatial.remove(ctx, event._id);

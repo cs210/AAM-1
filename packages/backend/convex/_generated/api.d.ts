@@ -13,15 +13,16 @@ import type * as auth from "../auth.js";
 import type * as checkIns from "../checkIns.js";
 import type * as email from "../email.js";
 import type * as events from "../events.js";
+import type * as exhibitions from "../exhibitions.js";
 import type * as fakeData from "../fakeData.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as organizationRequests from "../organizationRequests.js";
-import type * as ratings from "../ratings.js";
 import type * as recsys from "../recsys.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as wrapped from "../wrapped.js";
 
 import type {
   ApiFromModules,
@@ -35,15 +36,16 @@ declare const fullApi: ApiFromModules<{
   checkIns: typeof checkIns;
   email: typeof email;
   events: typeof events;
+  exhibitions: typeof exhibitions;
   fakeData: typeof fakeData;
   follows: typeof follows;
   http: typeof http;
   museums: typeof museums;
   organizationRequests: typeof organizationRequests;
-  ratings: typeof ratings;
   recsys: typeof recsys;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
+  wrapped: typeof wrapped;
 }>;
 
 /**

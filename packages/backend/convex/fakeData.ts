@@ -61,6 +61,115 @@ export const populateFakeMuseums = mutation({
         location: { address: "1450 El Prado", city: "San Diego", state: "CA" },
         website: "https://www.sdmart.org",
       },
+      // Science
+      {
+        name: "Exploratorium",
+        description: "A hands-on science museum exploring the world through science, art, and human perception.",
+        category: "science",
+        location: { address: "Pier 15", city: "San Francisco", state: "CA" },
+        website: "https://www.exploratorium.edu",
+      },
+      {
+        name: "Museum of Science and Industry",
+        description: "One of the largest science museums in the world, with exhibits on technology, industry, and natural phenomena.",
+        category: "science",
+        location: { address: "5700 S DuSable Lake Shore Dr", city: "Chicago", state: "IL" },
+        website: "https://www.msichicago.org",
+      },
+      {
+        name: "California Science Center",
+        description: "Hands-on science museum featuring the Space Shuttle Endeavour and interactive exhibits.",
+        category: "science",
+        location: { address: "700 Exposition Park Dr", city: "Los Angeles", state: "CA" },
+        website: "https://californiasciencecenter.org",
+      },
+      // History
+      {
+        name: "National Museum of American History",
+        description: "Smithsonian museum dedicated to the social, political, and cultural history of the United States.",
+        category: "history",
+        location: { address: "1400 Constitution Ave NW", city: "Washington", state: "DC" },
+        website: "https://americanhistory.si.edu",
+      },
+      {
+        name: "The National WWII Museum",
+        description: "Comprehensive museum telling the story of the American experience in World War II.",
+        category: "history",
+        location: { address: "945 Magazine St", city: "New Orleans", state: "LA" },
+        website: "https://www.nationalww2museum.org",
+      },
+      {
+        name: "Museum of the American Revolution",
+        description: "Explores the story of the American Revolution and its ongoing relevance.",
+        category: "history",
+        location: { address: "101 S 3rd St", city: "Philadelphia", state: "PA" },
+        website: "https://www.amrevmuseum.org",
+      },
+      {
+        name: "National Constitution Center",
+        description: "Museum dedicated to the U.S. Constitution and the story of we the people.",
+        category: "history",
+        location: { address: "525 Arch St", city: "Philadelphia", state: "PA" },
+        website: "https://constitutioncenter.org",
+      },
+      // Contemporary
+      {
+        name: "The Museum of Modern Art",
+        description: "Leading museum of modern and contemporary art, from the late 19th century to the present.",
+        category: "contemporary",
+        location: { address: "11 W 53rd St", city: "New York", state: "NY" },
+        website: "https://www.moma.org",
+      },
+      {
+        name: "Institute of Contemporary Art",
+        description: "Museum presenting contemporary art and culture through exhibitions and programs.",
+        category: "contemporary",
+        location: { address: "25 Harbor Shore Dr", city: "Boston", state: "MA" },
+        website: "https://www.icaboston.org",
+      },
+      {
+        name: "Contemporary Arts Museum Houston",
+        description: "Museum dedicated to presenting the art of our time to the public.",
+        category: "contemporary",
+        location: { address: "5216 Montrose Blvd", city: "Houston", state: "TX" },
+        website: "https://camh.org",
+      },
+      {
+        name: "Walker Art Center",
+        description: "Multidisciplinary contemporary art center with visual arts, performance, and film.",
+        category: "contemporary",
+        location: { address: "725 Vineland Pl", city: "Minneapolis", state: "MN" },
+        website: "https://walkerart.org",
+      },
+      // Culture
+      {
+        name: "National Museum of the American Indian",
+        description: "Smithsonian museum dedicated to the culture and history of Native peoples of the Americas.",
+        category: "culture",
+        location: { address: "4th St & Independence Ave SW", city: "Washington", state: "DC" },
+        website: "https://americanindian.si.edu",
+      },
+      {
+        name: "Japanese American National Museum",
+        description: "Museum dedicated to preserving and sharing the history and culture of Japanese Americans.",
+        category: "culture",
+        location: { address: "100 N Central Ave", city: "Los Angeles", state: "CA" },
+        website: "https://www.janm.org",
+      },
+      {
+        name: "National Museum of African American History and Culture",
+        description: "Smithsonian museum documenting African American life, history, and culture.",
+        category: "culture",
+        location: { address: "1400 Constitution Ave NW", city: "Washington", state: "DC" },
+        website: "https://nmaahc.si.edu",
+      },
+      {
+        name: "Museum of Latin American Art",
+        description: "Museum dedicated to modern and contemporary Latin American and Latino art.",
+        category: "culture",
+        location: { address: "628 Alamitos Ave", city: "Long Beach", state: "CA" },
+        website: "https://molaa.org",
+      },
     ];
 
     const insertedIds = [];
@@ -161,7 +270,7 @@ export const populateFakeRatings = mutation({
       for (const userId of usersToRate) {
         // Check if rating already exists
         const existing = await ctx.db
-          .query("userRatings")
+          .query("checkIns")
           .withIndex("by_user_and_content", (q) =>
             q.eq("userId", userId).eq("contentType", "museum").eq("contentId", museum._id)
           )
@@ -171,13 +280,14 @@ export const populateFakeRatings = mutation({
           // Random rating between 3.0 and 5.0 (museums tend to be rated well)
           const rating = 3 + Math.floor(Math.random() * 3);
           
-          await ctx.db.insert("userRatings", {
+          await ctx.db.insert("checkIns", {
             userId,
             contentType: "museum",
             contentId: museum._id,
             rating,
+            imageUrls: [],
+            friendUserIds: [],
             createdAt: now,
-            updatedAt: now,
           });
           insertedCount++;
         }
