@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import {
   GripVerticalIcon,
   ImageIcon,
@@ -22,6 +23,7 @@ type MuseumImage = {
 }
 
 export function ImageManager() {
+  const t = useTranslations("dashboard.images")
   const [images, setImages] = React.useState<MuseumImage[]>([])
   const [heroImageId, setHeroImageId] = React.useState<string | null>(null)
   const [urlDraft, setUrlDraft] = React.useState("")
@@ -137,17 +139,17 @@ export function ImageManager() {
 
   return (
     <Field>
-      <FieldLabel className="mb-1">Images</FieldLabel>
+      <FieldLabel className="mb-1">{t("title")}</FieldLabel>
       <div className="rounded-xl border p-4">
         <FieldGroup>
           <FieldDescription>
-            Upload multiple images, set the hero image, and drag cards to reorder the gallery.
+            {t("description")}
           </FieldDescription>
 
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               type="url"
-              placeholder="Paste an image URL and click Add"
+              placeholder={t("urlPlaceholderPaste")}
               value={urlDraft}
               onChange={(event) => setUrlDraft(event.target.value)}
               onKeyDown={(event) => {
@@ -158,7 +160,7 @@ export function ImageManager() {
               }}
             />
             <Button type="button" variant="outline" onClick={handleAddImageByUrl}>
-              Add URL
+              {t("addUrl")}
             </Button>
           </div>
 
@@ -176,15 +178,15 @@ export function ImageManager() {
             onDrop={handleDropFiles}
           >
             <ImagePlusIcon className="text-muted-foreground mx-auto size-5" />
-            <p className="mt-2 text-sm font-medium">Drop images here</p>
-            <p className="text-muted-foreground text-xs">or choose files from your computer</p>
+            <p className="mt-2 text-sm font-medium">{t("dropImagesHere")}</p>
+            <p className="text-muted-foreground text-xs">{t("orChooseFiles")}</p>
             <Button
               type="button"
               variant="outline"
               className="mt-3"
               onClick={() => fileInputRef.current?.click()}
             >
-              Select Images
+              {t("selectImages")}
             </Button>
           </div>
 
@@ -192,10 +194,10 @@ export function ImageManager() {
             <div className="flex items-center justify-between rounded-xl border bg-muted/25 px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <StarIcon className="size-4 fill-current" />
-                Hero image: <span className="font-medium">{heroImage.name || "Selected image"}</span>
+                {t("heroImageLabel")} <span className="font-medium">{heroImage.name || t("selectedImage")}</span>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={() => setHeroImageId(null)}>
-                Clear
+                {t("clear")}
               </Button>
             </div>
           ) : null}
@@ -229,7 +231,7 @@ export function ImageManager() {
                     <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-black/45 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity group-hover:opacity-100">
                       <span className="inline-flex items-center gap-1">
                         <GripVerticalIcon className="size-3.5" />
-                        Drag
+                        {t("drag")}
                       </span>
                       <span className="max-w-[110px] truncate">{image.name}</span>
                     </div>
@@ -260,7 +262,7 @@ export function ImageManager() {
             ) : (
               <div className="text-muted-foreground col-span-full flex items-center gap-2 rounded-lg border border-dashed px-3 py-4 text-sm">
                 <ImageIcon className="size-4" />
-                No images added yet.
+                {t("noImagesAddedYet")}
               </div>
             )}
           </div>

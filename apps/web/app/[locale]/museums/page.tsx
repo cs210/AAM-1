@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { useQuery } from "convex/react";
 import { Syne, Newsreader } from "next/font/google";
 import { Link } from "@/i18n/navigation";
@@ -12,18 +13,19 @@ import { Button } from "@/components/ui/button";
 const display = Syne({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
 const body = Newsreader({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-body" });
 
-const formatDate = (timestamp: number) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(timestamp));
-
-const formatRange = (start: number, end: number) => {
-  const startLabel = formatDate(start);
-  const endLabel = formatDate(end);
-  return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
-};
-
 export default function MuseumsPage() {
+  const t = useTranslations("museums");
+  const locale = useLocale();
   const museums = useQuery(api.museums.listMuseums);
   const ongoingEvents = useQuery(api.events.listUpcomingEvents);
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(timestamp));
+  const formatRange = (start: number, end: number) => {
+    const startLabel = formatDate(start);
+    const endLabel = formatDate(end);
+    return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
+  };
 
   const eventsByMuseum = useMemo(() => {
   const map = new Map<string, NonNullable<typeof ongoingEvents>>();
@@ -47,24 +49,24 @@ export default function MuseumsPage() {
         <section className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.35em] text-muted-foreground">
             <span className="rounded-full border border-border/60 bg-background/70 px-3 py-1 font-semibold">
-              Museum List
+              {t("museumList")}
             </span>
-            <span className="font-semibold">Live database</span>
+            <span className="font-semibold">{t("liveDatabase")}</span>
           </div>
           <div className="flex flex-col gap-4">
             <h1 className={`${display.className} text-4xl leading-tight sm:text-5xl`}>
-              Museums
+              {t("title")}
             </h1>
             <p className={`${body.className} max-w-2xl text-base text-muted-foreground`}>
-              Explore museums and see their latest profile descriptions from the dashboard.
+              {t("description")}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-              {museumList.length} museums
+              {t("museumsCount", { count: museumList.length })}
             </Badge>
             <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-              {(ongoingEvents ?? []).length} ongoing events
+              {t("ongoingEventsCount", { count: (ongoingEvents ?? []).length })}
             </Badge>
           </div>
         </section>
@@ -72,12 +74,12 @@ export default function MuseumsPage() {
         <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {museums === undefined && (
             <div className="col-span-full grid gap-4 rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground">
-              Fetching museums from Convex...
+              {t("fetching")}
             </div>
           )}
           {museums !== undefined && museumList.length === 0 && (
             <div className="col-span-full grid gap-4 rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground">
-              No museums yet. Seed a few in the debug console first.
+              {t("noMuseums")}
             </div>
           )}
           {museumList.map((museum) => {
@@ -111,14 +113,14 @@ export default function MuseumsPage() {
                     </div>
                     <h2 className={`${display.className} text-2xl leading-tight`}>{museum.name}</h2>
                     <p className={`${body.className} line-clamp-3 text-sm text-muted-foreground`}>
-                      {museum.description || museum.tagline || "No museum profile description yet."}
+                      {museum.description || museum.tagline || t("noDescription")}
                     </p>
                   </div>
                   <div className="relative flex items-center justify-between text-xs text-muted-foreground">
                     <span className="rounded-full border border-border/70 bg-background/70 px-2 py-1">
-                      {events.length} ongoing
+                      {t("ongoing", { count: events.length })}
                     </span>
-                    <span className="uppercase tracking-[0.2em]">Tap for details</span>
+                    <span className="uppercase tracking-[0.2em]">{t("tapForDetails")}</span>
                   </div>
                 </Dialog.Trigger>
                 <Dialog.Portal>
@@ -127,7 +129,7 @@ export default function MuseumsPage() {
                     className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed left-1/2 top-1/2 z-50 grid w-full max-h-[85vh] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[32px] border border-border/60 bg-background/95 p-0 shadow-[0_25px_80px_-45px_rgba(15,23,42,0.55)] outline-none duration-100"
                   >
                     <Dialog.Close
-                      aria-label={`Close ${museum.name} details`}
+                      aria-label={t("closeDetails", { name: museum.name })}
                       className="absolute right-4 top-4 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/70 bg-background/85 text-base text-muted-foreground transition hover:bg-muted hover:text-foreground"
                       render={<button type="button" />}
                     >
@@ -145,21 +147,21 @@ export default function MuseumsPage() {
                         </div>
                         <h3 className={`${display.className} text-3xl`}>{museum.name}</h3>
                         <p className={`${body.className} text-base text-muted-foreground`}>
-                          {museum.description || museum.tagline || "No museum profile description yet."}
+                          {museum.description || museum.tagline || t("noDescription")}
                         </p>
                       </div>
                     </div>
 
                     <div className="grid gap-4 border-y border-border/60 bg-muted/40 px-6 py-5">
                       <div className="flex items-center justify-between">
-                        <h4 className={`${display.className} text-lg`}>Ongoing events</h4>
+                        <h4 className={`${display.className} text-lg`}>{t("ongoingEvents")}</h4>
                         <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                          {events.length} active
+                          {t("active", { count: events.length })}
                         </Badge>
                       </div>
                       {events.length === 0 ? (
                         <p className={`${body.className} text-sm text-muted-foreground`}>
-                          No active events right now. Add one in the debug console or check back later.
+                          {t("noActiveEvents")}
                         </p>
                       ) : (
                         <div className="grid gap-3">
@@ -187,24 +189,24 @@ export default function MuseumsPage() {
                     <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-none bg-background/95 px-6 py-3 backdrop-blur sm:flex-row sm:justify-end">
                       {museum.website ? (
                         <Button
-                        variant="outline"
+                          variant="outline"
                           className="rounded-full"
                           render={
                             <a href={museum.website} target="_blank" rel="noreferrer" />
                           }
                         >
-                          Visit museum site
+                          {t("visitMuseumSite")}
                         </Button>
                       ) : (
                         <Button disabled className="rounded-full">
-                          No website yet
+                          {t("noWebsiteYet")}
                         </Button>
                       )}
                       <Button
                         className="rounded-full"
                         render={<Link href={`/museums/${encodeURIComponent(museum._id)}`} />}
                       >
-                        See more
+                        {t("seeMore")}
                       </Button>
                     </div>
                   </Dialog.Popup>

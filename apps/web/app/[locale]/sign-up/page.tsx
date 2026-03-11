@@ -128,7 +128,7 @@ export default function SignUpPage() {
               {isLoading ? t("creating") : t("submit")}
             </Button>
             <p className="text-muted-foreground text-center text-sm">
-              {t("hasAccount")}{" "}
+              {t("hasAccount")}
               <Link
                 href="/sign-in"
                 className="font-medium text-primary underline-offset-4 hover:underline"
