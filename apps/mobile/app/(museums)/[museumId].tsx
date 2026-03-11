@@ -313,26 +313,6 @@ export default function MuseumDetailScreen() {
           )}
         </Pressable>
 
-        {/* Upcoming Events Section (shown on About tab) */}
-        <View style={styles.eventsSection}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          
-          {events && events.length > 0 ? (
-            events.map((event, index) => (
-              <EventCard
-                key={event._id}
-                event={{ ...event, museumId: id } as EventCardData}
-                showMuseum={false}
-                compactDate={false}
-                cardIndex={index}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyEvents}>
-              <Text style={styles.emptyEventsText}>No upcoming events</Text>
-            </View>
-          )}
-        </View>
         </>
         )}
         {activeTab === 'events' && (
