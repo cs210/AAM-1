@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { useAction, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
@@ -43,6 +44,8 @@ type AdminMuseumsProps = {
 }
 
 export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: AdminMuseumsProps) {
+  const t = useTranslations("dashboard.adminMuseums")
+  const tCommon = useTranslations("common")
   const listMuseums = useAction(api.admin.listMuseumsForAdmin)
   const createMuseum = useMutation(api.admin.createMuseumForAdmin)
   const deleteMuseum = useMutation(api.admin.deleteMuseumForAdmin)
@@ -68,9 +71,9 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       setMuseums((rows as MuseumRow[]) ?? [])
     } catch (e) {
       setMuseums(null)
-      setError(e instanceof Error ? e.message : "Failed to load museums")
+      setError(e instanceof Error ? e.message : t("loadFailed"))
     }
-  }, [listMuseums])
+  }, [listMuseums, t])
 
   React.useEffect(() => {
     loadMuseums()
@@ -83,7 +86,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
 
     const name = newMuseumName.trim()
     if (!name) {
-      setError("Museum name is required.")
+      setError(t("museumRequired"))
       return
     }
 
@@ -92,10 +95,10 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       await createMuseum({ name })
       setNewMuseumName("")
       setShowCreateForm(false)
-      setSuccess("Museum created.")
+      setSuccess(t("museumCreated"))
       await loadMuseums()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create museum")
+      setError(e instanceof Error ? e.message : t("createFailed"))
     } finally {
       setCreating(false)
     }
@@ -104,7 +107,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
   const handleEditContext = (museum: MuseumRow) => {
     onEditMuseumContext?.(museum._id)
     setError(null)
-    setSuccess(`Museum context switched to ${museum.name}.`)
+    setSuccess(t("contextSwitched", { name: museum.name }))
   }
 
   const handleDelete = async (museum: MuseumRow) => {
@@ -113,10 +116,10 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
     setSuccess(null)
     try {
       await deleteMuseum({ museumId: museum._id })
-      setSuccess("Museum deleted.")
+      setSuccess(t("museumDeleted"))
       await loadMuseums()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete museum")
+      setError(e instanceof Error ? e.message : t("deleteFailed"))
     } finally {
       setDeletingId(null)
       setPendingDeleteMuseum(null)
@@ -167,7 +170,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
     return (
       <Card>
         <CardContent className="py-12">
-          <div className="text-muted-foreground text-center text-sm">Loading museums…</div>
+          <div className="text-muted-foreground text-center text-sm">{t("loadingMuseums")}</div>
         </CardContent>
       </Card>
     )
@@ -178,41 +181,41 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Museums</CardTitle>
-          <CardDescription>Admin-only create, delete, and museum-context selection.</CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadMuseums} disabled={museums === undefined}>
-            Refresh
+            {t("refresh")}
           </Button>
           <Button onClick={() => setShowCreateForm((v) => !v)}>
-            {showCreateForm ? "Cancel" : "Add museum"}
+            {showCreateForm ? tCommon("cancel") : t("addMuseum")}
           </Button>
         </div>
         </CardHeader>
         <CardContent className="space-y-4">
         {showCreateForm && (
           <form onSubmit={handleCreate} className="space-y-4 rounded-xl border bg-muted/30 p-4">
-            <p className="font-medium">Create museum</p>
+            <p className="font-medium">{t("createMuseumLabel")}</p>
             <div className="grid gap-1">
-              <Label htmlFor="create-museum-name">Museum name</Label>
+              <Label htmlFor="create-museum-name">{t("museumName")}</Label>
               <Input
                 id="create-museum-name"
                 value={newMuseumName}
                 onChange={(e) => setNewMuseumName(e.target.value)}
-                placeholder="New museum name"
+                placeholder={t("museumNamePlaceholder")}
                 required
               />
             </div>
             <p className="text-muted-foreground text-xs">
-              Additional details can be edited later in the Museum Details tab.
+              {t("editLaterHint")}
             </p>
             <div className="flex gap-2">
               <Button type="submit" disabled={creating}>
-                {creating ? "Creating…" : "Create museum"}
+                {creating ? t("creating") : t("createMuseum")}
               </Button>
               <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
             </div>
           </form>
@@ -232,22 +235,22 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
         <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="grid gap-1">
-              <Label htmlFor="museum-search">Search</Label>
+              <Label htmlFor="museum-search">{t("search")}</Label>
               <Input
                 id="museum-search"
-                placeholder="Name, id, city, description..."
+                placeholder={t("searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-category-filter">Category</Label>
+              <Label htmlFor="museum-category-filter">{t("category")}</Label>
               <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value ?? "all")}>
                 <SelectTrigger id="museum-category-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
+                  <SelectItem value="all">{t("allCategories")}</SelectItem>
                   {categoryOptions.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -257,13 +260,13 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
               </Select>
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-state-filter">State</Label>
+              <Label htmlFor="museum-state-filter">{t("state")}</Label>
               <Select value={stateFilter} onValueChange={(value) => setStateFilter(value ?? "all")}>
                 <SelectTrigger id="museum-state-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All states</SelectItem>
+                  <SelectItem value="all">{t("allStates")}</SelectItem>
                   {stateOptions.map((state) => (
                     <SelectItem key={state} value={state}>
                       {state}
@@ -273,13 +276,13 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
               </Select>
             </div>
             <div className="grid gap-1">
-              <Label htmlFor="museum-city-filter">City</Label>
+              <Label htmlFor="museum-city-filter">{t("city")}</Label>
               <Select value={cityFilter} onValueChange={(value) => setCityFilter(value ?? "all")}>
                 <SelectTrigger id="museum-city-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All cities</SelectItem>
+                  <SelectItem value="all">{t("allCities")}</SelectItem>
                   {cityOptions.map((city) => (
                     <SelectItem key={city} value={city}>
                       {city}
@@ -291,7 +294,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-sm">
-              Showing {filteredMuseums.length} of {museumList.length} museums
+              {t("showing", { count: filteredMuseums.length, total: museumList.length })}
             </p>
             {hasActiveFilters && (
               <Button
@@ -305,16 +308,16 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                   setCityFilter("all")
                 }}
               >
-                Clear filters
+                {t("clearFilters")}
               </Button>
             )}
           </div>
         </div>
 
         {museumList.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No museums in database yet.</p>
+          <p className="text-muted-foreground text-sm">{t("noMuseumsInDb")}</p>
         ) : filteredMuseums.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No museums match current search and filters.</p>
+          <p className="text-muted-foreground text-sm">{t("noMuseumsMatch")}</p>
         ) : (
           <div className="space-y-3">
             {filteredMuseums.map((museum) => (
@@ -325,17 +328,17 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                       {museum.name} ({museum._id})
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      {museum.location.city ?? "Unknown city"}, {museum.location.state ?? "Unknown state"}
+                      {museum.location.city ?? t("unknownCity")}, {museum.location.state ?? t("unknownState")}
                       {museum.location.address ? ` · ${museum.location.address}` : ""}
                     </p>
                     {museum.description ? (
                       <p className="text-muted-foreground text-sm">{museum.description}</p>
                     ) : (
-                      <p className="text-muted-foreground text-sm">No description</p>
+                      <p className="text-muted-foreground text-sm">{t("noDescription")}</p>
                     )}
                     <div className="flex flex-wrap gap-1">
                       <Badge variant="secondary">{museum.category}</Badge>
-                      {activeMuseumContextId === museum._id && <Badge variant="default">Current context</Badge>}
+                      {activeMuseumContextId === museum._id && <Badge variant="default">{t("currentContext")}</Badge>}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-start gap-1">
@@ -344,7 +347,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                       variant="outline"
                       render={<a href={`/museums/${encodeURIComponent(museum._id)}`} target="_blank" rel="noreferrer" />}
                     >
-                      View page
+                      {t("viewPage")}
                     </Button>
                     <Button
                       size="sm"
@@ -352,7 +355,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                       onClick={() => handleEditContext(museum)}
                       disabled={deletingId === museum._id}
                     >
-                      Edit
+                      {t("edit")}
                     </Button>
                     <Button
                       size="sm"
@@ -360,7 +363,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                       onClick={() => setPendingDeleteMuseum(museum)}
                       disabled={deletingId === museum._id}
                     >
-                      {deletingId === museum._id ? "Deleting…" : "Delete"}
+                      {deletingId === museum._id ? t("deleting") : t("delete")}
                     </Button>
                   </div>
                 </div>
@@ -380,15 +383,15 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete museum?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteMuseumTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDeleteMuseum
-                ? `This will permanently delete "${pendingDeleteMuseum.name}" and related records. This action cannot be undone.`
-                : "This action cannot be undone."}
+                ? t("deleteMuseumDescription", { name: pendingDeleteMuseum.name })
+                : t("deleteMuseumDescriptionShort")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={Boolean(deletingId)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={Boolean(deletingId)}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={!pendingDeleteMuseum || Boolean(deletingId)}
@@ -397,7 +400,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                 handleDelete(pendingDeleteMuseum)
               }}
             >
-              {deletingId ? "Deleting…" : "Delete"}
+              {deletingId ? t("deleting") : t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

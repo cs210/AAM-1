@@ -15,6 +15,8 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Share2, Download } from 'lucide-react-native';
+import { useQuery } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
 
 const { width, height } = Dimensions.get('window');
 const SLIDE_HEIGHT = height;
@@ -45,7 +47,7 @@ const DATA = {
 };
 
 // ─── Slide 1: Intro ────────────────────────────────────────────────────────
-const IntroSlide = ({ onNext }: { onNext: () => void }) => {
+const IntroSlide = ({ onNext, tasteProfileName }: { onNext: () => void; tasteProfileName: string | null | undefined }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -56,7 +58,6 @@ const IntroSlide = ({ onNext }: { onNext: () => void }) => {
       Animated.timing(slideAnim, { toValue: 0, duration: 700, delay: 200, useNativeDriver: true }),
     ]).start();
 
-    // Pulse animation for tap hint
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 800, useNativeDriver: true }),
@@ -72,6 +73,9 @@ const IntroSlide = ({ onNext }: { onNext: () => void }) => {
         <View style={styles.titleBlock}>
           <Text style={styles.displayTitle}>Museum</Text>
           <Text style={styles.displayAccent}>Wrapped</Text>
+        </View>
+        <View style={styles.tasteProfilePill}>
+          <Text style={styles.tasteProfilePillText}>{tasteProfileName ?? 'Explorer'}</Text>
         </View>
         <Text style={styles.bodyText}>Let's explore your artistic{'\n'}journey this year</Text>
       </Animated.View>
@@ -248,7 +252,46 @@ const StylesSlide = ({ onNext }: { onNext: () => void }) => {
   );
 };
 
-// ─── Slide 6: Share ────────────────────────────────────────────────────────
+// ─── Slide 6: Taste profile (based on majority of followed museum types) ────
+const TasteProfileSlide = ({
+  profileName,
+  category,
+  onNext,
+}: {
+  profileName: string | null;
+  category: string | null;
+  onNext: () => void;
+}) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 8, tension: 40, delay: 150, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Pressable style={styles.slide} onPress={onNext}>
+      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
+        <Text style={styles.eyebrow}>YOUR TASTE PROFILE</Text>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <Text style={[styles.displayAccent, { fontSize: 48, marginBottom: 12 }]}>
+            {profileName ?? 'Explorer'}
+          </Text>
+        </Animated.View>
+        <Text style={styles.bodyText}>
+          {category
+            ? `Based on your love of ${category} museums`
+            : 'Follow museums to discover your taste profile'}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+};
+
+// ─── Slide 7: Share ────────────────────────────────────────────────────────
 const ShareSlide = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
@@ -305,12 +348,13 @@ const ProgressDots = ({ total, current }: { total: number; current: number }) =>
 );
 
 // ─── Main screen ───────────────────────────────────────────────────────────
-const SLIDES = ['intro', 'hours', 'museums', 'topspot', 'styles', 'share'] as const;
+const SLIDES = ['intro', 'tasteprofile', 'hours', 'museums', 'topspot', 'styles', 'share'] as const;
 
 export default function WrappedScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const tasteProfile = useQuery(api.wrapped.getTasteProfile);
 
   const goToNext = () => {
     if (currentSlide < SLIDES.length - 1) {
@@ -337,11 +381,12 @@ export default function WrappedScreen() {
     };
 
     switch (SLIDES[currentSlide]) {
-      case 'intro': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><IntroSlide onNext={goToNext} /></Animated.View>;
+      case 'intro': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><IntroSlide onNext={goToNext} tasteProfileName={tasteProfile?.profileName ?? null} /></Animated.View>;
       case 'hours': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><HoursSlide onNext={goToNext} /></Animated.View>;
       case 'museums': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><MuseumsSlide onNext={goToNext} /></Animated.View>;
       case 'topspot': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><TopSpotSlide onNext={goToNext} /></Animated.View>;
       case 'styles': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><StylesSlide onNext={goToNext} /></Animated.View>;
+      case 'tasteprofile': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><TasteProfileSlide profileName={tasteProfile?.profileName ?? null} category={tasteProfile?.category ?? null} onNext={goToNext} /></Animated.View>;
       case 'share': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><ShareSlide /></Animated.View>;
       default: return null;
     }
@@ -447,6 +492,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginTop: 8,
+  },
+  tasteProfilePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(212, 145, 90, 0.15)',
+    borderRadius: 20,
+  },
+  tasteProfilePillText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D4915A',
   },
   footnoteText: {
     fontSize: 13,

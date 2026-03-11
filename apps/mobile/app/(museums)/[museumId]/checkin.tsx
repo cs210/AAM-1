@@ -70,7 +70,8 @@ export default function CheckInScreen() {
     setIsSubmitting(true);
     try {
       await createCheckIn({
-        museumId: id as Id<"museums">,
+        contentType: "museum",
+        contentId: museumId as Id<"museums">,
         rating: rating || undefined,
         review: review.trim() || undefined,
         friendUserIds: selectedFriends,

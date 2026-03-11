@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -14,18 +15,20 @@ import { Button } from "@/components/ui/button";
 const display = Syne({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
 const body = Newsreader({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-body" });
 
-const formatDate = (timestamp: number) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
+const formatDate = (timestamp: number, locale: string) =>
+  new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(
     new Date(timestamp),
   );
 
-const formatRange = (start: number, end: number) => {
-  const startLabel = formatDate(start);
-  const endLabel = formatDate(end);
+const formatRange = (start: number, end: number, locale: string) => {
+  const startLabel = formatDate(start, locale);
+  const endLabel = formatDate(end, locale);
   return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
 };
 
 export default function MuseumDetailPage() {
+  const t = useTranslations("museums");
+  const locale = useLocale();
   const params = useParams<{ locale: string; museumId: string }>();
   const museumId = params?.museumId as Id<"museums"> | undefined;
 
@@ -41,26 +44,26 @@ export default function MuseumDetailPage() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
         <div className="flex items-center justify-between gap-3">
           <Button variant="outline" className="rounded-full" render={<Link href="/museums" />}>
-            Back to museums
+            {t("backToMuseums")}
           </Button>
           {museum?.website ? (
             <Button className="rounded-full" render={<a href={museum.website} target="_blank" rel="noreferrer" />}>
-              Visit museum site
+              {t("visitMuseumSite")}
             </Button>
           ) : (
             <Button disabled className="rounded-full">
-              No website yet
+              {t("noWebsiteYet")}
             </Button>
           )}
         </div>
 
         {museum === undefined ? (
           <div className="rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground">
-            Loading museum details...
+            {t("loadingDetails")}
           </div>
         ) : museum === null ? (
           <div className="rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground">
-            Museum not found.
+            {t("notFound")}
           </div>
         ) : (
           <>
@@ -84,11 +87,11 @@ export default function MuseumDetailPage() {
                 </div>
                 <h1 className={`${display.className} text-4xl leading-tight sm:text-5xl`}>{museum.name}</h1>
                 <p className={`${body.className} max-w-3xl text-base text-muted-foreground`}>
-                  {museum.description || museum.tagline || "No museum description yet."}
+                  {museum.description || museum.tagline || t("noDescriptionDetail")}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                    {exhibitList.length} active exhibits
+                    {t("activeExhibitsCount", { count: exhibitList.length })}
                   </Badge>
                   {museum.phone && (
                     <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
@@ -101,28 +104,28 @@ export default function MuseumDetailPage() {
 
             <section className="grid gap-4 rounded-[28px] border border-border/60 bg-background/80 p-6">
               <div className="flex items-center justify-between">
-                <h2 className={`${display.className} text-2xl`}>Museum Details</h2>
+                <h2 className={`${display.className} text-2xl`}>{t("museumDetails")}</h2>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                  Profile
+                  {t("profile")}
                 </Badge>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 text-sm">
                   {museum.tagline && (
                     <p>
-                      <span className="text-muted-foreground">Tagline: </span>
+                      <span className="text-muted-foreground">{t("taglineLabel")}</span>
                       {museum.tagline}
                     </p>
                   )}
                   {museum.publicEmail && (
                     <p>
-                      <span className="text-muted-foreground">Email: </span>
+                      <span className="text-muted-foreground">{t("emailLabel")}</span>
                       {museum.publicEmail}
                     </p>
                   )}
                   {museum.phone && (
                     <p>
-                      <span className="text-muted-foreground">Phone: </span>
+                      <span className="text-muted-foreground">{t("phoneLabel")}</span>
                       {museum.phone}
                     </p>
                   )}
@@ -130,7 +133,7 @@ export default function MuseumDetailPage() {
                 <div className="space-y-2 text-sm">
                   {(museum.location.address || museum.location.city || museum.location.state || museum.location.postalCode) && (
                     <p>
-                      <span className="text-muted-foreground">Address: </span>
+                      <span className="text-muted-foreground">{t("addressLabel")}</span>
                       {[museum.location.address, museum.location.city, museum.location.state, museum.location.postalCode]
                         .filter(Boolean)
                         .join(", ")}
@@ -138,11 +141,11 @@ export default function MuseumDetailPage() {
                   )}
                   {museum.operatingHours && museum.operatingHours.length > 0 && (
                     <div>
-                      <p className="text-muted-foreground">Operating hours:</p>
+                      <p className="text-muted-foreground">{t("operatingHours")}</p>
                       <ul className="mt-1 space-y-1">
                         {museum.operatingHours.map((entry) => (
                           <li key={entry.day}>
-                            {entry.day}: {entry.isOpen ? `${entry.openTime} - ${entry.closeTime}` : "Closed"}
+                            {entry.day}: {entry.isOpen ? `${entry.openTime} - ${entry.closeTime}` : t("closed")}
                           </li>
                         ))}
                       </ul>
@@ -150,13 +153,13 @@ export default function MuseumDetailPage() {
                   )}
                   {museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0 && (
                     <p>
-                      <span className="text-muted-foreground">Accessibility: </span>
+                      <span className="text-muted-foreground">{t("accessibilityLabel")}</span>
                       {museum.accessibilityFeatures.join(", ")}
                     </p>
                   )}
                   {museum.accessibilityNotes && (
                     <p>
-                      <span className="text-muted-foreground">Accessibility notes: </span>
+                      <span className="text-muted-foreground">{t("accessibilityNotesLabel")}</span>
                       {museum.accessibilityNotes}
                     </p>
                   )}
@@ -166,16 +169,16 @@ export default function MuseumDetailPage() {
 
             <section className="grid gap-4 rounded-[28px] border border-border/60 bg-background/80 p-6">
               <div className="flex items-center justify-between">
-                <h2 className={`${display.className} text-2xl`}>Exhibits</h2>
+                <h2 className={`${display.className} text-2xl`}>{t("exhibits")}</h2>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                  Live Data
+                  {t("liveData")}
                 </Badge>
               </div>
               {exhibits === undefined ? (
-                <p className={`${body.className} text-sm text-muted-foreground`}>Loading exhibits...</p>
+                <p className={`${body.className} text-sm text-muted-foreground`}>{t("loadingExhibits")}</p>
               ) : exhibitList.length === 0 ? (
                 <p className={`${body.className} text-sm text-muted-foreground`}>
-                  No active exhibits right now. Check back later.
+                  {t("noActiveExhibits")}
                 </p>
               ) : (
                 <div className="grid gap-3">
@@ -189,7 +192,7 @@ export default function MuseumDetailPage() {
                           </div>
                         </div>
                         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                          {formatRange(event.startDate, event.endDate)}
+                          {formatRange(event.startDate, event.endDate, locale)}
                         </div>
                       </div>
                       {event.description && (
@@ -203,7 +206,7 @@ export default function MuseumDetailPage() {
                             className="rounded-full"
                             render={<a href={event.registrationUrl} target="_blank" rel="noreferrer" />}
                           >
-                            Event details
+                            {t("eventDetails")}
                           </Button>
                         </div>
                       )}

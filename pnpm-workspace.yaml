@@ -6,6 +6,8 @@ nodeLinker: hoisted
 
 onlyBuiltDependencies:
   - '@clerk/shared'
+  - '@parcel/watcher'
+  - '@swc/core'
   - esbuild
   - msw
   - sharp

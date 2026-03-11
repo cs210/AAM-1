@@ -154,7 +154,7 @@ export function DashboardOrganizations() {
                   <p className="font-medium">{org.name ?? org._id}</p>
                   <p className="text-muted-foreground text-xs">{org._id}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    {t("museumLabel")}:{" "}
+                    {t("museumLabel")}
                     {org.hasInvalidMuseumContext
                       ? tShell("invalidMuseumContext")
                       : org.linkedMuseumName ?? tShell("museumNotAssigned")}

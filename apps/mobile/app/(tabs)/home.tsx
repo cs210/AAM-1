@@ -141,10 +141,10 @@ export default function HomeScreen() {
         initialRating={editingCheckin?.rating ?? null}
         initialReview={editingCheckin?.review}
         onSave={(rating, review) =>
-          editingCheckin && saveCheckIn(editingCheckin._id as Id<'museumCheckIns'>, rating, review)
+          editingCheckin && saveCheckIn(editingCheckin._id as Id<'checkIns'>, rating, review)
         }
         onDelete={() =>
-          editingCheckin && deleteCheckIn(editingCheckin._id as Id<'museumCheckIns'>)
+          editingCheckin && deleteCheckIn(editingCheckin._id as Id<'checkIns'>)
         }
         onClose={() => setEditingCheckin(null)}
       />
