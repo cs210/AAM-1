@@ -7,6 +7,7 @@ import { SearchIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
+import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { router, useLocalSearchParams } from 'expo-router';
 import { TabView, TabBar } from 'react-native-tab-view';
 
@@ -106,11 +107,50 @@ function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styl
   );
 }
 
+// --- Taste Aligned: posts from users who share your taste profile (compatibility matcher) ---
+function TasteAlignedRoute({ compatibleCheckins, styles, currUserId }: { compatibleCheckins: CheckinPostData[] | undefined; styles: any; currUserId: string | null }) {
+  if (compatibleCheckins === undefined) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#D4915A" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+  if (compatibleCheckins.length === 0) {
+    return (
+      <View style={styles.noResultsContainer}>
+        <Text style={styles.noResultsText}>
+          Follow museums to get a taste profile. Posts from taste-aligned people will show up here.
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={compatibleCheckins}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item, index }) => (
+          <CheckinPost
+            checkin={item}
+            cardIndex={index}
+            isOwnCheckin={currUserId != null && item.userId === currUserId}
+          />
+        )}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
+  );
+}
+
 export default function SearchScreen() {
   const layout = useWindowDimensions();
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
   const [index, setIndex] = useState(0);
   const routes = React.useMemo(() => [
+    { key: 'aligned', title: 'Taste Aligned' },
     { key: 'museums', title: 'Museums' },
     { key: 'people', title: 'People' },
   ], []);
@@ -124,7 +164,11 @@ export default function SearchScreen() {
       setPeopleSearch(searchParam);
     }
     if (tabParam === 'people') {
+      setIndex(2);
+    } else if (tabParam === 'museums') {
       setIndex(1);
+    } else if (tabParam === 'aligned') {
+      setIndex(0);
     }
   }, [params.search, params.tab]);
 
@@ -155,9 +199,18 @@ export default function SearchScreen() {
 
   // renderScene directly returns the route components with current props
   const currUser = useQuery(api.auth.getCurrentUser);
+  const compatibleCheckins = useQuery(api.wrapped.getCompatibleCheckIns);
   const renderScene = React.useCallback(
     ({ route }: { route: { key: string } }) => {
       switch (route.key) {
+        case 'aligned':
+          return (
+            <TasteAlignedRoute
+              compatibleCheckins={compatibleCheckins}
+              styles={styles}
+              currUserId={currUser?._id ?? null}
+            />
+          );
         case 'museums':
           return (
             <MuseumsRoute
@@ -183,7 +236,7 @@ export default function SearchScreen() {
           return null;
       }
     },
-    [museumSearch, setMuseumSearch, museums, filteredMuseums, peopleSearch, setPeopleSearch, users, filteredUsers, styles]
+    [museumSearch, setMuseumSearch, museums, filteredMuseums, peopleSearch, setPeopleSearch, users, filteredUsers, compatibleCheckins, currUser, styles]
   );
 
   return (
