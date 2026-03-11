@@ -210,6 +210,43 @@ export const getMuseumCheckIns = query({
   },
 });
 
+// Get all check-ins for a museum with user info (for Reviews tab)
+export const getMuseumCheckInsWithUsers = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const checkIns = await ctx.db
+      .query("checkIns")
+      .withIndex("by_content", (q) =>
+        q.eq("contentType", "museum").eq("contentId", args.museumId)
+      )
+      .collect();
+
+    const enriched = await Promise.all(
+      checkIns
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .map(async (ci) => {
+          const profile = await ctx.db
+            .query("userProfiles")
+            .withIndex("by_userId", (q) => q.eq("userId", ci.userId))
+            .first();
+          return {
+            _id: ci._id,
+            userId: ci.userId,
+            userName: profile?.name ?? "Unknown",
+            userImage: profile?.imageUrl,
+            rating: ci.rating,
+            review: ci.review,
+            createdAt: ci.createdAt,
+            editedAt: ci.editedAt,
+            visitDate: ci.visitDate,
+          };
+        })
+    );
+
+    return enriched;
+  },
+});
+
 // Get check-ins for a user at a specific museum
 export const getUserMuseumCheckIns = query({
   args: { userId: v.string(), museumId: v.id("museums") },

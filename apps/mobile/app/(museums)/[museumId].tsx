@@ -1,20 +1,26 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon, StarIcon } from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 
+type MuseumTab = 'about' | 'events' | 'reviews';
+
 export default function MuseumDetailScreen() {
-  const { museumId } = useLocalSearchParams<{ museumId: string }>();
-  const id = typeof museumId === 'string' ? museumId : Array.isArray(museumId) ? museumId[0] : undefined;
+  const params = useLocalSearchParams<{ museumId: string; tab?: string; highlight?: string }>();
+  const museumIdParam = params.museumId;
+  const id = typeof museumIdParam === 'string' ? museumIdParam : Array.isArray(museumIdParam) ? museumIdParam[0] : undefined;
+  const tabParam = typeof params.tab === 'string' ? params.tab : Array.isArray(params.tab) ? params.tab[0] : undefined;
+  const highlightId = typeof params.highlight === 'string' ? params.highlight : Array.isArray(params.highlight) ? params.highlight[0] : undefined;
 
   // If this route was hit with a tab segment (e.g. from redirect), go to home
   useEffect(() => {
@@ -26,6 +32,18 @@ export default function MuseumDetailScreen() {
   const isTabSegment = id != null && TAB_ROUTE_SEGMENTS.has(id);
   const effectiveId = isTabSegment ? undefined : id;
 
+  // Tab state: about | events | reviews (initial from URL so "Similar taste" 
+  const [activeTab, setActiveTab] = useState<MuseumTab>(() => {
+    if (tabParam === 'reviews') return 'reviews';
+    if (tabParam === 'events') return 'events';
+    return 'about';
+  });
+  useEffect(() => {
+    if (tabParam === 'reviews') setActiveTab('reviews');
+    else if (tabParam === 'events') setActiveTab('events');
+    else if (tabParam === 'about') setActiveTab('about');
+  }, [tabParam]);
+
   // Fetch museum from Convex (skip when param is a tab segment)
   const museum = useQuery(api.museums.getMuseum, 
     effectiveId ? { id: effectiveId as Id<"museums"> } : "skip"
@@ -35,6 +53,22 @@ export default function MuseumDetailScreen() {
   const events = useQuery(api.events.getEventsByMuseum, 
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
+
+  // Reviews for this museum (with user info)
+  const reviews = useQuery(api.checkIns.getMuseumCheckInsWithUsers,
+    effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
+  );
+  const reviewsListRef = useRef<FlatList>(null);
+  const highlightIndex = useMemo(() => {
+    if (!highlightId || !reviews?.length) return -1;
+    const idx = reviews.findIndex((r) => r._id === highlightId);
+    return idx >= 0 ? idx : -1;
+  }, [reviews, highlightId]);
+  useEffect(() => {
+    if (activeTab === 'reviews' && highlightIndex >= 0 && reviewsListRef.current) {
+      reviewsListRef.current.scrollToIndex({ index: highlightIndex, animated: true });
+    }
+  }, [activeTab, highlightIndex]);
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
@@ -131,11 +165,99 @@ export default function MuseumDetailScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        <Pressable
+          style={[styles.tab, activeTab === 'about' && styles.tabActive]}
+          onPress={() => setActiveTab('about')}
+        >
+          <Text style={[styles.tabText, activeTab === 'about' && styles.tabTextActive]}>About</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, activeTab === 'events' && styles.tabActive]}
+          onPress={() => setActiveTab('events')}
+        >
+          <Text style={[styles.tabText, activeTab === 'events' && styles.tabTextActive]}>Events</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, activeTab === 'reviews' && styles.tabActive]}
+          onPress={() => setActiveTab('reviews')}
+        >
+          <Text style={[styles.tabText, activeTab === 'reviews' && styles.tabTextActive]}>Reviews</Text>
+        </Pressable>
+      </View>
+
+      {activeTab === 'reviews' ? (
+        <FlatList
+          ref={reviewsListRef}
+          data={reviews ?? []}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.reviewsListContent}
+          ListEmptyComponent={
+            reviews === undefined ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#D4915A" />
+                <Text style={styles.loadingText}>Loading reviews...</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyReviews}>
+                <Text style={styles.emptyEventsText}>No reviews yet. Be the first to check in!</Text>
+              </View>
+            )
+          }
+          onScrollToIndexFailed={() => {}}
+          renderItem={({ item }) => (
+            <View
+              style={[
+                styles.reviewCard,
+                highlightId === item._id && styles.reviewCardHighlight,
+              ]}
+            >
+              <View style={styles.reviewHeader}>
+                <Avatar className="size-10 mr-3" alt={item.userName}>
+                  {item.userImage ? (
+                    <AvatarImage source={{ uri: item.userImage }} />
+                  ) : (
+                    <AvatarFallback style={styles.avatarFallback}>
+                      <Text style={styles.avatarFallbackText}>{item.userName.charAt(0).toUpperCase()}</Text>
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <View style={styles.reviewHeaderText}>
+                  <Text style={styles.reviewUserName} numberOfLines={1}>{item.userName}</Text>
+                  <Text style={styles.reviewDate}>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                    {item.editedAt != null ? ' · Edited' : ''}
+                  </Text>
+                </View>
+                {item.rating != null && (
+                  <View style={styles.reviewStars}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <StarIcon
+                        key={star}
+                        size={14}
+                        color={star <= item.rating! ? '#D4915A' : 'rgba(0,0,0,0.15)'}
+                        fill={star <= item.rating! ? '#D4915A' : 'none'}
+                      />
+                    ))}
+                    <Text style={styles.reviewRatingNum}>{item.rating.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
+              {item.review ? (
+                <Text style={styles.reviewBody}>{item.review}</Text>
+              ) : null}
+            </View>
+          )}
+        />
+      ) : (
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {activeTab === 'about' && (
+        <>
         {/* Museum Info Card */}
         <View style={styles.infoCard}>
           <View style={styles.titleRow}>
@@ -191,7 +313,7 @@ export default function MuseumDetailScreen() {
           )}
         </Pressable>
 
-        {/* Upcoming Events Section */}
+        {/* Upcoming Events Section (shown on About tab) */}
         <View style={styles.eventsSection}>
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
           
@@ -211,7 +333,30 @@ export default function MuseumDetailScreen() {
             </View>
           )}
         </View>
+        </>
+        )}
+        {activeTab === 'events' && (
+          <View style={styles.eventsSection}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            {events && events.length > 0 ? (
+              events.map((event, index) => (
+                <EventCard
+                  key={event._id}
+                  event={{ ...event, museumId: id } as EventCardData}
+                  showMuseum={false}
+                  compactDate={false}
+                  cardIndex={index}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyEvents}>
+                <Text style={styles.emptyEventsText}>No upcoming events</Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
+      )}
 
       <EditCheckinModal
         visible={editingCheckIn != null}
@@ -402,6 +547,96 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 8,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#D4915A',
+  },
+  tabText: {
+    fontSize: 15,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: '#D4915A',
+    fontWeight: '600',
+  },
+  reviewsListContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  emptyReviews: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  reviewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  reviewCardHighlight: {
+    borderColor: '#D4915A',
+    borderWidth: 2,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewHeaderText: {
+    flex: 1,
+    marginRight: 8,
+  },
+  reviewUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  reviewRatingNum: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#D4915A',
+    marginLeft: 4,
+  },
+  reviewBody: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
+  },
+  avatarFallback: {
+    backgroundColor: '#D4915A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarFallbackText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

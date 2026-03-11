@@ -51,96 +51,104 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
   );
 }
 
-function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styles, currUser }: any) {
+// --- Taste Aligned: posts from taste-aligned users + search for a specific person (one tab) ---
+function TasteAlignedRoute({
+  peopleSearch,
+  setPeopleSearch,
+  users,
+  filteredUsers,
+  compatibleCheckins,
+  styles,
+  currUser,
+  currUserId,
+}: {
+  peopleSearch: string;
+  setPeopleSearch: (v: string) => void;
+  users: any;
+  filteredUsers: any[];
+  compatibleCheckins: CheckinPostData[] | undefined;
+  styles: any;
+  currUser: any;
+  currUserId: string | null;
+}) {
+  const isSearching = peopleSearch.trim().length > 0;
+
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
         <SearchIcon size={20} color="#8E8E93" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search people..."
+          placeholder="Search for a person..."
           value={peopleSearch}
           onChangeText={setPeopleSearch}
           placeholderTextColor="#C7C7CC"
         />
       </View>
-      {users === undefined ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4915A" />
-          <Text style={styles.loadingText}>Loading people...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredUsers}
-          renderItem={({ item }) => {
-            // don't show the current user as a potential user
-            // must consider the case where currUser is undefined (not logged in)
-            if (currUser && item.userId === currUser._id) {
-              return (<></>);
+      {isSearching ? (
+        // Person search results
+        users === undefined ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#D4915A" />
+            <Text style={styles.loadingText}>Loading people...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredUsers}
+            renderItem={({ item }) => {
+              if (currUser && item.userId === currUser._id) return null;
+              const rawName = item.name || item.email || '';
+              const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+              return (
+                <Pressable
+                  style={styles.userCard}
+                  onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`)}
+                >
+                  <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
+                </Pressable>
+              );
+            }}
+            keyExtractor={(item) => item.userId}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>No people match your search</Text>
+              </View>
             }
-            const rawName = item.name || item.email || '';
-            const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
-            return (
-              <Pressable
-                style={styles.userCard}
-                onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`)}
-              >
-                <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
-              </Pressable>
-            );
-          }}
-          keyExtractor={(item) => item.userId}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-          scrollEnabled={true}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <View style={styles.noResultsContainer}>
-              <Text style={styles.noResultsText}>
-                {peopleSearch.trim() ? 'No people match your search' : 'Search for people to find accounts'}
-              </Text>
-            </View>
-          }
-        />
-      )}
-    </View>
-  );
-}
-
-// --- Taste Aligned: posts from users who share your taste profile (compatibility matcher) ---
-function TasteAlignedRoute({ compatibleCheckins, styles, currUserId }: { compatibleCheckins: CheckinPostData[] | undefined; styles: any; currUserId: string | null }) {
-  if (compatibleCheckins === undefined) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#D4915A" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-  if (compatibleCheckins.length === 0) {
-    return (
-      <View style={styles.noResultsContainer}>
-        <Text style={styles.noResultsText}>
-          Follow museums to get a taste profile. Posts from taste-aligned people will show up here.
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <View style={{ flex: 1 }}>
-      <FlatList
-        data={compatibleCheckins}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item, index }) => (
-          <CheckinPost
-            checkin={item}
-            cardIndex={index}
-            isOwnCheckin={currUserId != null && item.userId === currUserId}
           />
-        )}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
+        )
+      ) : (
+        // Taste-aligned posts when not searching
+        compatibleCheckins === undefined ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#D4915A" />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : compatibleCheckins.length === 0 ? (
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>
+              Follow museums to get a taste profile. Posts from taste-aligned people will show up here.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={compatibleCheckins}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item, index }) => (
+              <CheckinPost
+                checkin={item}
+                cardIndex={index}
+                isOwnCheckin={currUserId != null && item.userId === currUserId}
+                openOnReviewsTab
+              />
+            )}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+          />
+        )
+      )}
     </View>
   );
 }
@@ -152,7 +160,6 @@ export default function SearchScreen() {
   const routes = React.useMemo(() => [
     { key: 'aligned', title: 'Taste Aligned' },
     { key: 'museums', title: 'Museums' },
-    { key: 'people', title: 'People' },
   ], []);
 
   // People tab state (restore from URL when returning from profile)
@@ -163,11 +170,9 @@ export default function SearchScreen() {
     if (typeof searchParam === 'string' && searchParam !== '') {
       setPeopleSearch(searchParam);
     }
-    if (tabParam === 'people') {
-      setIndex(2);
-    } else if (tabParam === 'museums') {
+    if (tabParam === 'museums') {
       setIndex(1);
-    } else if (tabParam === 'aligned') {
+    } else if (tabParam === 'aligned' || tabParam === 'people') {
       setIndex(0);
     }
   }, [params.search, params.tab]);
@@ -206,8 +211,13 @@ export default function SearchScreen() {
         case 'aligned':
           return (
             <TasteAlignedRoute
+              peopleSearch={peopleSearch}
+              setPeopleSearch={setPeopleSearch}
+              users={users}
+              filteredUsers={filteredUsers}
               compatibleCheckins={compatibleCheckins}
               styles={styles}
+              currUser={currUser}
               currUserId={currUser?._id ?? null}
             />
           );
@@ -219,17 +229,6 @@ export default function SearchScreen() {
               museums={museums}
               filteredMuseums={filteredMuseums}
               styles={styles}
-            />
-          );
-        case 'people':
-          return (
-            <PeopleRoute
-              peopleSearch={peopleSearch}
-              setPeopleSearch={setPeopleSearch}
-              users={users}
-              filteredUsers={filteredUsers}
-              styles={styles}
-              currUser={currUser}
             />
           );
         default:

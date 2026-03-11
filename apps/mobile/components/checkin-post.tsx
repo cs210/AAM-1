@@ -34,11 +34,17 @@ type CheckinPostProps = {
   cardIndex?: number;
   isOwnCheckin?: boolean;
   onEditPress?: () => void;
+  /** When true, navigate to museum Reviews tab and highlight this check-in */
+  openOnReviewsTab?: boolean;
 };
 
-export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress }: CheckinPostProps) => {
+export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress, openOnReviewsTab }: CheckinPostProps) => {
   const handlePress = () => {
-    router.push(`/(museums)/${checkin.contentId}`);
+    if (openOnReviewsTab) {
+      router.push(`/(museums)/${checkin.contentId}?tab=reviews&highlight=${encodeURIComponent(checkin._id)}`);
+    } else {
+      router.push(`/(museums)/${checkin.contentId}`);
+    }
   };
 
   const colorScheme = CARD_COLORS[cardIndex % CARD_COLORS.length];
