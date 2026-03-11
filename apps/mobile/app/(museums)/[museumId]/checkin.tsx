@@ -18,8 +18,10 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ArrowLeftIcon, StarIcon, XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
+const MAX_UPLOAD_IMAGE_SIZE = 512;
 
 export default function CheckInScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
@@ -91,6 +93,37 @@ export default function CheckInScreen() {
     setSelectedImages((prev) => prev.filter((asset) => asset.uri !== uri));
   };
 
+  const getResizedImageUri = async (asset: ImagePicker.ImagePickerAsset) => {
+    const originalWidth = asset.width;
+    const originalHeight = asset.height;
+
+    if (!originalWidth || !originalHeight) {
+      return { uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' };
+    }
+
+    if (originalWidth <= MAX_UPLOAD_IMAGE_SIZE && originalHeight <= MAX_UPLOAD_IMAGE_SIZE) {
+      return { uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' };
+    }
+
+    const scale = Math.min(
+      MAX_UPLOAD_IMAGE_SIZE / originalWidth,
+      MAX_UPLOAD_IMAGE_SIZE / originalHeight
+    );
+    const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+    const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
+    const context = ExpoImageManipulator.manipulate(asset.uri);
+    context.resize({ width: targetWidth, height: targetHeight });
+
+    const renderedImage = await context.renderAsync();
+    const resizedImage = await renderedImage.saveAsync({
+      compress: 0.8,
+      format: SaveFormat.JPEG,
+    });
+
+    return { uri: resizedImage.uri, mimeType: 'image/jpeg' as const };
+  };
+
   const uploadSelectedImages = async (): Promise<Id<'_storage'>[]> => {
     if (selectedImages.length === 0) {
       return [];
@@ -99,14 +132,15 @@ export default function CheckInScreen() {
     const storageIds: Id<'_storage'>[] = [];
 
     for (const asset of selectedImages) {
+      const processedImage = await getResizedImageUri(asset);
       const uploadUrl = await generateCheckInImageUploadUrl({});
-      const fileResponse = await fetch(asset.uri);
+      const fileResponse = await fetch(processedImage.uri);
       const fileBlob = await fileResponse.blob();
 
       const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': asset.mimeType ?? 'image/jpeg',
+          'Content-Type': processedImage.mimeType,
         },
         body: fileBlob,
       });
