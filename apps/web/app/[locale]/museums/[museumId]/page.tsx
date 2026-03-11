@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -14,18 +15,19 @@ import { Button } from "@/components/ui/button";
 const display = Syne({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
 const body = Newsreader({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-body" });
 
-const formatDate = (timestamp: number) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
+const formatDate = (timestamp: number, locale: string) =>
+  new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(
     new Date(timestamp),
   );
 
-const formatRange = (start: number, end: number) => {
-  const startLabel = formatDate(start);
-  const endLabel = formatDate(end);
+const formatRange = (start: number, end: number, locale: string) => {
+  const startLabel = formatDate(start, locale);
+  const endLabel = formatDate(end, locale);
   return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
 };
 
 export default function MuseumDetailPage() {
+  const locale = useLocale();
   const params = useParams<{ locale: string; museumId: string }>();
   const museumId = params?.museumId as Id<"museums"> | undefined;
 
@@ -189,7 +191,7 @@ export default function MuseumDetailPage() {
                           </div>
                         </div>
                         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                          {formatRange(event.startDate, event.endDate)}
+                          {formatRange(event.startDate, event.endDate, locale)}
                         </div>
                       </div>
                       {event.description && (
