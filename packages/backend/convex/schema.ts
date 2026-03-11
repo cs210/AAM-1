@@ -153,6 +153,43 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_name", ["name"]),
 
+  // Exhibitions and halls (dashboard-managed, per museum)
+  exhibitions: defineTable({
+    museumId: v.id("museums"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+    imageUrl: v.optional(v.string()),
+    sortOrder: v.number(),
+  })
+    .index("by_museum", ["museumId"])
+    .index("by_museum_sortOrder", ["museumId", "sortOrder"]),
+
+  halls: defineTable({
+    exhibitionId: v.id("exhibitions"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    sortOrder: v.number(),
+  })
+    .index("by_exhibition", ["exhibitionId"])
+    .index("by_exhibition_sortOrder", ["exhibitionId", "sortOrder"]),
+
+  exhibitInteractions: defineTable({
+    hallId: v.id("halls"),
+    type: v.union(
+      v.literal("quiz"),
+      v.literal("scavenger_step"),
+      v.literal("badge"),
+      v.literal("info_audio")
+    ),
+    title: v.string(),
+    config: v.any(), // type-specific: quiz → { question, options, correctIndex }, etc.
+    sortOrder: v.number(),
+  })
+    .index("by_hall", ["hallId"])
+    .index("by_hall_sortOrder", ["hallId", "sortOrder"]),
+
   // Check-ins (museum or event)
   checkIns: defineTable({
     userId: v.string(), // Better Auth user ID

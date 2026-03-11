@@ -11,7 +11,7 @@ export function useCheckInActions(onClose: () => void) {
   const deleteCheckInMutation = useMutation(api.checkIns.deleteCheckIn);
 
   const saveCheckIn = async (
-    checkInId: Id<'museumCheckIns'>,
+    checkInId: Id<'checkIns'>,
     rating: number | null,
     review: string
   ) => {
@@ -23,7 +23,7 @@ export function useCheckInActions(onClose: () => void) {
     onClose();
   };
 
-  const deleteCheckIn = async (checkInId: Id<'museumCheckIns'>) => {
+  const deleteCheckIn = async (checkInId: Id<'checkIns'>) => {
     await deleteCheckInMutation({ checkInId });
     onClose();
   };

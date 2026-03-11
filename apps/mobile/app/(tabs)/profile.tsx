@@ -338,10 +338,10 @@ export default function WrappedScreen() {
         initialReview={editingVisit?.checkIn.review}
         onSave={(rating, review) =>
           editingVisit &&
-          saveCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>, rating, review)
+          saveCheckIn(editingVisit.checkIn._id as Id<'checkIns'>, rating, review)
         }
         onDelete={() =>
-          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'museumCheckIns'>)
+          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
         }
         onClose={() => setEditingVisit(null)}
       />
