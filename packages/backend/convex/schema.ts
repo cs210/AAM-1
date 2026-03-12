@@ -24,6 +24,7 @@ export default defineSchema({
       address: v.optional(v.string()),
       city: v.optional(v.string()),
       state: v.optional(v.string()),
+      country: v.optional(v.string()),
       postalCode: v.optional(v.string()),
     }),
 
@@ -198,7 +199,7 @@ export default defineSchema({
     contentId: v.union(v.id("museums"), v.id("events")), // Id of museum or event
     rating: v.optional(v.number()), // 1-5 stars
     review: v.optional(v.string()),
-    imageIds: v.array(v.id("_storage")),
+    imageIds: v.optional(v.array(v.id("_storage"))), // optional for legacy check-ins created before imageIds existed
     friendUserIds: v.array(v.string()),
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
     createdAt: v.number(), // timestamp of check-in creation
