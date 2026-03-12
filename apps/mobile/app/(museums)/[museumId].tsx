@@ -9,6 +9,7 @@ import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon } fr
 import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { AuthGuard } from '@/components/AuthGuard';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 
@@ -142,8 +143,9 @@ export default function MuseumDetailScreen() {
     : 'Address not available';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <AuthGuard>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -293,7 +295,8 @@ export default function MuseumDetailScreen() {
         }
         onClose={() => setEditingCheckIn(null)}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </AuthGuard>
   );
 }
 
