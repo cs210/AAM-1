@@ -52,22 +52,54 @@ export const getUnifiedFeed = query({
           .collect()
       )
     );
+    const exhibitionsArrays = await Promise.all(
+      allMuseumIds.map((museumId) =>
+        ctx.db
+          .query("exhibitions")
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId as Id<"museums">))
+          .collect()
+      )
+    );
+
+    const normalizedExhibitions = exhibitionsArrays
+      .flat()
+      .filter((exhibition) => exhibition.endDate === undefined || exhibition.endDate >= now)
+      .map((exhibition) => ({
+        _id: exhibition._id,
+        _creationTime: exhibition._creationTime,
+        title: exhibition.name,
+        description: exhibition.description,
+        category: "exhibition",
+        museumId: exhibition.museumId,
+        startDate: exhibition.startDate ?? now,
+        endDate: exhibition.endDate ?? exhibition.startDate ?? now,
+        imageUrl: exhibition.imageUrl,
+        kind: "exhibition" as const,
+      }));
 
     // Flatten and sort by start date (descending for most recent first)
-    const allEvents = eventsArrays.flat().sort((a, b) => b.startDate - a.startDate);
+    const normalizedEvents = eventsArrays
+      .flat()
+      .map((event) => ({
+        ...event,
+        kind: "event" as const,
+      }));
+    const allFeedItems = [...normalizedEvents, ...normalizedExhibitions].sort(
+      (a, b) => b.startDate - a.startDate
+    );
 
     // Attach museum info to each event
-    const eventsWithMuseum = await Promise.all(
-      allEvents.map(async (event) => {
-        const museum = event.museumId ? await ctx.db.get(event.museumId) : null;
+    const feedWithMuseum = await Promise.all(
+      allFeedItems.map(async (item) => {
+        const museum = item.museumId ? await ctx.db.get(item.museumId) : null;
         return {
-          ...event,
+          ...item,
           museum: museum ? { name: museum.name, category: museum.category } : null,
         };
       })
     );
 
-    return eventsWithMuseum;
+    return feedWithMuseum;
   },
 });
 
@@ -153,21 +185,53 @@ export const getEventsFromFollowedMuseums = query({
           .collect()
       )
     );
+    const exhibitionsArrays = await Promise.all(
+      museumIds.map((museumId) =>
+        ctx.db
+          .query("exhibitions")
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+          .collect()
+      )
+    );
+
+    const normalizedExhibitions = exhibitionsArrays
+      .flat()
+      .filter((exhibition) => exhibition.endDate === undefined || exhibition.endDate >= now)
+      .map((exhibition) => ({
+        _id: exhibition._id,
+        _creationTime: exhibition._creationTime,
+        title: exhibition.name,
+        description: exhibition.description,
+        category: "exhibition",
+        museumId: exhibition.museumId,
+        startDate: exhibition.startDate ?? now,
+        endDate: exhibition.endDate ?? exhibition.startDate ?? now,
+        imageUrl: exhibition.imageUrl,
+        kind: "exhibition" as const,
+      }));
 
     // Flatten and sort by start date
-    const allEvents = eventsArrays.flat().sort((a, b) => a.startDate - b.startDate);
+    const normalizedEvents = eventsArrays
+      .flat()
+      .map((event) => ({
+        ...event,
+        kind: "event" as const,
+      }));
+    const allFeedItems = [...normalizedEvents, ...normalizedExhibitions].sort(
+      (a, b) => a.startDate - b.startDate
+    );
 
     // Attach museum info to each event
-    const eventsWithMuseum = await Promise.all(
-      allEvents.map(async (event) => {
-        const museum = event.museumId ? await ctx.db.get(event.museumId) : null;
+    const feedWithMuseum = await Promise.all(
+      allFeedItems.map(async (item) => {
+        const museum = item.museumId ? await ctx.db.get(item.museumId) : null;
         return {
-          ...event,
+          ...item,
           museum: museum ? { name: museum.name, category: museum.category } : null,
         };
       })
     );
 
-    return eventsWithMuseum;
+    return feedWithMuseum;
   },
 });

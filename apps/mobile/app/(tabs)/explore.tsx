@@ -7,13 +7,26 @@ import { SearchIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
+import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { router, useLocalSearchParams } from 'expo-router';
 import { TabView, TabBar } from 'react-native-tab-view';
 
+const MUSEUMS_PER_PAGE = 10;
 
 
 // --- Tab Scenes defined outside main component for stability ---
-function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums, styles }: any) {
+function MuseumsRoute({
+  museumSearch,
+  setMuseumSearch,
+  museums,
+  pagedMuseums,
+  filteredMuseums,
+  museumPage,
+  totalMuseumPages,
+  onPrevPage,
+  onNextPage,
+  styles,
+}: any) {
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
@@ -33,12 +46,43 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
         </View>
       ) : (
         <FlatList
-          data={filteredMuseums}
+          data={pagedMuseums}
           renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           scrollEnabled={true}
+          ListFooterComponent={
+            filteredMuseums.length > 0 ? (
+              <View style={styles.paginationContainer}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pageButton,
+                    museumPage <= 1 && styles.pageButtonDisabled,
+                    pressed && museumPage > 1 && styles.pageButtonPressed,
+                  ]}
+                  onPress={onPrevPage}
+                  disabled={museumPage <= 1}
+                >
+                  <Text style={styles.pageButtonText}>Previous</Text>
+                </Pressable>
+                <Text style={styles.pageIndicatorText}>
+                  Page {museumPage} of {totalMuseumPages}
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pageButton,
+                    museumPage >= totalMuseumPages && styles.pageButtonDisabled,
+                    pressed && museumPage < totalMuseumPages && styles.pageButtonPressed,
+                  ]}
+                  onPress={onNextPage}
+                  disabled={museumPage >= totalMuseumPages}
+                >
+                  <Text style={styles.pageButtonText}>Next</Text>
+                </Pressable>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.noResultsContainer}>
               <Text style={styles.noResultsText}>No museums match your search</Text>
@@ -50,57 +94,103 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
   );
 }
 
-function PeopleRoute({ peopleSearch, setPeopleSearch, users, filteredUsers, styles, currUser }: any) {
+// --- Taste Aligned: posts from taste-aligned users + search for a specific person (one tab) ---
+function TasteAlignedRoute({
+  peopleSearch,
+  setPeopleSearch,
+  users,
+  filteredUsers,
+  compatibleCheckins,
+  styles,
+  currUser,
+  currUserId,
+}: {
+  peopleSearch: string;
+  setPeopleSearch: (v: string) => void;
+  users: any;
+  filteredUsers: any[];
+  compatibleCheckins: CheckinPostData[] | undefined;
+  styles: any;
+  currUser: any;
+  currUserId: string | null;
+}) {
+  const isSearching = peopleSearch.trim().length > 0;
+
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
         <SearchIcon size={20} color="#8E8E93" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search people..."
+          placeholder="Search for a person..."
           value={peopleSearch}
           onChangeText={setPeopleSearch}
           placeholderTextColor="#C7C7CC"
         />
       </View>
-      {users === undefined ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4915A" />
-          <Text style={styles.loadingText}>Loading people...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredUsers}
-          renderItem={({ item }) => {
-            // don't show the current user as a potential user
-            // must consider the case where currUser is undefined (not logged in)
-            if (currUser && item.userId === currUser._id) {
-              return (<></>);
+      {isSearching ? (
+        // Person search results
+        users === undefined ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#D4915A" />
+            <Text style={styles.loadingText}>Loading people...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredUsers}
+            renderItem={({ item }) => {
+              if (currUser && item.userId === currUser._id) return null;
+              const rawName = item.name || item.email || '';
+              const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+              return (
+                <Pressable
+                  style={styles.userCard}
+                  onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`)}
+                >
+                  <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
+                </Pressable>
+              );
+            }}
+            keyExtractor={(item) => item.userId}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>No people match your search</Text>
+              </View>
             }
-            const rawName = item.name || item.email || '';
-            const displayName = typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
-            return (
-              <Pressable
-                style={styles.userCard}
-                onPress={() => router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`)}
-              >
-                <Text style={styles.userName} numberOfLines={1}>{displayName || "Name can't be displayed"}</Text>
-              </Pressable>
-            );
-          }}
-          keyExtractor={(item) => item.userId}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-          scrollEnabled={true}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <View style={styles.noResultsContainer}>
-              <Text style={styles.noResultsText}>
-                {peopleSearch.trim() ? 'No people match your search' : 'Search for people to find accounts'}
-              </Text>
-            </View>
-          }
-        />
+          />
+        )
+      ) : (
+        // Taste-aligned posts when not searching
+        compatibleCheckins === undefined ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#D4915A" />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : compatibleCheckins.length === 0 ? (
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>
+              Follow museums to get a taste profile. Posts from taste-aligned people will show up here.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={compatibleCheckins}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item, index }) => (
+              <CheckinPost
+                checkin={item}
+                cardIndex={index}
+                isOwnCheckin={currUserId != null && item.userId === currUserId}
+                openOnReviewsTab
+              />
+            )}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+          />
+        )
       )}
     </View>
   );
@@ -111,8 +201,8 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
   const [index, setIndex] = useState(0);
   const routes = React.useMemo(() => [
+    { key: 'aligned', title: 'Taste Aligned' },
     { key: 'museums', title: 'Museums' },
-    { key: 'people', title: 'People' },
   ], []);
 
   // People tab state (restore from URL when returning from profile)
@@ -123,13 +213,16 @@ export default function SearchScreen() {
     if (typeof searchParam === 'string' && searchParam !== '') {
       setPeopleSearch(searchParam);
     }
-    if (tabParam === 'people') {
+    if (tabParam === 'museums') {
       setIndex(1);
+    } else if (tabParam === 'aligned' || tabParam === 'people') {
+      setIndex(0);
     }
   }, [params.search, params.tab]);
 
   // Museums tab state
   const [museumSearch, setMuseumSearch] = useState('');
+  const [museumPage, setMuseumPage] = useState(1);
   const museums = useQuery(api.museums.listMuseumsWithStats);
   const filteredMuseums = useMemo(() => {
     if (!museums) return [];
@@ -141,6 +234,23 @@ export default function SearchScreen() {
       museum.location?.state?.toLowerCase().includes(lowerSearch)
     );
   }, [museums, museumSearch]);
+  const totalMuseumPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredMuseums.length / MUSEUMS_PER_PAGE)),
+    [filteredMuseums.length]
+  );
+  const currentMuseumPage = Math.min(museumPage, totalMuseumPages);
+  const pagedMuseums = useMemo(() => {
+    const startIndex = (currentMuseumPage - 1) * MUSEUMS_PER_PAGE;
+    return filteredMuseums.slice(startIndex, startIndex + MUSEUMS_PER_PAGE);
+  }, [filteredMuseums, currentMuseumPage]);
+  React.useEffect(() => {
+    setMuseumPage(1);
+  }, [museumSearch]);
+  React.useEffect(() => {
+    if (museumPage > totalMuseumPages) {
+      setMuseumPage(totalMuseumPages);
+    }
+  }, [museumPage, totalMuseumPages]);
 
   const users = useQuery(api.auth.listUsers);
   const filteredUsers = useMemo(() => {
@@ -155,35 +265,43 @@ export default function SearchScreen() {
 
   // renderScene directly returns the route components with current props
   const currUser = useQuery(api.auth.getCurrentUser);
+  const compatibleCheckins = useQuery(api.wrapped.getCompatibleCheckIns);
   const renderScene = React.useCallback(
     ({ route }: { route: { key: string } }) => {
       switch (route.key) {
+        case 'aligned':
+          return (
+            <TasteAlignedRoute
+              peopleSearch={peopleSearch}
+              setPeopleSearch={setPeopleSearch}
+              users={users}
+              filteredUsers={filteredUsers}
+              compatibleCheckins={compatibleCheckins}
+              styles={styles}
+              currUser={currUser}
+              currUserId={currUser?._id ?? null}
+            />
+          );
         case 'museums':
           return (
             <MuseumsRoute
               museumSearch={museumSearch}
               setMuseumSearch={setMuseumSearch}
               museums={museums}
+              pagedMuseums={pagedMuseums}
               filteredMuseums={filteredMuseums}
+              museumPage={currentMuseumPage}
+              totalMuseumPages={totalMuseumPages}
+              onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
+              onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
               styles={styles}
-            />
-          );
-        case 'people':
-          return (
-            <PeopleRoute
-              peopleSearch={peopleSearch}
-              setPeopleSearch={setPeopleSearch}
-              users={users}
-              filteredUsers={filteredUsers}
-              styles={styles}
-              currUser={currUser}
             />
           );
         default:
           return null;
       }
     },
-    [museumSearch, setMuseumSearch, museums, filteredMuseums, peopleSearch, setPeopleSearch, users, filteredUsers, styles]
+    [museumSearch, setMuseumSearch, museums, pagedMuseums, filteredMuseums, currentMuseumPage, totalMuseumPages, peopleSearch, setPeopleSearch, users, filteredUsers, currUser, compatibleCheckins, styles]
   );
 
   return (
@@ -291,7 +409,37 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   listContainer: {
-    paddingBottom: 120,
+    paddingBottom: 80,
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  pageButton: {
+    backgroundColor: '#D4915A',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  pageButtonPressed: {
+    opacity: 0.85,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#DDD',
+  },
+  pageButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  pageIndicatorText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
