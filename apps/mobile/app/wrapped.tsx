@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, Share2, Download } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
+import { AuthGuard } from '@/components/AuthGuard';
 
 const { width, height } = Dimensions.get('window');
 const SLIDE_HEIGHT = height;
@@ -393,29 +394,31 @@ export default function WrappedScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.topRightBubble} pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
-          style={styles.bubbleGradient}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
-      {renderCurrentSlide()}
-      {/* Close button */}
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => router.back()}
-        hitSlop={12}
-        activeOpacity={0.7}
-      >
-        <X size={20} color="#666" strokeWidth={1.5} />
-      </TouchableOpacity>
-      {/* Progress dots */}
-      <ProgressDots total={SLIDES.length} current={currentSlide} />
-    </SafeAreaView>
+    <AuthGuard>
+      <SafeAreaView style={styles.root} edges={['top']}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.topRightBubble} pointerEvents="none">
+          <LinearGradient
+            colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
+            style={styles.bubbleGradient}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+          />
+        </View>
+        {renderCurrentSlide()}
+        {/* Close button */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => router.back()}
+          hitSlop={12}
+          activeOpacity={0.7}
+        >
+          <X size={20} color="#666" strokeWidth={1.5} />
+        </TouchableOpacity>
+        {/* Progress dots */}
+        <ProgressDots total={SLIDES.length} current={currentSlide} />
+      </SafeAreaView>
+    </AuthGuard>
   );
 }
 
