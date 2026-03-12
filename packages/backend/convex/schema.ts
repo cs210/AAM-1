@@ -198,7 +198,7 @@ export default defineSchema({
     contentId: v.union(v.id("museums"), v.id("events")), // Id of museum or event
     rating: v.optional(v.number()), // 1-5 stars
     review: v.optional(v.string()),
-    imageUrls: v.array(v.string()),
+    imageIds: v.array(v.id("_storage")),
     friendUserIds: v.array(v.string()),
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
     createdAt: v.number(), // timestamp of check-in creation
