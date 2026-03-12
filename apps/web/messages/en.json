@@ -142,6 +142,7 @@
       "interactions": "Interactions",
       "analytics": "Analytics",
       "orgRequests": "Org requests",
+      "adminMuseums": "Museums",
       "users": "Users",
       "invitations": "Invitations"
     },
@@ -266,6 +267,22 @@
       "invalidDescription": "This museum context is invalid or no longer exists.",
       "save": "Save Museum Details",
       "saveSuccess": "Museum details saved.",
+      "ai": {
+        "prefill": "Auto Fill with YAMI",
+        "prefilling": "Running Places + web scraper...",
+        "confirmTitle": "Use Places + AI Auto Fill?",
+        "confirmDescription": "This will overwrite current form fields with data from Google Places, then use web scraping to fill missing fields when possible. Please review everything before saving.",
+        "confirmCta": "Run Auto Fill",
+        "prefillSuccess": "Auto-fill results loaded into the form. Nothing has been saved yet.",
+        "prefillNeedsWebsite": "Google Places loaded partial results. Add the official website to run web-scrape fallback for remaining fields.",
+        "prefillWebsiteSkipped": "Skipped website fallback. You can enter a website and run auto-fill again anytime.",
+        "websitePromptTitle": "Website Needed for Fallback",
+        "websitePromptDescription": "Google Places did not return an official website. Enter one to let web scraping fill remaining missing fields.",
+        "websitePromptPlaceholder": "https://museum.org",
+        "websitePromptSkip": "Skip for now",
+        "websitePromptCta": "Run with website",
+        "imagesImported": "{count, plural, one {Imported # image to gallery.} other {Imported # images to gallery.}}"
+      },
       "fields": {
         "name": "Museum Name",
         "tagline": "Tagline",
@@ -279,6 +296,7 @@
         "address": "Street Address",
         "city": "City",
         "state": "State / Province",
+        "country": "Country",
         "postalCode": "Postal Code",
         "latitude": "Latitude",
         "longitude": "Longitude",
@@ -288,8 +306,19 @@
       },
       "placeholders": {
         "selectTimezone": "Select timezone",
-        "selectLanguage": "Select language",
-        "category": "art, history, science"
+        "category": "Select one or more categories."
+      },
+      "categoryOptions": {
+        "art": "Art",
+        "contemporaryArt": "Contemporary Art",
+        "history": "History",
+        "science": "Science",
+        "naturalHistory": "Natural History",
+        "children": "Children",
+        "design": "Design",
+        "photography": "Photography",
+        "culturalHeritage": "Cultural Heritage",
+        "specialty": "Specialty"
       },
       "hours": {
         "day": "Day",
@@ -332,6 +361,7 @@
         "cityStateRequired": "City and state are required.",
         "latitudeRange": "Latitude must be a number between -90 and 90.",
         "longitudeRange": "Longitude must be a number between -180 and 180.",
+        "prefillFailed": "Failed to load AI museum details.",
         "saveFailed": "Failed to save museum details."
       }
     },
@@ -340,6 +370,20 @@
       "selectMuseumDescription": "Select a museum context to manage exhibitions and halls.",
       "description": "Organize exhibition structure and halls. Use the Interactions tab to attach visitor interactions.",
       "addExhibition": "Add exhibition",
+      "autoFill": {
+        "button": "Auto Fill with YAMI",
+        "dialogTitle": "Auto Fill Exhibitions",
+        "dialogDescription": "Paste the museum exhibitions page URL. YAMI will scrape and import exhibitions from that page.",
+        "urlLabel": "Exhibitions page URL",
+        "urlPlaceholder": "https://museum.org/exhibitions",
+        "urlRequired": "Exhibitions page URL is required.",
+        "run": "Run auto fill",
+        "running": "Auto filling...",
+        "failed": "Failed to auto-fill exhibitions.",
+        "noResults": "No exhibitions were found on that page.",
+        "noNewResults": "No new exhibitions to import (possible duplicates).",
+        "success": "Imported {count} exhibitions."
+      },
       "loadingExhibitions": "Loading exhibitions...",
       "noExhibitions": "No exhibitions yet. Add one to start organizing halls."
     },
@@ -364,12 +408,32 @@
         "nameRequired": "Name is required.",
         "createFailed": "Failed to create exhibition.",
         "creating": "Creating...",
-        "create": "Create exhibition"
+        "create": "Create exhibition",
+        "autoFill": {
+          "button": "Auto Fill with YAMI",
+          "dialogTitle": "Auto Fill Exhibitions",
+          "dialogDescription": "Paste the museum exhibitions page URL. YAMI will scrape and import exhibitions from that page.",
+          "urlLabel": "Exhibitions page URL",
+          "urlPlaceholder": "https://museum.org/exhibitions",
+          "urlRequired": "Exhibitions page URL is required.",
+          "run": "Run auto fill",
+          "running": "Auto filling...",
+          "failed": "Failed to auto-fill exhibitions.",
+          "noResults": "No exhibitions were found on that page.",
+          "noNewResults": "No new exhibitions to import (possible duplicates)."
+        }
       },
       "exhibitionCard": {
         "hallsCount": "{count, plural, one {# hall} other {# halls}}",
         "fromDate": "From {date}",
         "addHall": "Add hall",
+        "edit": "Edit",
+        "saveChanges": "Save changes",
+        "savingChanges": "Saving...",
+        "notSet": "Not set",
+        "invalidDateRange": "End date must be on or after the start date.",
+        "updateFailed": "Failed to update exhibition.",
+        "imageAlt": "{name} image",
         "removeExhibition": "Remove exhibition",
         "removeExhibitionTitle": "Remove exhibition",
         "removeExhibitionDescription": "This will remove \"{name}\" and all its halls and interactions. This cannot be undone.",
@@ -747,6 +811,7 @@
     "liveData": "Live Data",
     "loadingExhibits": "Loading exhibits...",
     "noActiveExhibits": "No active exhibits right now. Check back later.",
+    "datesNotSet": "Dates not set",
     "eventDetails": "Event details",
     "activeExhibitsCount": "{count} active exhibits"
   },

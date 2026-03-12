@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Image } from 'react-native';
 import { router } from 'expo-router';
 import { StarIcon, PencilIcon } from 'lucide-react-native';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -16,6 +16,7 @@ export interface CheckinPostData {
   contentName: string;
   rating?: number;
   review?: string;
+  imageUrls?: string[];
   createdAt: number;
   editedAt?: number;
 }
@@ -121,11 +122,23 @@ export const CheckinPost = ({ checkin, cardIndex = 0, isOwnCheckin, onEditPress,
         )}
       </View>
 
-      {checkin.review && (
-        <Text className={cn('text-sm leading-[22px]', colorScheme.text)} numberOfLines={3}>
+      {checkin.review ? (
+        <Text className={cn('text-sm leading-[22px] mb-3', colorScheme.text)} numberOfLines={3}>
           {checkin.review}
         </Text>
-      )}
+      ) : null}
+
+      {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
+        <View style={styles.imageRow}>
+          {checkin.imageUrls.slice(0, 3).map((url, index) => (
+            <Image
+              key={`${checkin._id}-photo-${index}`}
+              source={{ uri: url }}
+              style={[styles.checkinImage, index > 0 && styles.checkinImageSpacing]}
+            />
+          ))}
+        </View>
+      ) : null}
     </Pressable>
   );
 };
@@ -140,5 +153,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
+  },
+  imageRow: {
+    flexDirection: 'row',
+    marginTop: 2,
+  },
+  checkinImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  checkinImageSpacing: {
+    marginLeft: 8,
   },
 });
