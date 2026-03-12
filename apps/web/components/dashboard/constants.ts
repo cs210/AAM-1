@@ -53,6 +53,7 @@ export const workspaceDashboardTabs = [
 
 export const adminDashboardTabs = [
   { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
+  { id: "admin-museums", path: "museums", label: "Museums", icon: Building2Icon },
   { id: "users", path: "users", label: "Users", icon: UsersIcon },
   { id: "invitations", path: "invitations", label: "Invitations", icon: MailIcon },
 ] as const
@@ -73,6 +74,7 @@ export type DashboardTabMessageKey =
   | "interactions"
   | "analytics"
   | "orgRequests"
+  | "adminMuseums"
   | "users"
   | "invitations"
 
@@ -83,6 +85,7 @@ export const dashboardTabMessageKeys: Record<AllDashboardTabId, DashboardTabMess
   interactions: "interactions",
   analytics: "analytics",
   "org-requests": "orgRequests",
+  "admin-museums": "adminMuseums",
   users: "users",
   invitations: "invitations",
 }

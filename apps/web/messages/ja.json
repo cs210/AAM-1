@@ -142,6 +142,7 @@
       "interactions": "インタラクション",
       "analytics": "分析",
       "orgRequests": "組織リクエスト",
+      "adminMuseums": "ミュージアム",
       "users": "ユーザー",
       "invitations": "招待"
     },
@@ -266,6 +267,22 @@
       "invalidDescription": "このミュージアムコンテキストは無効であるか、すでに存在しません。",
       "save": "ミュージアム詳細を保存",
       "saveSuccess": "ミュージアム詳細を保存しました。",
+      "ai": {
+        "prefill": "YAMIで自動入力",
+        "prefilling": "Places + ウェブスクレーパーを実行中...",
+        "confirmTitle": "Places + AI 自動入力を使いますか？",
+        "confirmDescription": "現在のフォーム項目は Google Places のデータで上書きされ、可能な場合はウェブスクレイピングで不足項目を補完します。保存前に必ず確認してください。",
+        "confirmCta": "自動入力を実行",
+        "prefillSuccess": "自動入力結果をフォームに反映しました。まだ保存はされていません。",
+        "prefillNeedsWebsite": "Google Places の結果は一部のみでした。残りの不足項目を補完するため、公式サイトURLを入力してください。",
+        "prefillWebsiteSkipped": "サイトURLによる補完をスキップしました。いつでもURLを入力して再実行できます。",
+        "websitePromptTitle": "補完にはサイトURLが必要です",
+        "websitePromptDescription": "Google Places から公式サイトURLを取得できませんでした。残りの不足項目を補完するためにURLを入力してください。",
+        "websitePromptPlaceholder": "https://museum.org",
+        "websitePromptSkip": "今はスキップ",
+        "websitePromptCta": "URLで実行",
+        "imagesImported": "{count, plural, one {ギャラリーに#件の画像を取り込みました。} other {ギャラリーに#件の画像を取り込みました。}}"
+      },
       "fields": {
         "name": "ミュージアム名",
         "tagline": "タグライン",
@@ -279,6 +296,7 @@
         "address": "住所",
         "city": "市区町村",
         "state": "都道府県 / 州",
+        "country": "国",
         "postalCode": "郵便番号",
         "latitude": "緯度",
         "longitude": "経度",
@@ -288,8 +306,19 @@
       },
       "placeholders": {
         "selectTimezone": "タイムゾーンを選択",
-        "selectLanguage": "言語を選択",
-        "category": "art, history, science"
+        "category": "1つ以上のカテゴリを選択してください。"
+      },
+      "categoryOptions": {
+        "art": "アート",
+        "contemporaryArt": "現代アート",
+        "history": "歴史",
+        "science": "科学",
+        "naturalHistory": "自然史",
+        "children": "子ども向け",
+        "design": "デザイン",
+        "photography": "写真",
+        "culturalHeritage": "文化遺産",
+        "specialty": "専門"
       },
       "hours": {
         "day": "曜日",
@@ -332,6 +361,7 @@
         "cityStateRequired": "市区町村と都道府県 / 州は必須です。",
         "latitudeRange": "緯度は -90 から 90 の数値で入力してください。",
         "longitudeRange": "経度は -180 から 180 の数値で入力してください。",
+        "prefillFailed": "AIによるミュージアム詳細の取得に失敗しました。",
         "saveFailed": "ミュージアム詳細を保存できませんでした。"
       }
     },

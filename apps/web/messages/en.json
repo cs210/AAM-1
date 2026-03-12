@@ -142,6 +142,7 @@
       "interactions": "Interactions",
       "analytics": "Analytics",
       "orgRequests": "Org requests",
+      "adminMuseums": "Museums",
       "users": "Users",
       "invitations": "Invitations"
     },
@@ -266,6 +267,22 @@
       "invalidDescription": "This museum context is invalid or no longer exists.",
       "save": "Save Museum Details",
       "saveSuccess": "Museum details saved.",
+      "ai": {
+        "prefill": "Auto Fill with YAMI",
+        "prefilling": "Running Places + web scraper...",
+        "confirmTitle": "Use Places + AI Auto Fill?",
+        "confirmDescription": "This will overwrite current form fields with data from Google Places, then use web scraping to fill missing fields when possible. Please review everything before saving.",
+        "confirmCta": "Run Auto Fill",
+        "prefillSuccess": "Auto-fill results loaded into the form. Nothing has been saved yet.",
+        "prefillNeedsWebsite": "Google Places loaded partial results. Add the official website to run web-scrape fallback for remaining fields.",
+        "prefillWebsiteSkipped": "Skipped website fallback. You can enter a website and run auto-fill again anytime.",
+        "websitePromptTitle": "Website Needed for Fallback",
+        "websitePromptDescription": "Google Places did not return an official website. Enter one to let web scraping fill remaining missing fields.",
+        "websitePromptPlaceholder": "https://museum.org",
+        "websitePromptSkip": "Skip for now",
+        "websitePromptCta": "Run with website",
+        "imagesImported": "{count, plural, one {Imported # image to gallery.} other {Imported # images to gallery.}}"
+      },
       "fields": {
         "name": "Museum Name",
         "tagline": "Tagline",
@@ -279,6 +296,7 @@
         "address": "Street Address",
         "city": "City",
         "state": "State / Province",
+        "country": "Country",
         "postalCode": "Postal Code",
         "latitude": "Latitude",
         "longitude": "Longitude",
@@ -288,8 +306,19 @@
       },
       "placeholders": {
         "selectTimezone": "Select timezone",
-        "selectLanguage": "Select language",
-        "category": "art, history, science"
+        "category": "Select one or more categories."
+      },
+      "categoryOptions": {
+        "art": "Art",
+        "contemporaryArt": "Contemporary Art",
+        "history": "History",
+        "science": "Science",
+        "naturalHistory": "Natural History",
+        "children": "Children",
+        "design": "Design",
+        "photography": "Photography",
+        "culturalHeritage": "Cultural Heritage",
+        "specialty": "Specialty"
       },
       "hours": {
         "day": "Day",
@@ -332,6 +361,7 @@
         "cityStateRequired": "City and state are required.",
         "latitudeRange": "Latitude must be a number between -90 and 90.",
         "longitudeRange": "Longitude must be a number between -180 and 180.",
+        "prefillFailed": "Failed to load AI museum details.",
         "saveFailed": "Failed to save museum details."
       }
     },

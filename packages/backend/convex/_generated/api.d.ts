@@ -18,6 +18,7 @@ import type * as fakeData from "../fakeData.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
+import type * as museumsAutoFill from "../museumsAutoFill.js";
 import type * as organizationRequests from "../organizationRequests.js";
 import type * as recsys from "../recsys.js";
 import type * as userInterests from "../userInterests.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   follows: typeof follows;
   http: typeof http;
   museums: typeof museums;
+  museumsAutoFill: typeof museumsAutoFill;
   organizationRequests: typeof organizationRequests;
   recsys: typeof recsys;
   userInterests: typeof userInterests;
