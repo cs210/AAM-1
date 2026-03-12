@@ -370,6 +370,20 @@
       "selectMuseumDescription": "Select a museum context to manage exhibitions and halls.",
       "description": "Organize exhibition structure and halls. Use the Interactions tab to attach visitor interactions.",
       "addExhibition": "Add exhibition",
+      "autoFill": {
+        "button": "Auto Fill with YAMI",
+        "dialogTitle": "Auto Fill Exhibitions",
+        "dialogDescription": "Paste the museum exhibitions page URL. YAMI will scrape and import exhibitions from that page.",
+        "urlLabel": "Exhibitions page URL",
+        "urlPlaceholder": "https://museum.org/exhibitions",
+        "urlRequired": "Exhibitions page URL is required.",
+        "run": "Run auto fill",
+        "running": "Auto filling...",
+        "failed": "Failed to auto-fill exhibitions.",
+        "noResults": "No exhibitions were found on that page.",
+        "noNewResults": "No new exhibitions to import (possible duplicates).",
+        "success": "Imported {count} exhibitions."
+      },
       "loadingExhibitions": "Loading exhibitions...",
       "noExhibitions": "No exhibitions yet. Add one to start organizing halls."
     },
@@ -394,12 +408,32 @@
         "nameRequired": "Name is required.",
         "createFailed": "Failed to create exhibition.",
         "creating": "Creating...",
-        "create": "Create exhibition"
+        "create": "Create exhibition",
+        "autoFill": {
+          "button": "Auto Fill with YAMI",
+          "dialogTitle": "Auto Fill Exhibitions",
+          "dialogDescription": "Paste the museum exhibitions page URL. YAMI will scrape and import exhibitions from that page.",
+          "urlLabel": "Exhibitions page URL",
+          "urlPlaceholder": "https://museum.org/exhibitions",
+          "urlRequired": "Exhibitions page URL is required.",
+          "run": "Run auto fill",
+          "running": "Auto filling...",
+          "failed": "Failed to auto-fill exhibitions.",
+          "noResults": "No exhibitions were found on that page.",
+          "noNewResults": "No new exhibitions to import (possible duplicates)."
+        }
       },
       "exhibitionCard": {
         "hallsCount": "{count, plural, one {# hall} other {# halls}}",
         "fromDate": "From {date}",
         "addHall": "Add hall",
+        "edit": "Edit",
+        "saveChanges": "Save changes",
+        "savingChanges": "Saving...",
+        "notSet": "Not set",
+        "invalidDateRange": "End date must be on or after the start date.",
+        "updateFailed": "Failed to update exhibition.",
+        "imageAlt": "{name} image",
         "removeExhibition": "Remove exhibition",
         "removeExhibitionTitle": "Remove exhibition",
         "removeExhibitionDescription": "This will remove \"{name}\" and all its halls and interactions. This cannot be undone.",
@@ -777,6 +811,7 @@
     "liveData": "Live Data",
     "loadingExhibits": "Loading exhibits...",
     "noActiveExhibits": "No active exhibits right now. Check back later.",
+    "datesNotSet": "Dates not set",
     "eventDetails": "Event details",
     "activeExhibitsCount": "{count} active exhibits"
   },

@@ -4,7 +4,15 @@ import * as React from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
-import { CalendarDaysIcon, ChevronDownIcon, ChevronRightIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import {
+  CalendarDaysIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  Loader2Icon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -27,6 +35,22 @@ import {
 import { AddHallForm } from "@/components/dashboard/interactions/add-hall-form"
 import { HallRow } from "@/components/dashboard/interactions/hall-row"
 import { formatDate, type ExhibitionRow } from "@/components/dashboard/interactions/types"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+
+function toDateInputValue(timestamp?: number) {
+  if (!timestamp) return ""
+  const date = new Date(timestamp)
+  const tzOffsetMs = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 10)
+}
+
+function parseDateInput(value: string) {
+  if (!value) return undefined
+  const parsed = new Date(`${value}T00:00:00`).getTime()
+  return Number.isFinite(parsed) ? parsed : undefined
+}
 
 export function ExhibitionCard({
   exhibition,
@@ -36,17 +60,36 @@ export function ExhibitionCard({
   showInteractions?: boolean
 }) {
   const t = useTranslations("dashboard.interactions.exhibitionCard")
+  const tForm = useTranslations("dashboard.interactions.addExhibitionForm")
   const tCommon = useTranslations("common")
   const locale = useLocale()
   const [expanded, setExpanded] = React.useState(false)
   const [showAddHall, setShowAddHall] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
+  const [editing, setEditing] = React.useState(false)
+  const [name, setName] = React.useState(exhibition.name)
+  const [description, setDescription] = React.useState(exhibition.description ?? "")
+  const [startDate, setStartDate] = React.useState(toDateInputValue(exhibition.startDate))
+  const [endDate, setEndDate] = React.useState(toDateInputValue(exhibition.endDate))
+  const [imageUrl, setImageUrl] = React.useState(exhibition.imageUrl ?? "")
+  const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [saving, setSaving] = React.useState(false)
 
   const halls = useQuery(
     api.exhibitions.listHallsByExhibition,
     expanded ? { exhibitionId: exhibition._id } : "skip"
   )
   const removeExhibition = useMutation(api.exhibitions.removeExhibition)
+  const updateExhibition = useMutation(api.exhibitions.updateExhibition)
+
+  React.useEffect(() => {
+    if (editing) return
+    setName(exhibition.name)
+    setDescription(exhibition.description ?? "")
+    setStartDate(toDateInputValue(exhibition.startDate))
+    setEndDate(toDateInputValue(exhibition.endDate))
+    setImageUrl(exhibition.imageUrl ?? "")
+  }, [editing, exhibition])
 
   const formatDateLocal = (ts: number) => formatDate(ts, locale)
   const dateRange =
@@ -55,6 +98,61 @@ export function ExhibitionCard({
       : exhibition.startDate
         ? t("fromDate", { date: formatDateLocal(exhibition.startDate) })
         : null
+
+  const startDateLabel = exhibition.startDate ? formatDateLocal(exhibition.startDate) : t("notSet")
+  const endDateLabel = exhibition.endDate ? formatDateLocal(exhibition.endDate) : t("notSet")
+
+  const onStartEditing = () => {
+    setSaveError(null)
+    setEditing(true)
+  }
+
+  const onCancelEditing = () => {
+    setSaveError(null)
+    setEditing(false)
+    setName(exhibition.name)
+    setDescription(exhibition.description ?? "")
+    setStartDate(toDateInputValue(exhibition.startDate))
+    setEndDate(toDateInputValue(exhibition.endDate))
+    setImageUrl(exhibition.imageUrl ?? "")
+  }
+
+  const onSaveEditing = async () => {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setSaveError(tForm("nameRequired"))
+      return
+    }
+
+    const startTimestamp = parseDateInput(startDate)
+    const endTimestamp = parseDateInput(endDate)
+    if (
+      startTimestamp !== undefined &&
+      endTimestamp !== undefined &&
+      endTimestamp < startTimestamp
+    ) {
+      setSaveError(t("invalidDateRange"))
+      return
+    }
+
+    setSaveError(null)
+    setSaving(true)
+    try {
+      await updateExhibition({
+        id: exhibition._id,
+        name: trimmedName,
+        description: description.trim() || null,
+        startDate: startTimestamp ?? null,
+        endDate: endTimestamp ?? null,
+        imageUrl: imageUrl.trim() || null,
+      })
+      setEditing(false)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : t("updateFailed"))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <>
@@ -93,44 +191,177 @@ export function ExhibitionCard({
 
         {expanded && (
           <CardContent className="space-y-4 pt-0">
-            {exhibition.description && (
-              <p className="text-sm text-muted-foreground">{exhibition.description}</p>
-            )}
-
-            {showAddHall ? (
-              <AddHallForm
-                exhibitionId={exhibition._id}
-                sortOrder={halls?.length ?? 0}
-                onDone={() => setShowAddHall(false)}
-              />
+            {editing ? (
+              <div className="space-y-4 rounded-lg border border-dashed border-border/70 p-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`exhibition-name-${exhibition._id}`}>{tForm("name")}</Label>
+                  <Input
+                    id={`exhibition-name-${exhibition._id}`}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder={tForm("namePlaceholder")}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`exhibition-description-${exhibition._id}`}>{tForm("descriptionOptional")}</Label>
+                  <Textarea
+                    id={`exhibition-description-${exhibition._id}`}
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder={tForm("descriptionPlaceholder")}
+                    rows={3}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor={`exhibition-startDate-${exhibition._id}`}>{tForm("startDateOptional")}</Label>
+                    <Input
+                      id={`exhibition-startDate-${exhibition._id}`}
+                      type="date"
+                      value={startDate}
+                      onChange={(event) => setStartDate(event.target.value)}
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`exhibition-endDate-${exhibition._id}`}>{tForm("endDateOptional")}</Label>
+                    <Input
+                      id={`exhibition-endDate-${exhibition._id}`}
+                      type="date"
+                      value={endDate}
+                      onChange={(event) => setEndDate(event.target.value)}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`exhibition-imageUrl-${exhibition._id}`}>{tForm("imageUrlOptional")}</Label>
+                  <Input
+                    id={`exhibition-imageUrl-${exhibition._id}`}
+                    value={imageUrl}
+                    onChange={(event) => setImageUrl(event.target.value)}
+                    placeholder={tForm("imageUrlPlaceholder")}
+                    disabled={saving}
+                  />
+                </div>
+                {saveError && <p className="text-sm text-destructive">{saveError}</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" onClick={() => void onSaveEditing()} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2Icon className="mr-1.5 size-4 animate-spin" />
+                        {t("savingChanges")}
+                      </>
+                    ) : (
+                      t("saveChanges")
+                    )}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={onCancelEditing} disabled={saving}>
+                    {tCommon("cancel")}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowAddHall(true)
-                }}
-              >
-                <PlusIcon className="size-4" />
-                {t("addHall")}
-              </Button>
-            )}
+              <>
+                <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-4 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">{tForm("name")}: </span>
+                    {exhibition.name}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{tForm("descriptionOptional")}: </span>
+                    {exhibition.description?.trim() || t("notSet")}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{tForm("startDateOptional")}: </span>
+                    {startDateLabel}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{tForm("endDateOptional")}: </span>
+                    {endDateLabel}
+                  </p>
+                  <p className="break-all">
+                    <span className="text-muted-foreground">{tForm("imageUrlOptional")}: </span>
+                    {exhibition.imageUrl ? (
+                      <a
+                        href={exhibition.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {exhibition.imageUrl}
+                      </a>
+                    ) : (
+                      t("notSet")
+                    )}
+                  </p>
+                  {exhibition.imageUrl && (
+                    <div className="overflow-hidden rounded-md border border-border/70 bg-background">
+                      <img
+                        src={exhibition.imageUrl}
+                        alt={t("imageAlt", { name: exhibition.name })}
+                        className="h-48 w-full object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  )}
+                </div>
 
-            {halls?.map((hall) => (
-              <HallRow key={hall._id} hall={hall} showInteractions={showInteractions} />
-            ))}
+                {showAddHall ? (
+                  <AddHallForm
+                    exhibitionId={exhibition._id}
+                    sortOrder={halls?.length ?? 0}
+                    onDone={() => setShowAddHall(false)}
+                  />
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowAddHall(true)
+                    }}
+                  >
+                    <PlusIcon className="size-4" />
+                    {t("addHall")}
+                  </Button>
+                )}
+
+                {halls?.map((hall) => (
+                  <HallRow key={hall._id} hall={hall} showInteractions={showInteractions} />
+                ))}
+              </>
+            )}
 
             <div className="flex justify-end">
+              {!editing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStartEditing()
+                  }}
+                >
+                  <PencilIcon className="mr-1 size-3.5" />
+                  {t("edit")}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation()
+                  if (editing) return
                   setShowDelete(true)
                 }}
+                disabled={editing}
               >
                 <Trash2Icon className="mr-1 size-3.5" />
                 {t("removeExhibition")}

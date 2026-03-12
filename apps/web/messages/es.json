@@ -370,6 +370,20 @@
       "selectMuseumDescription": "Selecciona un contexto de museo para gestionar exposiciones y salas.",
       "description": "Organiza la estructura de exposiciones y salas. Usa la pestaña Interacciones para añadir interacciones para visitantes.",
       "addExhibition": "Añadir exposición",
+      "autoFill": {
+        "button": "Autorrellenar con YAMI",
+        "dialogTitle": "Autorrellenar exposiciones",
+        "dialogDescription": "Pega la URL de la página de exposiciones del museo. YAMI extraerá e importará las exposiciones de esa página.",
+        "urlLabel": "URL de la página de exposiciones",
+        "urlPlaceholder": "https://museo.org/exposiciones",
+        "urlRequired": "La URL de la página de exposiciones es obligatoria.",
+        "run": "Ejecutar autorrelleno",
+        "running": "Autorrellenando...",
+        "failed": "No se pudieron autorrellenar las exposiciones.",
+        "noResults": "No se encontraron exposiciones en esa página.",
+        "noNewResults": "No hay exposiciones nuevas para importar (posibles duplicados).",
+        "success": "Se importaron {count} exposiciones."
+      },
       "loadingExhibitions": "Cargando exposiciones...",
       "noExhibitions": "Aún no hay exposiciones. Añade una para organizar salas."
     },
@@ -394,12 +408,32 @@
         "nameRequired": "El nombre es obligatorio.",
         "createFailed": "No se pudo crear la exposición.",
         "creating": "Creando...",
-        "create": "Crear exposición"
+        "create": "Crear exposición",
+        "autoFill": {
+          "button": "Autorrellenar con YAMI",
+          "dialogTitle": "Autorrellenar exposiciones",
+          "dialogDescription": "Pega la URL de la página de exposiciones del museo. YAMI extraerá e importará las exposiciones de esa página.",
+          "urlLabel": "URL de la página de exposiciones",
+          "urlPlaceholder": "https://museo.org/exposiciones",
+          "urlRequired": "La URL de la página de exposiciones es obligatoria.",
+          "run": "Ejecutar autorrelleno",
+          "running": "Autorrellenando...",
+          "failed": "No se pudieron autorrellenar las exposiciones.",
+          "noResults": "No se encontraron exposiciones en esa página.",
+          "noNewResults": "No hay exposiciones nuevas para importar (posibles duplicados)."
+        }
       },
       "exhibitionCard": {
         "hallsCount": "{count, plural, one {# sala} other {# salas}}",
         "fromDate": "Desde {date}",
         "addHall": "Añadir sala",
+        "edit": "Editar",
+        "saveChanges": "Guardar cambios",
+        "savingChanges": "Guardando...",
+        "notSet": "Sin definir",
+        "invalidDateRange": "La fecha de fin debe ser igual o posterior a la fecha de inicio.",
+        "updateFailed": "No se pudo actualizar la exposición.",
+        "imageAlt": "Imagen de {name}",
         "removeExhibition": "Eliminar exposición",
         "removeExhibitionTitle": "Eliminar exposición",
         "removeExhibitionDescription": "Se eliminará \"{name}\" y todas sus salas e interacciones. No se puede deshacer.",
@@ -777,6 +811,7 @@
     "liveData": "Datos en vivo",
     "loadingExhibits": "Cargando exposiciones...",
     "noActiveExhibits": "No hay exposiciones activas. Vuelve más tarde.",
+    "datesNotSet": "Fechas sin definir",
     "eventDetails": "Detalles del evento",
     "activeExhibitsCount": "{count} exposiciones activas"
   },

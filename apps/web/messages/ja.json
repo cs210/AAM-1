@@ -370,6 +370,20 @@
       "selectMuseumDescription": "展覧会とホールを管理するミュージアムを選択してください。",
       "description": "展覧会とホールの構成を管理します。インタラクションタブで来館者向けのインタラクションを追加できます。",
       "addExhibition": "展覧会を追加",
+      "autoFill": {
+        "button": "YAMIで自動入力",
+        "dialogTitle": "展覧会を自動入力",
+        "dialogDescription": "ミュージアムの展覧会ページURLを貼り付けてください。YAMIがそのページから展覧会情報を抽出して取り込みます。",
+        "urlLabel": "展覧会ページURL",
+        "urlPlaceholder": "https://museum.org/exhibitions",
+        "urlRequired": "展覧会ページURLは必須です。",
+        "run": "自動入力を実行",
+        "running": "自動入力中...",
+        "failed": "展覧会の自動入力に失敗しました。",
+        "noResults": "このページでは展覧会が見つかりませんでした。",
+        "noNewResults": "取り込める新しい展覧会はありません（重複の可能性）。",
+        "success": "{count} 件の展覧会を取り込みました。"
+      },
       "loadingExhibitions": "展覧会を読み込み中...",
       "noExhibitions": "まだ展覧会がありません。ホールを整理するために追加してください。"
     },
@@ -394,12 +408,32 @@
         "nameRequired": "名前は必須です。",
         "createFailed": "展覧会の作成に失敗しました。",
         "creating": "作成中...",
-        "create": "展覧会を作成"
+        "create": "展覧会を作成",
+        "autoFill": {
+          "button": "YAMIで自動入力",
+          "dialogTitle": "展覧会を自動入力",
+          "dialogDescription": "ミュージアムの展覧会ページURLを貼り付けてください。YAMIがそのページから展覧会情報を抽出して取り込みます。",
+          "urlLabel": "展覧会ページURL",
+          "urlPlaceholder": "https://museum.org/exhibitions",
+          "urlRequired": "展覧会ページURLは必須です。",
+          "run": "自動入力を実行",
+          "running": "自動入力中...",
+          "failed": "展覧会の自動入力に失敗しました。",
+          "noResults": "このページでは展覧会が見つかりませんでした。",
+          "noNewResults": "取り込める新しい展覧会はありません（重複の可能性）。"
+        }
       },
       "exhibitionCard": {
         "hallsCount": "{count, plural, other {# ホール}}",
         "fromDate": "{date} から",
         "addHall": "ホールを追加",
+        "edit": "編集",
+        "saveChanges": "変更を保存",
+        "savingChanges": "保存中...",
+        "notSet": "未設定",
+        "invalidDateRange": "終了日は開始日以降にしてください。",
+        "updateFailed": "展覧会を更新できませんでした。",
+        "imageAlt": "{name} の画像",
         "removeExhibition": "展覧会を削除",
         "removeExhibitionTitle": "展覧会を削除",
         "removeExhibitionDescription": "「{name}」とそのすべてのホール・インタラクションが削除されます。元に戻せません。",
@@ -777,6 +811,7 @@
     "liveData": "ライブデータ",
     "loadingExhibits": "展覧会を読み込み中...",
     "noActiveExhibits": "現在開催中の展覧会はありません。",
+    "datesNotSet": "日程未設定",
     "eventDetails": "イベント詳細",
     "activeExhibitsCount": "{count} 件の開催中展覧会"
   },
