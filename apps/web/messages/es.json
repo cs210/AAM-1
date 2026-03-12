@@ -142,6 +142,7 @@
       "interactions": "Interacciones",
       "analytics": "Analíticas",
       "orgRequests": "Solicitudes de org.",
+      "adminMuseums": "Museos",
       "users": "Usuarios",
       "invitations": "Invitaciones"
     },
@@ -266,6 +267,22 @@
       "invalidDescription": "Este contexto de museo no es válido o ya no existe.",
       "save": "Guardar detalles del museo",
       "saveSuccess": "Detalles del museo guardados.",
+      "ai": {
+        "prefill": "Autorrellenar con YAMI",
+        "prefilling": "Ejecutando Places + raspador web...",
+        "confirmTitle": "¿Usar autorrelleno con Places + IA?",
+        "confirmDescription": "Esto sobrescribirá los campos actuales del formulario con datos de Google Places y luego usará raspado web para completar campos faltantes cuando sea posible. Revisa todo antes de guardar.",
+        "confirmCta": "Ejecutar autorrelleno",
+        "prefillSuccess": "Los resultados del autorrelleno se cargaron en el formulario. Aún no se ha guardado nada.",
+        "prefillNeedsWebsite": "Google Places cargó resultados parciales. Agrega el sitio web oficial para ejecutar el respaldo de raspado web en los campos faltantes.",
+        "prefillWebsiteSkipped": "Se omitió el respaldo con sitio web. Puedes agregar un sitio web y volver a ejecutar el autorrelleno cuando quieras.",
+        "websitePromptTitle": "Se necesita sitio web para el respaldo",
+        "websitePromptDescription": "Google Places no devolvió un sitio web oficial. Ingresa uno para que el raspado web complete los campos faltantes.",
+        "websitePromptPlaceholder": "https://museo.org",
+        "websitePromptSkip": "Omitir por ahora",
+        "websitePromptCta": "Ejecutar con sitio web",
+        "imagesImported": "{count, plural, one {Se importó # imagen a la galería.} other {Se importaron # imágenes a la galería.}}"
+      },
       "fields": {
         "name": "Nombre del museo",
         "tagline": "Eslogan",
@@ -279,6 +296,7 @@
         "address": "Dirección",
         "city": "Ciudad",
         "state": "Estado / Provincia",
+        "country": "País",
         "postalCode": "Código postal",
         "latitude": "Latitud",
         "longitude": "Longitud",
@@ -288,8 +306,19 @@
       },
       "placeholders": {
         "selectTimezone": "Selecciona una zona horaria",
-        "selectLanguage": "Selecciona un idioma",
-        "category": "arte, historia, ciencia"
+        "category": "Selecciona una o más categorías."
+      },
+      "categoryOptions": {
+        "art": "Arte",
+        "contemporaryArt": "Arte contemporáneo",
+        "history": "Historia",
+        "science": "Ciencia",
+        "naturalHistory": "Historia natural",
+        "children": "Infantil",
+        "design": "Diseño",
+        "photography": "Fotografía",
+        "culturalHeritage": "Patrimonio cultural",
+        "specialty": "Especializado"
       },
       "hours": {
         "day": "Día",
@@ -332,6 +361,7 @@
         "cityStateRequired": "La ciudad y el estado son obligatorios.",
         "latitudeRange": "La latitud debe ser un número entre -90 y 90.",
         "longitudeRange": "La longitud debe ser un número entre -180 y 180.",
+        "prefillFailed": "No se pudieron cargar los detalles del museo con IA.",
         "saveFailed": "No se pudieron guardar los detalles del museo."
       }
     },
