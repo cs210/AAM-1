@@ -10,10 +10,22 @@ import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 import { router, useLocalSearchParams } from 'expo-router';
 import { TabView, TabBar } from 'react-native-tab-view';
 
+const MUSEUMS_PER_PAGE = 10;
 
 
 // --- Tab Scenes defined outside main component for stability ---
-function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums, styles }: any) {
+function MuseumsRoute({
+  museumSearch,
+  setMuseumSearch,
+  museums,
+  pagedMuseums,
+  filteredMuseums,
+  museumPage,
+  totalMuseumPages,
+  onPrevPage,
+  onNextPage,
+  styles,
+}: any) {
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
@@ -33,12 +45,43 @@ function MuseumsRoute({ museumSearch, setMuseumSearch, museums, filteredMuseums,
         </View>
       ) : (
         <FlatList
-          data={filteredMuseums}
+          data={pagedMuseums}
           renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           scrollEnabled={true}
+          ListFooterComponent={
+            filteredMuseums.length > 0 ? (
+              <View style={styles.paginationContainer}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pageButton,
+                    museumPage <= 1 && styles.pageButtonDisabled,
+                    pressed && museumPage > 1 && styles.pageButtonPressed,
+                  ]}
+                  onPress={onPrevPage}
+                  disabled={museumPage <= 1}
+                >
+                  <Text style={styles.pageButtonText}>Previous</Text>
+                </Pressable>
+                <Text style={styles.pageIndicatorText}>
+                  Page {museumPage} of {totalMuseumPages}
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pageButton,
+                    museumPage >= totalMuseumPages && styles.pageButtonDisabled,
+                    pressed && museumPage < totalMuseumPages && styles.pageButtonPressed,
+                  ]}
+                  onPress={onNextPage}
+                  disabled={museumPage >= totalMuseumPages}
+                >
+                  <Text style={styles.pageButtonText}>Next</Text>
+                </Pressable>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.noResultsContainer}>
               <Text style={styles.noResultsText}>No museums match your search</Text>
@@ -130,6 +173,7 @@ export default function SearchScreen() {
 
   // Museums tab state
   const [museumSearch, setMuseumSearch] = useState('');
+  const [museumPage, setMuseumPage] = useState(1);
   const museums = useQuery(api.museums.listMuseumsWithStats);
   const filteredMuseums = useMemo(() => {
     if (!museums) return [];
@@ -141,6 +185,23 @@ export default function SearchScreen() {
       museum.location?.state?.toLowerCase().includes(lowerSearch)
     );
   }, [museums, museumSearch]);
+  const totalMuseumPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredMuseums.length / MUSEUMS_PER_PAGE)),
+    [filteredMuseums.length]
+  );
+  const currentMuseumPage = Math.min(museumPage, totalMuseumPages);
+  const pagedMuseums = useMemo(() => {
+    const startIndex = (currentMuseumPage - 1) * MUSEUMS_PER_PAGE;
+    return filteredMuseums.slice(startIndex, startIndex + MUSEUMS_PER_PAGE);
+  }, [filteredMuseums, currentMuseumPage]);
+  React.useEffect(() => {
+    setMuseumPage(1);
+  }, [museumSearch]);
+  React.useEffect(() => {
+    if (museumPage > totalMuseumPages) {
+      setMuseumPage(totalMuseumPages);
+    }
+  }, [museumPage, totalMuseumPages]);
 
   const users = useQuery(api.auth.listUsers);
   const filteredUsers = useMemo(() => {
@@ -164,7 +225,12 @@ export default function SearchScreen() {
               museumSearch={museumSearch}
               setMuseumSearch={setMuseumSearch}
               museums={museums}
+              pagedMuseums={pagedMuseums}
               filteredMuseums={filteredMuseums}
+              museumPage={currentMuseumPage}
+              totalMuseumPages={totalMuseumPages}
+              onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
+              onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
               styles={styles}
             />
           );
@@ -183,7 +249,7 @@ export default function SearchScreen() {
           return null;
       }
     },
-    [museumSearch, setMuseumSearch, museums, filteredMuseums, peopleSearch, setPeopleSearch, users, filteredUsers, styles]
+    [museumSearch, setMuseumSearch, museums, pagedMuseums, filteredMuseums, currentMuseumPage, totalMuseumPages, peopleSearch, setPeopleSearch, users, filteredUsers, currUser]
   );
 
   return (
@@ -291,7 +357,37 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   listContainer: {
-    paddingBottom: 120,
+    paddingBottom: 80,
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  pageButton: {
+    backgroundColor: '#D4915A',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  pageButtonPressed: {
+    opacity: 0.85,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#DDD',
+  },
+  pageButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  pageIndicatorText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,

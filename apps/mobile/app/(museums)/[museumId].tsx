@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Image, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Image, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
@@ -11,6 +11,11 @@ import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
+
+function normalizeExternalUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
 
 export default function MuseumDetailScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
@@ -82,7 +87,12 @@ export default function MuseumDetailScreen() {
 
   const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
+
+  useEffect(() => {
+    setShowMoreDetails(false);
+  }, [effectiveId]);
 
   const { upcomingItems, ongoingItems } = useMemo(() => {
     if (!events || !exhibitions) {
@@ -192,6 +202,13 @@ export default function MuseumDetailScreen() {
   const address = museum.location 
     ? `${museum.location.address || ''}, ${museum.location.city || ''}, ${museum.location.state || ''}`
     : 'Address not available';
+  const hasExpandedDetails = Boolean(
+    museum.website ||
+    museum.phone ||
+    (museum.operatingHours && museum.operatingHours.length > 0) ||
+    (museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0) ||
+    museum.accessibilityNotes
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -235,6 +252,60 @@ export default function MuseumDetailScreen() {
               <Text style={styles.categoryText}>{museum.category}</Text>
             </View>
           </View>
+
+          {showMoreDetails && (
+            <View style={styles.moreDetailsSection}>
+              {museum.website && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Website</Text>
+                  <Pressable onPress={() => void Linking.openURL(normalizeExternalUrl(museum.website!))}>
+                    <Text style={styles.linkText}>{museum.website}</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {museum.phone && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Phone</Text>
+                  <Text style={styles.moreDetailText}>{museum.phone}</Text>
+                </View>
+              )}
+
+              {museum.operatingHours && museum.operatingHours.length > 0 && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Operating Hours</Text>
+                  {museum.operatingHours.map((entry) => (
+                    <Text key={entry.day} style={styles.moreDetailText}>
+                      {entry.day}: {entry.isOpen ? `${entry.openTime} - ${entry.closeTime}` : 'Closed'}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              {museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0 && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Accessibility Features</Text>
+                  <Text style={styles.moreDetailText}>{museum.accessibilityFeatures.join(', ')}</Text>
+                </View>
+              )}
+
+              {museum.accessibilityNotes && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Accessibility Notes</Text>
+                  <Text style={styles.moreDetailText}>{museum.accessibilityNotes}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {hasExpandedDetails && (
+            <Pressable
+              style={({ pressed }) => [styles.moreButton, pressed && styles.moreButtonPressed]}
+              onPress={() => setShowMoreDetails((value) => !value)}
+            >
+              <Text style={styles.moreButtonText}>{showMoreDetails ? 'Show less' : 'View more'}</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Follow Button */}
@@ -501,6 +572,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8E8E93',
     flex: 1,
+  },
+  moreDetailsSection: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#EFEFEF',
+    paddingTop: 14,
+    gap: 10,
+  },
+  moreDetailBlock: {
+    gap: 3,
+  },
+  moreDetailLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#444',
+  },
+  moreDetailText: {
+    fontSize: 14,
+    color: '#6B6B6B',
+    lineHeight: 20,
+  },
+  linkText: {
+    fontSize: 14,
+    color: '#2F6FED',
+    lineHeight: 20,
+    textDecorationLine: 'underline',
+  },
+  moreButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#F4F4F5',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  moreButtonPressed: {
+    opacity: 0.75,
+  },
+  moreButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3F3F46',
   },
   followButton: {
     backgroundColor: '#D4915A',
