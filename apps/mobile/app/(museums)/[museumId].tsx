@@ -35,6 +35,10 @@ export default function MuseumDetailScreen() {
   const events = useQuery(api.events.getEventsByMuseum, 
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
+  const exhibitions = useQuery(
+    api.exhibitions.listPublicExhibitionsByMuseum,
+    effectiveId ? { museumId: effectiveId as Id<'museums'> } : 'skip'
+  );
 
   // Fetch all check-ins for this museum (for visitor photo gallery)
   const museumCheckIns = useQuery(
@@ -79,6 +83,54 @@ export default function MuseumDetailScreen() {
   const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
+
+  const { upcomingItems, ongoingItems } = useMemo(() => {
+    if (!events || !exhibitions) {
+      return { upcomingItems: [] as EventCardData[], ongoingItems: [] as EventCardData[] };
+    }
+
+    const now = Date.now();
+    const merged: EventCardData[] = [
+      ...events.map((event) => ({
+        _id: String(event._id),
+        title: event.title,
+        description: event.description,
+        category: event.category,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        imageUrl: event.imageUrl,
+        kind: 'event' as const,
+        museumId: id,
+      })),
+      ...exhibitions.map((exhibition) => ({
+        _id: `exhibition-${String(exhibition._id)}`,
+        title: exhibition.name,
+        description: exhibition.description,
+        category: 'Exhibition',
+        startDate: exhibition.startDate,
+        endDate: exhibition.endDate,
+        imageUrl: exhibition.imageUrl,
+        kind: 'exhibition' as const,
+        museumId: id,
+      })),
+    ];
+
+    const upcoming = merged.filter((item) => item.startDate != null && item.startDate > now);
+    const ongoing = merged.filter((item) => {
+      const hasStarted = item.startDate == null || item.startDate <= now;
+      const hasNotEnded = item.endDate == null || item.endDate >= now;
+      return hasStarted && hasNotEnded;
+    });
+
+    upcoming.sort(
+      (a, b) => (a.startDate ?? Number.MAX_SAFE_INTEGER) - (b.startDate ?? Number.MAX_SAFE_INTEGER)
+    );
+    ongoing.sort(
+      (a, b) => (a.endDate ?? Number.MAX_SAFE_INTEGER) - (b.endDate ?? Number.MAX_SAFE_INTEGER)
+    );
+
+    return { upcomingItems: upcoming, ongoingItems: ongoing };
+  }, [events, exhibitions, id]);
   
   // Follow/unfollow mutations
   const followMuseum = useMutation(api.follows.followMuseum);
@@ -159,14 +211,18 @@ export default function MuseumDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {museum.imageUrl && (
+          <View style={styles.bannerContainer}>
+            <Image source={{ uri: museum.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+            <View style={styles.bannerOverlay} />
+            <Text style={styles.bannerTitle} numberOfLines={2}>
+              {museum.name}
+            </Text>
+          </View>
+        )}
+
         {/* Museum Info Card */}
         <View style={styles.infoCard}>
-          <View style={styles.titleRow}>
-            <Text style={styles.museumName}>{museum.name}</Text>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{museum.category}</Text>
-            </View>
-          </View>
 
           <Text style={styles.description}>
             {museum.description || 'No description available.'}
@@ -175,6 +231,9 @@ export default function MuseumDetailScreen() {
           <View style={styles.detailRow}>
             <MapPinIcon size={16} color="#8E8E93" />
             <Text style={styles.detailText}>{address}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{museum.category}</Text>
+            </View>
           </View>
         </View>
 
@@ -214,15 +273,20 @@ export default function MuseumDetailScreen() {
           )}
         </Pressable>
 
-        {/* Upcoming Events Section */}
+        {/* Ongoing Events Section */}
         <View style={styles.eventsSection}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          <Text style={styles.sectionTitle}>Ongoing Events</Text>
           
-          {events && events.length > 0 ? (
-            events.map((event, index) => (
+          {events === undefined || exhibitions === undefined ? (
+            <View style={styles.emptyEvents}>
+              <ActivityIndicator size="small" color="#D4915A" />
+              <Text style={styles.emptyEventsText}>Loading events...</Text>
+            </View>
+          ) : ongoingItems.length > 0 ? (
+            ongoingItems.map((item, index) => (
               <EventCard
-                key={event._id}
-                event={{ ...event, museumId: id } as EventCardData}
+                key={`ongoing-${item._id}`}
+                event={item}
                 showMuseum={false}
                 compactDate={false}
                 cardIndex={index}
@@ -230,34 +294,59 @@ export default function MuseumDetailScreen() {
             ))
           ) : (
             <View style={styles.emptyEvents}>
-              <Text style={styles.emptyEventsText}>No upcoming events</Text>
+              <Text style={styles.emptyEventsText}>No ongoing events or exhibitions</Text>
             </View>
           )}
-
-          <View style={styles.photosSection}>
-            <Text style={styles.photosSectionTitle}>Visitor Photos</Text>
-            {museumCheckInPhotoUrls.length > 0 ? (
-              <View style={styles.photoGrid}>
-                {museumCheckInPhotoUrls.map((url, index) => (
-                  <Pressable
-                    key={`${url}-${index}`}
-                    onPress={() => setPreviewImageUrl(url)}
-                    style={styles.photoGridItem}
-                  >
-                    <Image
-                      source={{ uri: url }}
-                      style={styles.photoGridImage}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyPhotos}>
-                <Text style={styles.emptyPhotosText}>No check-in photos yet</Text>
-              </View>
-            )}
-          </View>
         </View>
+
+        {/* Upcoming Events Section */}
+        <View style={styles.eventsSection}>
+          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          {events === undefined || exhibitions === undefined ? (
+            <View style={styles.emptyEvents}>
+              <ActivityIndicator size="small" color="#D4915A" />
+              <Text style={styles.emptyEventsText}>Loading events...</Text>
+            </View>
+          ) : upcomingItems.length > 0 ? (
+            upcomingItems.map((item, index) => (
+              <EventCard
+                key={`upcoming-${item._id}`}
+                event={item}
+                showMuseum={false}
+                compactDate={false}
+                cardIndex={index}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyEvents}>
+              <Text style={styles.emptyEventsText}>No upcoming events or exhibitions</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.photosSection}>
+          <Text style={styles.photosSectionTitle}>Visitor Photos</Text>
+          {museumCheckInPhotoUrls.length > 0 ? (
+            <View style={styles.photoGrid}>
+              {museumCheckInPhotoUrls.map((url, index) => (
+                <Pressable
+                  key={`${url}-${index}`}
+                  onPress={() => setPreviewImageUrl(url)}
+                  style={styles.photoGridItem}
+                >
+                  <Image
+                    source={{ uri: url }}
+                    style={styles.photoGridImage}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyPhotos}>
+              <Text style={styles.emptyPhotosText}>No check-in photos yet</Text>
+            </View>
+          )}
+          </View>
       </ScrollView>
 
       <Modal
@@ -341,6 +430,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 32,
+  },
+  bannerContainer: {
+    height: 150,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 10,
+    backgroundColor: '#E9ECEF',
+    justifyContent: 'flex-end',
+  },
+  bannerImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.32)',
+  },
+  bannerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
   },
   infoCard: {
     backgroundColor: '#FFFFFF',
