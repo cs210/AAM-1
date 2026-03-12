@@ -24,6 +24,7 @@ export const listUsers = query({
       name: profile.name ?? null,
       email: profile.email ?? null,
       imageUrl: profile.imageUrl ?? null,
+      bannerUrl: profile.bannerUrl ?? null,
     }));
   },
 });
