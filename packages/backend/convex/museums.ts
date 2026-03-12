@@ -81,6 +81,7 @@ const museumLocationValidator = v.object({
   address: v.optional(v.string()),
   city: v.optional(v.string()),
   state: v.optional(v.string()),
+  country: v.optional(v.string()),
   postalCode: v.optional(v.string()),
 });
 
@@ -153,7 +154,7 @@ function museumMatchesSnapshot(
     timezone?: string;
     primaryLanguage?: string;
     category: string;
-    location: { address?: string; city?: string; state?: string; postalCode?: string };
+    location: { address?: string; city?: string; state?: string; country?: string; postalCode?: string };
     imageUrl?: string;
     website?: string;
     phone?: string;
@@ -170,7 +171,7 @@ function museumMatchesSnapshot(
     timezone?: string;
     primaryLanguage?: string;
     category: string;
-    location: { address?: string; city?: string; state?: string; postalCode?: string };
+    location: { address?: string; city?: string; state?: string; country?: string; postalCode?: string };
     imageUrl?: string;
     website?: string;
     phone?: string;
@@ -191,6 +192,7 @@ function museumMatchesSnapshot(
     valuesEqual(museum.location.address, snapshot.location.address) &&
     valuesEqual(museum.location.city, snapshot.location.city) &&
     valuesEqual(museum.location.state, snapshot.location.state) &&
+    valuesEqual(museum.location.country, snapshot.location.country) &&
     valuesEqual(museum.location.postalCode, snapshot.location.postalCode) &&
     valuesEqual(museum.imageUrl, snapshot.imageUrl) &&
     valuesEqual(museum.website, snapshot.website) &&
@@ -217,6 +219,7 @@ export const addMuseum = mutation({
       address: v.optional(v.string()),
       city: v.optional(v.string()),
       state: v.optional(v.string()),
+      country: v.optional(v.string()),
       postalCode: v.optional(v.string()),
     }),
     imageUrl: v.optional(v.string()),

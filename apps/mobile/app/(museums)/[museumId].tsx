@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Image, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
@@ -11,6 +11,11 @@ import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
+
+function normalizeExternalUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
 
 export default function MuseumDetailScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
@@ -35,6 +40,16 @@ export default function MuseumDetailScreen() {
   const events = useQuery(api.events.getEventsByMuseum, 
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
+  const exhibitions = useQuery(
+    api.exhibitions.listPublicExhibitionsByMuseum,
+    effectiveId ? { museumId: effectiveId as Id<'museums'> } : 'skip'
+  );
+
+  // Fetch all check-ins for this museum (for visitor photo gallery)
+  const museumCheckIns = useQuery(
+    api.checkIns.getMuseumCheckIns,
+    effectiveId ? { museumId: effectiveId as Id<'museums'> } : 'skip'
+  );
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
@@ -54,8 +69,78 @@ export default function MuseumDetailScreen() {
     );
   }, [userCheckIns]);
 
+  const museumCheckInPhotoUrls = useMemo(() => {
+    if (!museumCheckIns || museumCheckIns.length === 0) return [];
+
+    const sorted = [...museumCheckIns].sort((a, b) => b.createdAt - a.createdAt);
+    const photoUrls: string[] = [];
+
+    for (const checkIn of sorted as Array<{ imageUrls?: string[] }>) {
+      if (Array.isArray(checkIn.imageUrls) && checkIn.imageUrls.length > 0) {
+        photoUrls.push(...checkIn.imageUrls);
+      }
+      if (photoUrls.length >= 12) break;
+    }
+
+    return photoUrls.slice(0, 12);
+  }, [museumCheckIns]);
+
   const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
+
+  useEffect(() => {
+    setShowMoreDetails(false);
+  }, [effectiveId]);
+
+  const { upcomingItems, ongoingItems } = useMemo(() => {
+    if (!events || !exhibitions) {
+      return { upcomingItems: [] as EventCardData[], ongoingItems: [] as EventCardData[] };
+    }
+
+    const now = Date.now();
+    const merged: EventCardData[] = [
+      ...events.map((event) => ({
+        _id: String(event._id),
+        title: event.title,
+        description: event.description,
+        category: event.category,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        imageUrl: event.imageUrl,
+        kind: 'event' as const,
+        museumId: id,
+      })),
+      ...exhibitions.map((exhibition) => ({
+        _id: `exhibition-${String(exhibition._id)}`,
+        title: exhibition.name,
+        description: exhibition.description,
+        category: 'Exhibition',
+        startDate: exhibition.startDate,
+        endDate: exhibition.endDate,
+        imageUrl: exhibition.imageUrl,
+        kind: 'exhibition' as const,
+        museumId: id,
+      })),
+    ];
+
+    const upcoming = merged.filter((item) => item.startDate != null && item.startDate > now);
+    const ongoing = merged.filter((item) => {
+      const hasStarted = item.startDate == null || item.startDate <= now;
+      const hasNotEnded = item.endDate == null || item.endDate >= now;
+      return hasStarted && hasNotEnded;
+    });
+
+    upcoming.sort(
+      (a, b) => (a.startDate ?? Number.MAX_SAFE_INTEGER) - (b.startDate ?? Number.MAX_SAFE_INTEGER)
+    );
+    ongoing.sort(
+      (a, b) => (a.endDate ?? Number.MAX_SAFE_INTEGER) - (b.endDate ?? Number.MAX_SAFE_INTEGER)
+    );
+
+    return { upcomingItems: upcoming, ongoingItems: ongoing };
+  }, [events, exhibitions, id]);
   
   // Follow/unfollow mutations
   const followMuseum = useMutation(api.follows.followMuseum);
@@ -117,6 +202,13 @@ export default function MuseumDetailScreen() {
   const address = museum.location 
     ? `${museum.location.address || ''}, ${museum.location.city || ''}, ${museum.location.state || ''}`
     : 'Address not available';
+  const hasExpandedDetails = Boolean(
+    museum.website ||
+    museum.phone ||
+    (museum.operatingHours && museum.operatingHours.length > 0) ||
+    (museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0) ||
+    museum.accessibilityNotes
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -136,14 +228,18 @@ export default function MuseumDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {museum.imageUrl && (
+          <View style={styles.bannerContainer}>
+            <Image source={{ uri: museum.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+            <View style={styles.bannerOverlay} />
+            <Text style={styles.bannerTitle} numberOfLines={2}>
+              {museum.name}
+            </Text>
+          </View>
+        )}
+
         {/* Museum Info Card */}
         <View style={styles.infoCard}>
-          <View style={styles.titleRow}>
-            <Text style={styles.museumName}>{museum.name}</Text>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{museum.category}</Text>
-            </View>
-          </View>
 
           <Text style={styles.description}>
             {museum.description || 'No description available.'}
@@ -152,7 +248,64 @@ export default function MuseumDetailScreen() {
           <View style={styles.detailRow}>
             <MapPinIcon size={16} color="#8E8E93" />
             <Text style={styles.detailText}>{address}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{museum.category}</Text>
+            </View>
           </View>
+
+          {showMoreDetails && (
+            <View style={styles.moreDetailsSection}>
+              {museum.website && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Website</Text>
+                  <Pressable onPress={() => void Linking.openURL(normalizeExternalUrl(museum.website!))}>
+                    <Text style={styles.linkText}>{museum.website}</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {museum.phone && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Phone</Text>
+                  <Text style={styles.moreDetailText}>{museum.phone}</Text>
+                </View>
+              )}
+
+              {museum.operatingHours && museum.operatingHours.length > 0 && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Operating Hours</Text>
+                  {museum.operatingHours.map((entry) => (
+                    <Text key={entry.day} style={styles.moreDetailText}>
+                      {entry.day}: {entry.isOpen ? `${entry.openTime} - ${entry.closeTime}` : 'Closed'}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              {museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0 && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Accessibility Features</Text>
+                  <Text style={styles.moreDetailText}>{museum.accessibilityFeatures.join(', ')}</Text>
+                </View>
+              )}
+
+              {museum.accessibilityNotes && (
+                <View style={styles.moreDetailBlock}>
+                  <Text style={styles.moreDetailLabel}>Accessibility Notes</Text>
+                  <Text style={styles.moreDetailText}>{museum.accessibilityNotes}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {hasExpandedDetails && (
+            <Pressable
+              style={({ pressed }) => [styles.moreButton, pressed && styles.moreButtonPressed]}
+              onPress={() => setShowMoreDetails((value) => !value)}
+            >
+              <Text style={styles.moreButtonText}>{showMoreDetails ? 'Show less' : 'View more'}</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Follow Button */}
@@ -191,15 +344,20 @@ export default function MuseumDetailScreen() {
           )}
         </Pressable>
 
-        {/* Upcoming Events Section */}
+        {/* Ongoing Events Section */}
         <View style={styles.eventsSection}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          <Text style={styles.sectionTitle}>Ongoing Events</Text>
           
-          {events && events.length > 0 ? (
-            events.map((event, index) => (
+          {events === undefined || exhibitions === undefined ? (
+            <View style={styles.emptyEvents}>
+              <ActivityIndicator size="small" color="#D4915A" />
+              <Text style={styles.emptyEventsText}>Loading events...</Text>
+            </View>
+          ) : ongoingItems.length > 0 ? (
+            ongoingItems.map((item, index) => (
               <EventCard
-                key={event._id}
-                event={{ ...event, museumId: id } as EventCardData}
+                key={`ongoing-${item._id}`}
+                event={item}
                 showMuseum={false}
                 compactDate={false}
                 cardIndex={index}
@@ -207,11 +365,80 @@ export default function MuseumDetailScreen() {
             ))
           ) : (
             <View style={styles.emptyEvents}>
-              <Text style={styles.emptyEventsText}>No upcoming events</Text>
+              <Text style={styles.emptyEventsText}>No ongoing events or exhibitions</Text>
             </View>
           )}
         </View>
+
+        {/* Upcoming Events Section */}
+        <View style={styles.eventsSection}>
+          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          {events === undefined || exhibitions === undefined ? (
+            <View style={styles.emptyEvents}>
+              <ActivityIndicator size="small" color="#D4915A" />
+              <Text style={styles.emptyEventsText}>Loading events...</Text>
+            </View>
+          ) : upcomingItems.length > 0 ? (
+            upcomingItems.map((item, index) => (
+              <EventCard
+                key={`upcoming-${item._id}`}
+                event={item}
+                showMuseum={false}
+                compactDate={false}
+                cardIndex={index}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyEvents}>
+              <Text style={styles.emptyEventsText}>No upcoming events or exhibitions</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.photosSection}>
+          <Text style={styles.photosSectionTitle}>Visitor Photos</Text>
+          {museumCheckInPhotoUrls.length > 0 ? (
+            <View style={styles.photoGrid}>
+              {museumCheckInPhotoUrls.map((url, index) => (
+                <Pressable
+                  key={`${url}-${index}`}
+                  onPress={() => setPreviewImageUrl(url)}
+                  style={styles.photoGridItem}
+                >
+                  <Image
+                    source={{ uri: url }}
+                    style={styles.photoGridImage}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyPhotos}>
+              <Text style={styles.emptyPhotosText}>No check-in photos yet</Text>
+            </View>
+          )}
+          </View>
       </ScrollView>
+
+      <Modal
+        visible={previewImageUrl != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImageUrl(null)}
+      >
+        <Pressable
+          style={styles.fullscreenPreviewOverlay}
+          onPress={() => setPreviewImageUrl(null)}
+        >
+          {previewImageUrl ? (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.fullscreenPreviewImage}
+              resizeMode="contain"
+            />
+          ) : null}
+        </Pressable>
+      </Modal>
 
       <EditCheckinModal
         visible={editingCheckIn != null}
@@ -275,6 +502,28 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 32,
   },
+  bannerContainer: {
+    height: 150,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 10,
+    backgroundColor: '#E9ECEF',
+    justifyContent: 'flex-end',
+  },
+  bannerImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.32)',
+  },
+  bannerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
   infoCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -324,6 +573,48 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     flex: 1,
   },
+  moreDetailsSection: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#EFEFEF',
+    paddingTop: 14,
+    gap: 10,
+  },
+  moreDetailBlock: {
+    gap: 3,
+  },
+  moreDetailLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#444',
+  },
+  moreDetailText: {
+    fontSize: 14,
+    color: '#6B6B6B',
+    lineHeight: 20,
+  },
+  linkText: {
+    fontSize: 14,
+    color: '#2F6FED',
+    lineHeight: 20,
+    textDecorationLine: 'underline',
+  },
+  moreButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#F4F4F5',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  moreButtonPressed: {
+    opacity: 0.75,
+  },
+  moreButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3F3F46',
+  },
   followButton: {
     backgroundColor: '#D4915A',
     flexDirection: 'row',
@@ -367,6 +658,52 @@ const styles = StyleSheet.create({
   },
   eventsSection: {
     marginBottom: 16,
+  },
+  photosSection: {
+    marginTop: 20,
+  },
+  photosSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoGridItem: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  photoGridImage: {
+    width: 104,
+    height: 104,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  fullscreenPreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  fullscreenPreviewImage: {
+    width: '100%',
+    height: '80%',
+  },
+  emptyPhotos: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  emptyPhotosText: {
+    fontSize: 14,
+    color: '#8E8E93',
   },
   sectionTitle: {
     fontSize: 20,

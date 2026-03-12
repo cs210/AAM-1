@@ -1,8 +1,42 @@
 import { ConvexError, v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { QueryCtx } from "./_generated/server";
+import { QueryCtx, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+
+// Helper to convert storage IDs to URLs
+async function getImageUrlsFromStorageIds(
+  ctx: QueryCtx | MutationCtx,
+  storageIds: Id<"_storage">[]
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (const storageId of storageIds) {
+    try {
+      const url = await ctx.storage.getUrl(storageId);
+      if (url) {
+        urls.push(url);
+      }
+    } catch {
+      // Skip invalid storage IDs
+    }
+  }
+  return urls;
+}
+
+async function withResolvedImageUrls(
+  ctx: QueryCtx | MutationCtx,
+  checkIn: Doc<"checkIns">
+) {
+  const imageIds = checkIn.imageIds ?? [];
+  const imageUrls =
+    imageIds.length > 0 ? await getImageUrlsFromStorageIds(ctx, imageIds) : [];
+
+  return {
+    ...checkIn,
+    imageIds,
+    imageUrls,
+  };
+}
 
 async function getCheckInsRaw(
   ctx: QueryCtx,
@@ -31,6 +65,16 @@ async function getCheckInsRaw(
   return [];
 }
 
+// Generate an upload URL for check-in photos
+export const generateCheckInImageUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 // Create a check-in (museum or event)
 export const createCheckIn = mutation({
   args: {
@@ -38,7 +82,7 @@ export const createCheckIn = mutation({
     contentId: v.union(v.id("museums"), v.id("events")),
     rating: v.optional(v.number()),
     review: v.optional(v.string()),
-    imageUrls: v.optional(v.array(v.string())),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
     visitDate: v.optional(v.number()), // If not provided, use current time
   },
@@ -51,8 +95,9 @@ export const createCheckIn = mutation({
       throw new Error("Rating must be between 1 and 5");
     }
 
-    const visitDate = args.visitDate ?? Date.now();
-    const imageUrls = args.imageUrls ?? [];
+    const createdAt = Date.now();
+    const visitDate = args.visitDate ?? createdAt;
+    const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
 
     // Insert the check-in record
@@ -62,10 +107,10 @@ export const createCheckIn = mutation({
       contentId: args.contentId,
       rating: args.rating,
       review: args.review,
-      imageUrls,
+      imageIds: imageStorageIds,
       friendUserIds,
       visitDate,
-      createdAt: Date.now(),
+      createdAt,
     });
 
     // Update user profile with check-in data (museum check-ins only)
@@ -104,6 +149,11 @@ export const createCheckIn = mutation({
       });
     }
 
+    const imageUrls =
+      imageStorageIds.length > 0
+        ? await getImageUrlsFromStorageIds(ctx, imageStorageIds)
+        : [];
+
     return {
       _id: checkInId,
       userId: user._id,
@@ -114,7 +164,7 @@ export const createCheckIn = mutation({
       imageUrls,
       friendUserIds,
       visitDate,
-      createdAt: Date.now(),
+      createdAt,
     };
   },
 });
@@ -162,6 +212,11 @@ export const getProfileVisits = query({
       checkIns.map(async (ci) => {
         const museum = await ctx.db.get(ci.contentId);
         const city = museum && "location" in museum ? museum.location?.city : undefined;
+        const imageIds = ci.imageIds ?? [];
+        const imageUrls =
+          imageIds.length > 0
+            ? await getImageUrlsFromStorageIds(ctx, imageIds)
+            : [];
         return {
           checkIn: {
             _id: ci._id,
@@ -171,6 +226,7 @@ export const getProfileVisits = query({
             createdAt: ci.createdAt,
             review: ci.review,
             editedAt: ci.editedAt,
+            imageUrls: imageUrls,
           },
           museum: museum && "name" in museum
             ? {
@@ -186,7 +242,7 @@ export const getProfileVisits = query({
     );
 
     const valid = visits.filter((entry) => entry.museum != null) as {
-      checkIn: { _id: Id<"checkIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
+      checkIn: { _id: Id<"checkIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number; imageIds: Id<"_storage">[]; imageUrls: string[] };
       museum: { _id: Id<"museums">; name: string; imageUrl?: string; category: string; city?: string };
     }[];
 
@@ -206,7 +262,7 @@ export const getMuseumCheckIns = query({
       )
       .collect();
 
-    return checkIns;
+    return await Promise.all(checkIns.map((checkIn) => withResolvedImageUrls(ctx, checkIn)));
   },
 });
 
@@ -221,7 +277,7 @@ export const getUserMuseumCheckIns = query({
       )
       .collect();
 
-    return checkIns;
+    return await Promise.all(checkIns.map((checkIn) => withResolvedImageUrls(ctx, checkIn)));
   },
 });
 
@@ -231,7 +287,7 @@ export const updateCheckIn = mutation({
     checkInId: v.id("checkIns"),
     rating: v.optional(v.number()),
     review: v.optional(v.string()),
-    imageUrls: v.optional(v.array(v.string())),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
@@ -251,7 +307,7 @@ export const updateCheckIn = mutation({
     const updateData: Record<string, unknown> = {};
     if (args.rating !== undefined) updateData.rating = args.rating;
     if (args.review !== undefined) updateData.review = args.review;
-    if (args.imageUrls !== undefined) updateData.imageUrls = args.imageUrls;
+    if (args.imageStorageIds !== undefined) updateData.imageIds = args.imageStorageIds;
     if (args.friendUserIds !== undefined)
       updateData.friendUserIds = args.friendUserIds;
     // Only mark as edited when something actually changed
@@ -261,7 +317,11 @@ export const updateCheckIn = mutation({
 
     await ctx.db.patch(args.checkInId, updateData);
 
-    return { ...checkIn, ...updateData };
+    const imageIds = args.imageStorageIds ?? checkIn.imageIds ?? [];
+    const imageUrls =
+      imageIds.length > 0 ? await getImageUrlsFromStorageIds(ctx, imageIds) : [];
+
+    return { ...checkIn, ...updateData, imageUrls };
   },
 });
 
@@ -321,7 +381,7 @@ export const createMuseumCheckIn = mutation({
     museumId: v.id("museums"),
     rating: v.optional(v.number()),
     review: v.optional(v.string()),
-    imageUrls: v.optional(v.array(v.string())),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
     visitDate: v.optional(v.number()),
   },
@@ -334,8 +394,9 @@ export const createMuseumCheckIn = mutation({
       throw new Error("Rating must be between 1 and 5");
     }
 
-    const visitDate = args.visitDate ?? Date.now();
-    const imageUrls = args.imageUrls ?? [];
+    const createdAt = Date.now();
+    const visitDate = args.visitDate ?? createdAt;
+    const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
 
     // Insert the check-in record
@@ -345,10 +406,10 @@ export const createMuseumCheckIn = mutation({
       contentId: args.museumId,
       rating: args.rating,
       review: args.review,
-      imageUrls,
+      imageIds: imageStorageIds,
       friendUserIds,
       visitDate,
-      createdAt: Date.now(),
+      createdAt,
     });
 
     // Update user profile with check-in data
@@ -385,6 +446,11 @@ export const createMuseumCheckIn = mutation({
       updatedAt: Date.now(),
     });
 
+    const imageUrls =
+      imageStorageIds.length > 0
+        ? await getImageUrlsFromStorageIds(ctx, imageStorageIds)
+        : [];
+
     return {
       _id: checkInId,
       userId: user._id,
@@ -392,10 +458,10 @@ export const createMuseumCheckIn = mutation({
       contentId: args.museumId,
       rating: args.rating,
       review: args.review,
-      imageUrls,
+      imageUrls: imageUrls,
       friendUserIds,
       visitDate,
-      createdAt: Date.now(),
+      createdAt,
     };
   },
 });
@@ -406,7 +472,7 @@ export const createEventCheckIn = mutation({
     eventId: v.id("events"),
     rating: v.optional(v.number()),
     review: v.optional(v.string()),
-    imageUrls: v.optional(v.array(v.string())),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
     visitDate: v.optional(v.number()),
   },
@@ -419,8 +485,9 @@ export const createEventCheckIn = mutation({
       throw new Error("Rating must be between 1 and 5");
     }
 
-    const visitDate = args.visitDate ?? Date.now();
-    const imageUrls = args.imageUrls ?? [];
+    const createdAt = Date.now();
+    const visitDate = args.visitDate ?? createdAt;
+    const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
 
     // Insert the check-in record
@@ -430,11 +497,16 @@ export const createEventCheckIn = mutation({
       contentId: args.eventId,
       rating: args.rating,
       review: args.review,
-      imageUrls,
+      imageIds: imageStorageIds,
       friendUserIds,
       visitDate,
-      createdAt: Date.now(),
+      createdAt,
     });
+
+    const imageUrls =
+      imageStorageIds.length > 0
+        ? await getImageUrlsFromStorageIds(ctx, imageStorageIds)
+        : [];
 
     return {
       _id: checkInId,
@@ -443,10 +515,10 @@ export const createEventCheckIn = mutation({
       contentId: args.eventId,
       rating: args.rating,
       review: args.review,
-      imageUrls,
+      imageUrls: imageUrls,
       friendUserIds,
       visitDate,
-      createdAt: Date.now(),
+      createdAt,
     };
   },
 });
@@ -491,7 +563,7 @@ export const getEventCheckIns = query({
       )
       .collect();
 
-    return checkIns;
+    return await Promise.all(checkIns.map((checkIn) => withResolvedImageUrls(ctx, checkIn)));
   },
 });
 
@@ -506,7 +578,7 @@ export const getUserEventCheckIns = query({
       )
       .collect();
 
-    return checkIns;
+    return await Promise.all(checkIns.map((checkIn) => withResolvedImageUrls(ctx, checkIn)));
   },
 });
 
@@ -568,7 +640,7 @@ export const getFollowingCheckins = query({
       .slice(0, 50); // Limit to 50 most recent
 
     // Enrich with user and content data (museum or event)
-    const enriched = await Promise.all(
+    const checkInData = await Promise.all(
       followingCheckIns.map(async (ci) => {
         const userProfile = await ctx.db
           .query("userProfiles")
@@ -577,6 +649,11 @@ export const getFollowingCheckins = query({
 
         const content = await ctx.db.get(ci.contentId as any);
         const contentName = content && "name" in content ? content.name : "Unknown";
+        const imageIds = ci.imageIds ?? [];
+        const imageUrls =
+          imageIds.length > 0
+            ? await getImageUrlsFromStorageIds(ctx, imageIds)
+            : [];
 
         return {
           _id: ci._id,
@@ -588,12 +665,13 @@ export const getFollowingCheckins = query({
           contentName: contentName,
           rating: ci.rating,
           review: ci.review,
+          imageUrls: imageUrls,
           createdAt: ci.createdAt,
           editedAt: ci.editedAt,
         };
       })
     );
 
-    return enriched;
+    return checkInData;
   },
 });
