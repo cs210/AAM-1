@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AuthGuard } from '@/components/AuthGuard';
 
 // Gradient + UI palette (warm peach/sand → soft lavender/gray, different from reference)
 const GRADIENT_COLORS = ['#F5E8DC', '#EDE6E8', '#E5E0E8'] as const;
@@ -189,7 +190,7 @@ export default function IntakeScreen() {
 
   if (isComplete) {
     return (
-      <>
+      <AuthGuard>
         <Stack.Screen options={{ headerShown: false }} />
         <LinearGradient
           colors={[...GRADIENT_COLORS]}
@@ -213,12 +214,12 @@ export default function IntakeScreen() {
             </View>
           </SafeAreaView>
         </LinearGradient>
-      </>
+      </AuthGuard>
     );
   }
 
   return (
-    <>
+    <AuthGuard>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -364,7 +365,7 @@ export default function IntakeScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
-    </>
+    </AuthGuard>
   );
 }
 

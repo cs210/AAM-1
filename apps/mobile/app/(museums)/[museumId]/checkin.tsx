@@ -19,6 +19,7 @@ import { ArrowLeftIcon, StarIcon, XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { AuthGuard } from '@/components/AuthGuard';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 const MAX_UPLOAD_IMAGE_SIZE = 512;
@@ -218,8 +219,9 @@ export default function CheckInScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <AuthGuard>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -389,7 +391,8 @@ export default function CheckInScreen() {
           )}
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </AuthGuard>
   );
 }
 
