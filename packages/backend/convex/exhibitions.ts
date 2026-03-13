@@ -110,6 +110,16 @@ export const listExhibitionsByMuseum = query({
   },
 });
 
+export const listPublicExhibitionsByMuseum = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("exhibitions")
+      .withIndex("by_museum_sortOrder", (q) => q.eq("museumId", args.museumId))
+      .collect();
+  },
+});
+
 export const getExhibition = query({
   args: { id: v.id("exhibitions") },
   handler: async (ctx, args) => {
@@ -148,10 +158,10 @@ export const updateExhibition = mutation({
   args: {
     id: v.id("exhibitions"),
     name: v.optional(v.string()),
-    description: v.optional(v.string()),
-    startDate: v.optional(v.number()),
-    endDate: v.optional(v.number()),
-    imageUrl: v.optional(v.string()),
+    description: v.optional(v.union(v.string(), v.null())),
+    startDate: v.optional(v.union(v.number(), v.null())),
+    endDate: v.optional(v.union(v.number(), v.null())),
+    imageUrl: v.optional(v.union(v.string(), v.null())),
     sortOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -164,10 +174,18 @@ export const updateExhibition = mutation({
     const { id, ...updates } = args;
     const patch: Record<string, unknown> = {};
     if (updates.name !== undefined) patch.name = updates.name;
-    if (updates.description !== undefined) patch.description = updates.description;
-    if (updates.startDate !== undefined) patch.startDate = updates.startDate;
-    if (updates.endDate !== undefined) patch.endDate = updates.endDate;
-    if (updates.imageUrl !== undefined) patch.imageUrl = updates.imageUrl;
+    if (updates.description !== undefined) {
+      patch.description = updates.description === null ? undefined : updates.description;
+    }
+    if (updates.startDate !== undefined) {
+      patch.startDate = updates.startDate === null ? undefined : updates.startDate;
+    }
+    if (updates.endDate !== undefined) {
+      patch.endDate = updates.endDate === null ? undefined : updates.endDate;
+    }
+    if (updates.imageUrl !== undefined) {
+      patch.imageUrl = updates.imageUrl === null ? undefined : updates.imageUrl;
+    }
     if (updates.sortOrder !== undefined) patch.sortOrder = updates.sortOrder;
     if (Object.keys(patch).length === 0) return id;
     await ctx.db.patch(id, patch);

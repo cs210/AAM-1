@@ -1,9 +1,9 @@
 
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, ScrollView, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles, CameraIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles, CameraIcon, Grid3x3Icon, ListIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
@@ -13,6 +13,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 const { width } = Dimensions.get('window');
+
+type TabType = 'visits' | 'gallery';
 
 type ProfileVisit = {
   checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
@@ -92,6 +94,169 @@ function PassportCard({
   );
 }
 
+function MosaicGallery({ 
+  visits, 
+  onImagePress 
+}: { 
+  visits: ProfileVisit[];
+  onImagePress: (visit: ProfileVisit) => void;
+}) {
+  // Collect all images from all visits
+  const allImages: Array<{ url: string; visit: ProfileVisit }> = [];
+  
+  visits.forEach((visit) => {
+    const imageUrls = (visit.checkIn as any).imageUrls || [];
+    imageUrls.forEach((url: string) => {
+      allImages.push({ url, visit });
+    });
+  });
+
+  if (allImages.length === 0) {
+    return (
+      <View style={styles.galleryEmpty}>
+        <CameraIcon size={48} color="#D0D0D0" />
+        <Text style={styles.galleryEmptyTitle}>No photos yet</Text>
+        <Text style={styles.galleryEmptySub}>
+          Photos from your check-ins will appear here
+        </Text>
+      </View>
+    );
+  }
+
+  const GAP = 4;
+  const CONTAINER_PADDING = 20;
+  const AVAILABLE_WIDTH = width - (CONTAINER_PADDING * 2);
+  const largeSize = (AVAILABLE_WIDTH - GAP) * 0.66;
+  const smallSize = (AVAILABLE_WIDTH - GAP) * 0.34;
+  
+  // Create mosaic pattern: alternating between large and small images
+  // Pattern: [Large, Small, Small] repeating
+  const renderMosaicRows = () => {
+    const rows = [];
+    let index = 0;
+    
+    while (index < allImages.length) {
+      const rowImages = allImages.slice(index, index + 3);
+      const rowNumber = Math.floor(index / 3);
+      
+      // Only render complete rows (3 images) OR the last partial row
+      if (rowImages.length === 3 || index + rowImages.length === allImages.length) {
+        // Pattern 1: One large on left, two small stacked on right
+        if (rowNumber % 2 === 0) {
+          rows.push(
+            <View key={`row-${index}`} style={[styles.mosaicRow, { gap: GAP }]}>
+              {/* Large image on left */}
+              <TouchableOpacity
+                onPress={() => onImagePress(rowImages[0].visit)}
+                activeOpacity={0.8}
+                style={{ width: largeSize, height: largeSize }}
+              >
+                <Image
+                  source={{ uri: rowImages[0].url }}
+                  style={styles.mosaicImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+              
+              {/* Two small images stacked on right */}
+              <View style={{ flex: 1, gap: GAP }}>
+                {rowImages[1] && (
+                  <TouchableOpacity
+                    onPress={() => onImagePress(rowImages[1].visit)}
+                    activeOpacity={0.8}
+                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
+                  >
+                    <Image
+                      source={{ uri: rowImages[1].url }}
+                      style={styles.mosaicImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+                {rowImages[2] && (
+                  <TouchableOpacity
+                    onPress={() => onImagePress(rowImages[2].visit)}
+                    activeOpacity={0.8}
+                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
+                  >
+                    <Image
+                      source={{ uri: rowImages[2].url }}
+                      style={styles.mosaicImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        } else {
+          // Pattern 2: Two small stacked on left, one large on right
+          rows.push(
+            <View key={`row-${index}`} style={[styles.mosaicRow, { gap: GAP }]}>
+              {/* Two small images stacked on left */}
+              <View style={{ flex: 1, gap: GAP }}>
+                <TouchableOpacity
+                  onPress={() => onImagePress(rowImages[0].visit)}
+                  activeOpacity={0.8}
+                  style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
+                >
+                  <Image
+                    source={{ uri: rowImages[0].url }}
+                    style={styles.mosaicImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+                {rowImages[1] && (
+                  <TouchableOpacity
+                    onPress={() => onImagePress(rowImages[1].visit)}
+                    activeOpacity={0.8}
+                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
+                  >
+                    <Image
+                      source={{ uri: rowImages[1].url }}
+                      style={styles.mosaicImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              {/* Large image on right */}
+              {rowImages[2] && (
+                <TouchableOpacity
+                  onPress={() => onImagePress(rowImages[2].visit)}
+                  activeOpacity={0.8}
+                  style={{ width: largeSize, height: largeSize }}
+                >
+                  <Image
+                    source={{ uri: rowImages[2].url }}
+                    style={styles.mosaicImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        }
+      }
+      
+      index += 3;
+    }
+    
+    return rows;
+  };
+
+  return (
+    <ScrollView 
+      style={styles.mosaicContainer}
+      contentContainerStyle={styles.mosaicContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {renderMosaicRows()}
+    </ScrollView>
+  );
+}
+
 
 export default function WrappedScreen() {
   const { userId: paramUserId, search: paramSearch } = useLocalSearchParams<{ userId?: string | string[]; search?: string | string[] }>();
@@ -139,6 +304,7 @@ export default function WrappedScreen() {
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('visits');
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
   const MAX_AVATAR_DIMENSION = 512;
@@ -384,6 +550,17 @@ export default function WrappedScreen() {
                   <Text style={styles.tasteProfileBadgeText}>{tasteProfile.profileName}</Text>
                 </View>
               ) : null}
+              {/* Wrapped button (own profile only) */}
+              {!isViewingOtherProfile && (
+                <TouchableOpacity
+                  style={styles.wrappedPill}
+                  onPress={() => router.push('/wrapped')}
+                  activeOpacity={0.8}
+                >
+                  <Sparkles size={14} color="#FFFFFF" />
+                  <Text style={styles.wrappedPillText}>Wrapped</Text>
+                </TouchableOpacity>
+              )}
             </View>
             {viewedUserId === currentUserId && profile?.email && (
               <Text style={styles.profileEmail}>{profile.email}</Text>
@@ -403,26 +580,38 @@ export default function WrappedScreen() {
           </View>
         </View>
       </View>
-      
-      {/* Wrapped Section - Only show for own profile */}
-      {!isViewingOtherProfile && (
-        <TouchableOpacity 
-          style={styles.wrappedSection}
-          onPress={() => router.push('/wrapped')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.wrappedContent}>
-            <Sparkles size={18} color="#D4915A" />
-            <Text style={styles.wrappedText}>Wrapped</Text>
-          </View>
-        </TouchableOpacity>
+
+      {/* Tab Selector - Icons Only */}
+      {viewedUserId && (
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'visits' && styles.tabActive]}
+            onPress={() => setActiveTab('visits')}
+            activeOpacity={0.7}
+          >
+            <ListIcon 
+              size={22} 
+              color={activeTab === 'visits' ? '#D4915A' : '#8E8E93'} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'gallery' && styles.tabActive]}
+            onPress={() => setActiveTab('gallery')}
+            activeOpacity={0.7}
+          >
+            <Grid3x3Icon 
+              size={22} 
+              color={activeTab === 'gallery' ? '#D4915A' : '#8E8E93'} 
+            />
+          </TouchableOpacity>
+        </View>
       )}
       
-      {/* Cultural passport: own profile or when viewing another user's visits */}
+      {/* Content based on active tab */}
       {viewedUserId ? (
         profileVisits === undefined ? (
           <View style={styles.passportLoading}>
-            <Text style={styles.passportLoadingText}>Loading visits...</Text>
+            <Text style={styles.passportLoadingText}>Loading...</Text>
           </View>
         ) : profileVisits.length === 0 ? (
           <View style={styles.passportEmpty}>
@@ -443,7 +632,7 @@ export default function WrappedScreen() {
               </TouchableOpacity>
             )}
           </View>
-        ) : (
+        ) : activeTab === 'visits' ? (
           <FlatList
             data={profileVisits}
             keyExtractor={(item) => item.checkIn._id}
@@ -461,6 +650,11 @@ export default function WrappedScreen() {
                 <Text style={styles.passportSectionSub}>{profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}</Text>
               </View>
             }
+          />
+        ) : (
+          <MosaicGallery 
+            visits={profileVisits} 
+            onImagePress={(visit) => router.push(`/(museums)/${visit.museum._id}` as any)}
           />
         )
       ) : null}
@@ -711,30 +905,76 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 48,
   },
-  wrappedSection: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#D4915A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  wrappedContent: {
+  wrappedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#D4915A',
+    borderRadius: 999,
   },
-  wrappedText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#D4915A',
+  wrappedPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 20,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: '#D4915A',
+  },
+  mosaicContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  mosaicContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 32,
+    gap: 4,
+  },
+  mosaicRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  mosaicImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
+  },
+  galleryEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 48,
+    backgroundColor: '#FFFFFF',
+  },
+  galleryEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  galleryEmptySub: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
   },
   passportSectionHeader: {
     paddingHorizontal: 20,

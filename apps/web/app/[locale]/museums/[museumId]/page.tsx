@@ -33,9 +33,19 @@ export default function MuseumDetailPage() {
   const museumId = params?.museumId as Id<"museums"> | undefined;
 
   const museum = useQuery(api.museums.getMuseum, museumId ? { id: museumId } : "skip");
-  const exhibits = useQuery(api.events.getEventsByMuseum, museumId ? { museumId } : "skip");
+  const exhibits = useQuery(api.exhibitions.listPublicExhibitionsByMuseum, museumId ? { museumId } : "skip");
 
-  const exhibitList = useMemo(() => (exhibits ?? []).slice().sort((a, b) => a.startDate - b.startDate), [exhibits]);
+  const exhibitList = useMemo(
+    () =>
+      (exhibits ?? [])
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.startDate ?? Number.MAX_SAFE_INTEGER) - (b.startDate ?? Number.MAX_SAFE_INTEGER) ||
+            a.sortOrder - b.sortOrder,
+        ),
+    [exhibits],
+  );
 
   return (
     <div
@@ -182,32 +192,32 @@ export default function MuseumDetailPage() {
                 </p>
               ) : (
                 <div className="grid gap-3">
-                  {exhibitList.map((event) => (
-                    <article key={event._id} className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                  {exhibitList.map((exhibition) => (
+                    <article key={exhibition._id} className="rounded-2xl border border-border/60 bg-background/70 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="grid gap-1">
-                          <h3 className="text-sm font-semibold">{event.title}</h3>
-                          <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                            {event.category}
-                          </div>
-                        </div>
+                        <h3 className="text-sm font-semibold">{exhibition.name}</h3>
                         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                          {formatRange(event.startDate, event.endDate, locale)}
+                          {exhibition.startDate && exhibition.endDate
+                            ? formatRange(exhibition.startDate, exhibition.endDate, locale)
+                            : exhibition.startDate
+                              ? formatDate(exhibition.startDate, locale)
+                              : exhibition.endDate
+                                ? formatDate(exhibition.endDate, locale)
+                                : t("datesNotSet")}
                         </div>
                       </div>
-                      {event.description && (
-                        <p className={`${body.className} mt-3 text-sm text-muted-foreground`}>{event.description}</p>
+                      {exhibition.description && (
+                        <p className={`${body.className} mt-3 text-sm text-muted-foreground`}>{exhibition.description}</p>
                       )}
-                      {event.registrationUrl && (
-                        <div className="mt-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="rounded-full"
-                            render={<a href={event.registrationUrl} target="_blank" rel="noreferrer" />}
-                          >
-                            {t("eventDetails")}
-                          </Button>
+                      {exhibition.imageUrl && (
+                        <div className="mt-4 overflow-hidden rounded-xl border border-border/60">
+                          <img
+                            src={exhibition.imageUrl}
+                            alt={exhibition.name}
+                            className="h-56 w-full object-cover"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
                       )}
                     </article>

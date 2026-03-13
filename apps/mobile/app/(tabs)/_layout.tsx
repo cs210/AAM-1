@@ -1,9 +1,32 @@
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, ActivityIndicator, View } from 'react-native';
 import { Tabs, router } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon } from 'lucide-react-native';
+import { useConvexAuth } from 'convex/react';
 
 export default function TabLayout() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
+  React.useEffect(() => {
+    if (isLoading) return;
+    
+    if (!isAuthenticated) {
+      router.replace('/sign-in');
+    }
+  }, [isAuthenticated, isLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#D4915A" />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Tabs
       screenOptions={{

@@ -1,6 +1,6 @@
 # YAMI
 
-Welcome to the main repository for the Youth Art Museum Initiative! For more information, visit our [wiki](https://github.com/cs210/AAM-1/wiki).
+Welcome to the main repository for the You And Museum Initiative, YAMI! For more information, visit our [wiki](https://github.com/cs210/AAM-1/wiki).
 
 ## Basics
 
@@ -57,5 +57,20 @@ npx convex env set RESEND_FROM_EMAIL "YAMI <onboarding@your-verified-domain.com>
 ```
 
 Use a [Resend API key](https://resend.com/api-keys) and a verified domain for `RESEND_FROM_EMAIL`. For testing you can use `onboarding@resend.dev` (default if `RESEND_FROM_EMAIL` is unset).
+
+For museum info and exhibition auto-fill (Google Places + Firecrawl scraping), set:
+
+```bash
+npx convex env set GOOGLE_PLACES_API_KEY your_google_places_api_key
+npx convex env set FIRECRAWL_API_KEY fc-your-firecrawl-api-key
+```
+
+Google setup notes:
+- Create an API key in Google Cloud and enable the **Places API (New)**.
+- The auto-fill flow uses **Text Search** and **Place Photos** endpoints.
+
+Firecrawl setup notes:
+- Create a Firecrawl API key from your Firecrawl dashboard.
+- `FIRECRAWL_API_URL` is optional unless you are using a custom/self-hosted endpoint.
 
 This secret does not live on your machine, it is managed by Convex.
