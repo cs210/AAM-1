@@ -2,6 +2,7 @@
   "name": "mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
     "dev": "expo start -c",
     "android": "expo start -c --android",
@@ -49,8 +50,9 @@
     "clsx": "^2.1.1",
     "convex": "^1.32.0",
     "expo": "~54.0.33",
-    "expo-blur": "^55.0.8",
+    "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.12",
+    "expo-dev-client": "~6.0.20",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image-manipulator": "~14.0.8",
