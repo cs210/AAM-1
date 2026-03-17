@@ -19,7 +19,7 @@
     "system": "システム"
   },
   "metadata": {
-    "title": "YAMI — あなたのアート、ミュージアム、アイデンティティ",
+    "title": "Museum& — あなたのアート、ミュージアム、アイデンティティ",
     "description": "人類の文化的関与の初の社会的・自動記録。訪問者としてミュージアムを発見するか、スタッフダッシュボードで施設を運営できます。"
   },
   "landing": {
@@ -33,7 +33,7 @@
       "museum": "ミュージアム",
       "os": "OS",
       "visitorSubline": "人類の文化的関与の初の社会的・自動記録。すべての来館、すべての名作、ギャラリーで過ごした時間が、ずっとあなたのものに。",
-      "museumSubline": "YAMIは、TMSと同期し、分析を可視化し、すべてのギャラリーにインタラクティブな発見をもたらす訪問者エンゲージメント層をミュージアムに提供します。導入の手間はほぼゼロです。",
+      "museumSubline": "Museum&は、TMSと同期し、分析を可視化し、すべてのギャラリーにインタラクティブな発見をもたらす訪問者エンゲージメント層をミュージアムに提供します。導入の手間はほぼゼロです。",
       "getEarlyAccess": "早期アクセスを申し込む",
       "createAccount": "アカウント作成",
       "openDashboard": "ダッシュボードを開く",
@@ -63,12 +63,12 @@
     "visitorQuote": {
       "openQuote": "\u201C",
       "quote": "訪問者がギャラリーに入った瞬間、その姿は見えなくなる。",
-      "attribution": "YAMIがその旅のすべてを照らす。"
+      "attribution": "Museum&がその旅のすべてを照らす。"
     },
     "museumBento": {
       "tmsLabel": "TMS同期",
       "tmsTitle": "The Museum System との同期",
-      "tmsDesc": "TMSに直接接続し、コレクションデータを同期。重複入力もデータのずれもなし。真の情報源はそのまま、YAMIが訪問者に可視化するだけ。",
+      "tmsDesc": "TMSに直接接続し、コレクションデータを同期。重複入力もデータのずれもなし。真の情報源はそのまま、Museum&が訪問者に可視化するだけ。",
       "analyticsLabel": "分析",
       "analyticsTitle": "エンゲージメント分析",
       "analyticsDesc": "どの展示が響いているか、訪問者がどう関わるか、再来館の要因を把握。",
@@ -97,17 +97,17 @@
       "step1Title": "アクセスを申請。",
       "step1Body": "サインアップしてミュージアム情報を送信。チームが審査しワークスペースを有効化 — 技術的な設定は不要。",
       "step2Title": "TMSに接続。",
-      "step2Body": "YAMIがThe Museum Systemと同期し、コレクションデータを自動で取り込み。重複入力も移行の手間もなし。",
+      "step2Body": "Museum&がThe Museum Systemと同期し、コレクションデータを自動で取り込み。重複入力も移行の手間もなし。",
       "step3Title": "訪問者とエンゲージ。",
       "step3Body": "キッズ向けインタラクティブ、展覧会発見ツール、エンゲージメント分析 — 初日からダッシュボードで利用可能。"
     },
     "museumQuote": {
       "openQuote": "\u201C",
       "quote": "すべての来館を忘れられない体験に — 業務負荷を増やさずに。",
-      "attribution": "低コスト。高いエンゲージメント。それがミュージアムのためのYAMI。"
+      "attribution": "低コスト。高いエンゲージメント。それがミュージアムのためのMuseum&。"
     },
     "footer": {
-      "tagline": "YAMIは、私たちの共有文化とアートの社会的体験を革新しています。ベータテストはまもなく開始。リリース時にオープンソース化予定。"
+      "tagline": "Museum&は、私たちの共有文化とアートの社会的体験を革新しています。ベータテストはまもなく開始。リリース時にオープンソース化予定。"
     }
   },
   "auth": {
@@ -268,7 +268,7 @@
       "save": "ミュージアム詳細を保存",
       "saveSuccess": "ミュージアム詳細を保存しました。",
       "ai": {
-        "prefill": "YAMIで自動入力",
+        "prefill": "Museum&で自動入力",
         "prefilling": "Places + ウェブスクレーパーを実行中...",
         "confirmTitle": "Places + AI 自動入力を使いますか？",
         "confirmDescription": "現在のフォーム項目は Google Places のデータで上書きされ、可能な場合はウェブスクレイピングで不足項目を補完します。保存前に必ず確認してください。",
@@ -371,9 +371,9 @@
       "description": "展覧会とホールの構成を管理します。インタラクションタブで来館者向けのインタラクションを追加できます。",
       "addExhibition": "展覧会を追加",
       "autoFill": {
-        "button": "YAMIで自動入力",
+        "button": "Museum&で自動入力",
         "dialogTitle": "展覧会を自動入力",
-        "dialogDescription": "ミュージアムの展覧会ページURLを貼り付けてください。YAMIがそのページから展覧会情報を抽出して取り込みます。",
+        "dialogDescription": "ミュージアムの展覧会ページURLを貼り付けてください。Museum&がそのページから展覧会情報を抽出して取り込みます。",
         "urlLabel": "展覧会ページURL",
         "urlPlaceholder": "https://museum.org/exhibitions",
         "urlRequired": "展覧会ページURLは必須です。",
@@ -410,9 +410,9 @@
         "creating": "作成中...",
         "create": "展覧会を作成",
         "autoFill": {
-          "button": "YAMIで自動入力",
+          "button": "Museum&で自動入力",
           "dialogTitle": "展覧会を自動入力",
-          "dialogDescription": "ミュージアムの展覧会ページURLを貼り付けてください。YAMIがそのページから展覧会情報を抽出して取り込みます。",
+          "dialogDescription": "ミュージアムの展覧会ページURLを貼り付けてください。Museum&がそのページから展覧会情報を抽出して取り込みます。",
           "urlLabel": "展覧会ページURL",
           "urlPlaceholder": "https://museum.org/exhibitions",
           "urlRequired": "展覧会ページURLは必須です。",

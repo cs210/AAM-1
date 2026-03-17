@@ -19,7 +19,7 @@
     "system": "Sistema"
   },
   "metadata": {
-    "title": "YAMI — Tu arte, museo e identidad",
+    "title": "Museum& — Tu arte, museo e identidad",
     "description": "El primer registro social y automatizado del engagement cultural humano. Descubre museos como visitante o gestiona tu institución desde el panel de personal."
   },
   "landing": {
@@ -33,7 +33,7 @@
       "museum": "Museo",
       "os": "OS",
       "visitorSubline": "El primer registro social y automatizado del engagement cultural humano. Cada visita, cada obra maestra, cada hora en la galería — tuyas para siempre.",
-      "museumSubline": "YAMI aporta a tu museo una capa de engagement con visitantes que se sincroniza con TMS, muestra análisis y lleva el descubrimiento interactivo a cada galería, con un coste de implementación casi nulo.",
+      "museumSubline": "Museum& aporta a tu museo una capa de engagement con visitantes que se sincroniza con TMS, muestra análisis y lleva el descubrimiento interactivo a cada galería, con un coste de implementación casi nulo.",
       "getEarlyAccess": "Acceso anticipado",
       "createAccount": "Crear cuenta",
       "openDashboard": "Abrir panel",
@@ -63,12 +63,12 @@
     "visitorQuote": {
       "openQuote": "\u201C",
       "quote": "Cuando un visitante entra en la galería, se vuelve invisible.",
-      "attribution": "YAMI ilumina todo el recorrido."
+      "attribution": "Museum& ilumina todo el recorrido."
     },
     "museumBento": {
       "tmsLabel": "Sync TMS",
       "tmsTitle": "Sincronización con The Museum System",
-      "tmsDesc": "Conecta directamente con TMS y mantén los datos de tu colección sincronizados. Sin entradas duplicadas ni desviaciones. Tu fuente de verdad sigue siéndolo; YAMI solo la hace visible a los visitantes.",
+      "tmsDesc": "Conecta directamente con TMS y mantén los datos de tu colección sincronizados. Sin entradas duplicadas ni desviaciones. Tu fuente de verdad sigue siéndolo; Museum& solo la hace visible a los visitantes.",
       "analyticsLabel": "Analíticas",
       "analyticsTitle": "Analíticas de engagement",
       "analyticsDesc": "Comprende qué exposiciones resuenan, cómo interactúan los visitantes y qué impulsa las visitas repetidas.",
@@ -97,17 +97,17 @@
       "step1Title": "Solicita acceso.",
       "step1Body": "Regístrate y envía los datos de tu museo. Nuestro equipo revisa y activa tu espacio de trabajo — sin configuración técnica.",
       "step2Title": "Conecta tu TMS.",
-      "step2Body": "YAMI se sincroniza con The Museum System para que los datos de tu colección fluyan automáticamente. Sin duplicados ni migraciones.",
+      "step2Body": "Museum& se sincroniza con The Museum System para que los datos de tu colección fluyan automáticamente. Sin duplicados ni migraciones.",
       "step3Title": "Engage con visitantes.",
       "step3Body": "Actividades interactivas para niños, herramientas de descubrimiento de exposiciones y analíticas de engagement — todo en tu panel desde el primer día."
     },
     "museumQuote": {
       "openQuote": "\u201C",
       "quote": "Haz que cada visita sea inolvidable — sin sumar carga de trabajo.",
-      "attribution": "Bajo coste. Alto engagement. Así es YAMI para museos."
+      "attribution": "Bajo coste. Alto engagement. Así es Museum& para museos."
     },
     "footer": {
-      "tagline": "YAMI está revolucionando la experiencia social de nuestra cultura y arte compartidos. Las pruebas beta comienzan pronto. Código abierto en el lanzamiento."
+      "tagline": "Museum& está revolucionando la experiencia social de nuestra cultura y arte compartidos. Las pruebas beta comienzan pronto. Código abierto en el lanzamiento."
     }
   },
   "auth": {
@@ -268,7 +268,7 @@
       "save": "Guardar detalles del museo",
       "saveSuccess": "Detalles del museo guardados.",
       "ai": {
-        "prefill": "Autorrellenar con YAMI",
+        "prefill": "Autorrellenar con Museum&",
         "prefilling": "Ejecutando Places + raspador web...",
         "confirmTitle": "¿Usar autorrelleno con Places + IA?",
         "confirmDescription": "Esto sobrescribirá los campos actuales del formulario con datos de Google Places y luego usará raspado web para completar campos faltantes cuando sea posible. Revisa todo antes de guardar.",
@@ -371,9 +371,9 @@
       "description": "Organiza la estructura de exposiciones y salas. Usa la pestaña Interacciones para añadir interacciones para visitantes.",
       "addExhibition": "Añadir exposición",
       "autoFill": {
-        "button": "Autorrellenar con YAMI",
+        "button": "Autorrellenar con Museum&",
         "dialogTitle": "Autorrellenar exposiciones",
-        "dialogDescription": "Pega la URL de la página de exposiciones del museo. YAMI extraerá e importará las exposiciones de esa página.",
+        "dialogDescription": "Pega la URL de la página de exposiciones del museo. Museum& extraerá e importará las exposiciones de esa página.",
         "urlLabel": "URL de la página de exposiciones",
         "urlPlaceholder": "https://museo.org/exposiciones",
         "urlRequired": "La URL de la página de exposiciones es obligatoria.",
@@ -410,9 +410,9 @@
         "creating": "Creando...",
         "create": "Crear exposición",
         "autoFill": {
-          "button": "Autorrellenar con YAMI",
+          "button": "Autorrellenar con Museum&",
           "dialogTitle": "Autorrellenar exposiciones",
-          "dialogDescription": "Pega la URL de la página de exposiciones del museo. YAMI extraerá e importará las exposiciones de esa página.",
+          "dialogDescription": "Pega la URL de la página de exposiciones del museo. Museum& extraerá e importará las exposiciones de esa página.",
           "urlLabel": "URL de la página de exposiciones",
           "urlPlaceholder": "https://museo.org/exposiciones",
           "urlRequired": "La URL de la página de exposiciones es obligatoria.",

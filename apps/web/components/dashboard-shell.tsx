@@ -324,7 +324,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   if (!isAdmin && (myWorkspaces?.length ?? 0) === 0) {
     return (
       <div className="bg-background min-h-screen">
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,color-mix(in oklch,var(--primary)_14%,transparent),transparent_30%),radial-gradient(circle_at_88%_4%,color-mix(in oklch,var(--primary)_8%,transparent),transparent_26%)]" />
         <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8 md:px-6">
           <Card className="w-full">
             <CardHeader>
@@ -421,7 +421,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     const requestName = pendingRequest.museumName
     return (
       <div className="bg-background min-h-screen">
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,color-mix(in oklch,var(--primary)_14%,transparent),transparent_30%),radial-gradient(circle_at_88%_4%,color-mix(in oklch,var(--primary)_8%,transparent),transparent_26%)]" />
         <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8 md:px-6">
           <Card className="w-full">
             <CardHeader>
@@ -475,7 +475,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   return (
     <DashboardMuseumProvider museumId={activeMuseumContextId}>
       <div className="bg-background min-h-screen">
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,hsl(var(--primary)/0.14),transparent_30%),radial-gradient(circle_at_88%_4%,hsl(var(--primary)/0.08),transparent_26%)]" />
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,color-mix(in oklch,var(--primary)_14%,transparent),transparent_30%),radial-gradient(circle_at_88%_4%,color-mix(in oklch,var(--primary)_8%,transparent),transparent_26%)]" />
         <div className="flex min-h-screen w-full">
           <DashboardSidebar
           activeTab={activeTab}

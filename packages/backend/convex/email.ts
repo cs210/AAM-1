@@ -13,7 +13,7 @@ function getResendClient(): Resend | null {
 }
 
 function getFromAddress(): string {
-  return process.env.RESEND_FROM_EMAIL ?? "YAMI <onboarding@resend.dev>";
+  return process.env.RESEND_FROM_EMAIL ?? "Museum& <onboarding@resend.dev>";
 }
 
 export type SendEmailOptions = {
