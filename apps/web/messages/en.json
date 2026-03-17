@@ -19,7 +19,7 @@
     "system": "System"
   },
   "metadata": {
-    "title": "YAMI — Your Art, Museum & Identity",
+    "title": "Museum& — Your Art, Museum & Identity",
     "description": "The first social, automated record of human cultural engagement. Discover museums as a visitor or manage your institution through the staff dashboard."
   },
   "landing": {
@@ -33,7 +33,7 @@
       "museum": "Museum",
       "os": "OS",
       "visitorSubline": "The first social, automated record of human cultural engagement. Every visit, every masterpiece, every hour in the gallery — yours forever.",
-      "museumSubline": "YAMI gives your museum a visitor engagement layer that syncs with TMS, surfaces analytics, and brings interactive discovery to every gallery — with near-zero overhead to implement.",
+      "museumSubline": "Museum& gives your museum a visitor engagement layer that syncs with TMS, surfaces analytics, and brings interactive discovery to every gallery — with near-zero overhead to implement.",
       "getEarlyAccess": "Get early access",
       "createAccount": "Create account",
       "openDashboard": "Open dashboard",
@@ -63,12 +63,12 @@
     "visitorQuote": {
       "openQuote": "\u201C",
       "quote": "Once a visitor enters the gallery, they become invisible.",
-      "attribution": "YAMI illuminates the entire journey."
+      "attribution": "Museum& illuminates the entire journey."
     },
     "museumBento": {
       "tmsLabel": "TMS Sync",
       "tmsTitle": "Sync with The Museum System",
-      "tmsDesc": "Connect directly to TMS and keep your collection data in sync. No duplicate entry, no data drift. Your source of truth stays your source of truth — YAMI just makes it visible to visitors.",
+      "tmsDesc": "Connect directly to TMS and keep your collection data in sync. No duplicate entry, no data drift. Your source of truth stays your source of truth — Museum& just makes it visible to visitors.",
       "analyticsLabel": "Analytics",
       "analyticsTitle": "Engagement Analytics",
       "analyticsDesc": "Understand which exhibitions resonate, how visitors interact, and what drives return visits.",
@@ -97,17 +97,17 @@
       "step1Title": "Request access.",
       "step1Body": "Sign up and submit your museum details. Our team reviews and activates your workspace — no technical setup required.",
       "step2Title": "Connect your TMS.",
-      "step2Body": "YAMI syncs with The Museum System so your collection data flows in automatically. No duplicate entry, no migration headaches.",
+      "step2Body": "Museum& syncs with The Museum System so your collection data flows in automatically. No duplicate entry, no migration headaches.",
       "step3Title": "Engage visitors.",
       "step3Body": "Interactive activities for kids, exhibition discovery tools, and engagement analytics — all live in your dashboard from day one."
     },
     "museumQuote": {
       "openQuote": "\u201C",
       "quote": "Make every visit unforgettable — without adding to your workload.",
-      "attribution": "Low overhead. High engagement. That's YAMI for museums."
+      "attribution": "Low overhead. High engagement. That's Museum& for museums."
     },
     "footer": {
-      "tagline": "YAMI is revolutionizing the social experience of our shared culture and art. Beta testing begins soon. Open source on release."
+      "tagline": "Museum& is revolutionizing the social experience of our shared culture and art. Beta testing begins soon. Open source on release."
     }
   },
   "auth": {
@@ -268,7 +268,7 @@
       "save": "Save Museum Details",
       "saveSuccess": "Museum details saved.",
       "ai": {
-        "prefill": "Auto Fill with YAMI",
+        "prefill": "Auto Fill with Museum&",
         "prefilling": "Running Places + web scraper...",
         "confirmTitle": "Use Places + AI Auto Fill?",
         "confirmDescription": "This will overwrite current form fields with data from Google Places, then use web scraping to fill missing fields when possible. Please review everything before saving.",
@@ -371,9 +371,9 @@
       "description": "Organize exhibition structure and halls. Use the Interactions tab to attach visitor interactions.",
       "addExhibition": "Add exhibition",
       "autoFill": {
-        "button": "Auto Fill with YAMI",
+        "button": "Auto Fill with Museum&",
         "dialogTitle": "Auto Fill Exhibitions",
-        "dialogDescription": "Paste the museum exhibitions page URL. YAMI will scrape and import exhibitions from that page.",
+        "dialogDescription": "Paste the museum exhibitions page URL. Museum& will scrape and import exhibitions from that page.",
         "urlLabel": "Exhibitions page URL",
         "urlPlaceholder": "https://museum.org/exhibitions",
         "urlRequired": "Exhibitions page URL is required.",
@@ -410,9 +410,9 @@
         "creating": "Creating...",
         "create": "Create exhibition",
         "autoFill": {
-          "button": "Auto Fill with YAMI",
+          "button": "Auto Fill with Museum&",
           "dialogTitle": "Auto Fill Exhibitions",
-          "dialogDescription": "Paste the museum exhibitions page URL. YAMI will scrape and import exhibitions from that page.",
+          "dialogDescription": "Paste the museum exhibitions page URL. Museum& will scrape and import exhibitions from that page.",
           "urlLabel": "Exhibitions page URL",
           "urlPlaceholder": "https://museum.org/exhibitions",
           "urlRequired": "Exhibitions page URL is required.",

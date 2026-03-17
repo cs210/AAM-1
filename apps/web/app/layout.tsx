@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YAMI — Your Art, Museum & Identity",
+  title: "Museum& — Your Art, Museum & Identity",
   description:
     "The first social, automated record of human cultural engagement. Discover museums as a visitor or manage your institution through the staff dashboard.",
 };

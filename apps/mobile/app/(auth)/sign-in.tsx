@@ -71,7 +71,7 @@ export default function SignInScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.title}>YAMI</Text>
+              <Text style={styles.title}>Museum&</Text>
               <Text style={styles.subtitle}>Your Cultural Passport</Text>
             </View>
 

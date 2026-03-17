@@ -2,8 +2,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { isValidLocale, routing } from "@/i18n/routing";
-import { AppToolbar } from "@/components/app-toolbar";
-import { getToken } from "@/lib/auth-server";
+import { LandingToolbarWrapper } from "@/components/landing-toolbar-wrapper";
 
 type Props = {
   children: React.ReactNode;
@@ -21,12 +20,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   }
   setRequestLocale(locale);
   const messages = await getMessages();
-  const token = await getToken();
-  const isSignedIn = Boolean(token);
   return (
     <NextIntlClientProvider messages={messages}>
-      {!isSignedIn && <AppToolbar />}
-      <main className={isSignedIn ? "pt-0" : "pt-20"}>{children}</main>
+      <LandingToolbarWrapper>{children}</LandingToolbarWrapper>
     </NextIntlClientProvider>
   );
 }
