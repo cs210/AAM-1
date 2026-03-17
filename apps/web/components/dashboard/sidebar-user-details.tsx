@@ -70,14 +70,16 @@ export function SidebarUserDetails({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
-        <div className="bg-primary/12 text-primary flex size-9 items-center justify-center rounded-lg border">
-          <UserIcon className="size-4" />
+        <div className="bg-primary/12 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg border">
+          <span className="text-sm font-medium">
+            {user.name?.charAt(0) ?? user.email?.charAt(0) ?? "?"}
+          </span>
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{user.name ?? t("museumTeam")}</p>
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
           {isAdmin ? (
-            <p className="mt-1 inline-flex rounded-md border border-amber-300/80 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-800 uppercase dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-300">
+            <p className="mt-1 inline-flex rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary uppercase dark:border-primary/40 dark:bg-primary/15 dark:text-primary">
               {t("adminBadge")}
             </p>
           ) : null}
@@ -117,7 +119,7 @@ export function SidebarUserDetails({
                 {t("museumLabel")}: {activeWorkspaceOption?.museumLabel ?? t("notAssignedYet")}
               </p>
               {workspaceWarning ? (
-                <p className="flex items-start gap-1.5 px-1 text-xs text-amber-700 dark:text-amber-400">
+                <p className="flex items-start gap-1.5 px-1 text-xs text-primary">
                   <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
                   {workspaceWarning}
                 </p>

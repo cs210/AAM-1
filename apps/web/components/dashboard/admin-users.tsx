@@ -258,7 +258,7 @@ export function AdminUsers() {
               {pendingInvites.map((inv) => (
                 <div
                   key={inv._id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3"
                 >
                   <div className="min-w-0">
                     <p className="font-medium">{inv.email}</p>

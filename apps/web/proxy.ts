@@ -6,7 +6,7 @@ import { routing } from "./i18n/routing";
 const intlMiddleware = createMiddleware(routing);
 
 // Routes that unauthenticated users can access (path without locale prefix)
-const publicRoutes = ["/sign-in", "/sign-up", "/accept-invitation"];
+const publicRoutes = ["/", "/sign-in", "/sign-up", "/accept-invitation"];
 
 /** Pathname without the locale prefix (e.g. /en/dashboard -> /dashboard) */
 function pathnameWithoutLocale(pathname: string): string {
