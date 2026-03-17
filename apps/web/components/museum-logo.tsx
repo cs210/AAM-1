@@ -1,12 +1,12 @@
 import Image from "next/image";
 
-export function YamiLogo() {
+export function MuseumLogo() {
   return (
     <Image
-      src="/logo.png"
-      alt="YAMI"
-      width={286}
-      height={102}
+      src="/icon.png"
+      alt="Museum&"
+      width={120}
+      height={48}
       className="h-12 w-auto object-contain"
       priority
     />

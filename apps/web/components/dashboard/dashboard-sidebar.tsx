@@ -11,7 +11,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react"
 
-import { YamiLogo } from "@/components/yami-logo"
+import { MuseumLogo } from "@/components/museum-logo"
 import { Button } from "@/components/ui/button"
 import {
   Combobox,
@@ -91,7 +91,7 @@ export function DashboardSidebar({
   return (
     <aside className="bg-card/85 fixed top-4 bottom-4 left-4 hidden h-[calc(100vh-2rem)] w-72 flex-col rounded-2xl border p-4 shadow-xl shadow-black/5 backdrop-blur md:flex">
       <Link href="/" className="shrink-0 inline-flex">
-        <YamiLogo />
+        <MuseumLogo />
       </Link>
 
       <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
@@ -130,7 +130,7 @@ export function DashboardSidebar({
               <p className="line-clamp-2 text-sm font-medium">{museumContextLabel}</p>
             )}
             {museumContextWarning && (
-              <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-primary">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
                 {museumContextWarning}
               </p>
