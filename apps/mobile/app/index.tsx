@@ -5,7 +5,7 @@ import { useConvexAuth } from 'convex/react';
 import { Text } from '@/components/ui/text';
 
 const SCREEN_OPTIONS = {
-  title: 'YAMI',
+  title: 'Museum&',
   headerShown: false,
 };
 

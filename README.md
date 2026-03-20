@@ -1,6 +1,6 @@
-# YAMI
+# Museum&
 
-Welcome to the main repository for the You And Museum Initiative, YAMI! For more information, visit our [wiki](https://github.com/cs210/AAM-1/wiki).
+Welcome to the main repository for Museum&. For more information, visit our [wiki](https://github.com/cs210/AAM-1/wiki).
 
 ## Basics
 
@@ -53,7 +53,7 @@ For Better Auth and transactional emails (Resend), set:
 
 ```bash
 npx convex env set RESEND_API_KEY re_your_api_key_here
-npx convex env set RESEND_FROM_EMAIL "YAMI <onboarding@your-verified-domain.com>"
+npx convex env set RESEND_FROM_EMAIL "Museum& <onboarding@your-verified-domain.com>"
 ```
 
 Use a [Resend API key](https://resend.com/api-keys) and a verified domain for `RESEND_FROM_EMAIL`. For testing you can use `onboarding@resend.dev` (default if `RESEND_FROM_EMAIL` is unset).
