@@ -1,50 +1,44 @@
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Text } from '@/components/ui/text';
-import { View } from 'react-native';
+import { AUTH_PLACEHOLDER, authScreenStyles as styles } from '@/lib/auth-screen-styles';
+import { router } from 'expo-router';
+import * as React from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 export function ForgotPasswordForm() {
+  const [email, setEmail] = React.useState('');
+
   function onSubmit() {
-    // TODO: Submit form and navigate to reset password screen if successful
+    // TODO: wire to Better Auth forgot-password / email flow when available
   }
 
   return (
-    <View className="gap-6">
-      <Card className="border-border/0 sm:border-border shadow-none sm:shadow-sm sm:shadow-black/5">
-        <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">Forgot password?</CardTitle>
-          <CardDescription className="text-center sm:text-left">
-            Enter your email to reset your password
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="gap-6">
-          <View className="gap-6">
-            <View className="gap-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                placeholder="m@example.com"
-                keyboardType="email-address"
-                autoComplete="email"
-                autoCapitalize="none"
-                returnKeyType="send"
-                onSubmitEditing={onSubmit}
-              />
-            </View>
-            <Button className="w-full" onPress={onSubmit}>
-              <Text>Reset your password</Text>
-            </Button>
-          </View>
-        </CardContent>
-      </Card>
-    </View>
+    <>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          placeholder="you@example.com"
+          placeholderTextColor={AUTH_PLACEHOLDER}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoComplete="email"
+          autoCapitalize="none"
+          returnKeyType="send"
+          onSubmitEditing={onSubmit}
+          style={styles.input}
+        />
+      </View>
+
+      <Pressable
+        onPress={onSubmit}
+        style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+        <Text style={styles.primaryButtonText}>Send reset link</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/sign-in')}
+        style={({ pressed }) => [styles.footerLinkButton, pressed && styles.pressed]}>
+        <Text style={[styles.footerLinkText, styles.footerLinkBold]}>Back to sign in</Text>
+      </Pressable>
+    </>
   );
 }
