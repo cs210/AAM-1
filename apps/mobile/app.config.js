@@ -10,7 +10,7 @@ module.exports = {
         "@sentry/react-native/expo",
         {
           url: "https://sentry.io/",
-          organization: process.env.SENTRY_ORG ?? "your-sentry-org-slug",
+          organization: process.env.SENTRY_ORG ?? "museum-51",
           project: process.env.SENTRY_PROJECT ?? "museumand-mobile",
         },
       ],
