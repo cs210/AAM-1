@@ -1,13 +1,7 @@
+import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { authScreenStyles as styles } from '@/lib/auth-screen-styles';
 
 type AuthScreenLayoutProps = {
   children: React.ReactNode;
@@ -19,24 +13,36 @@ type AuthScreenLayoutProps = {
 
 export function AuthScreenLayout({ children, subtitle, description }: AuthScreenLayoutProps) {
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView
+      edges={['top', 'left', 'right', 'bottom']}
+      className="flex-1 bg-background"
+      style={{ flex: 1 }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        className="flex-1"
+        style={{ flex: 1 }}
         keyboardVerticalOffset={0}>
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          className="flex-1 bg-background"
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          showsVerticalScrollIndicator={false}>
-          <View style={styles.hero}>
-            <Text style={styles.title}>Museum&</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
-            {description ? <Text style={styles.description}>{description}</Text> : null}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 28 }}>
+          {/* Avoid flex-1/grow inside ScrollView — on RN it often collapses to zero height. */}
+          <View className="items-center pb-7 pt-3">
+            <Text className="mb-2 text-center text-[40px] font-bold tracking-tight text-stone-900">
+              Museum&
+            </Text>
+            <Text className="text-center text-base leading-snug text-stone-600">{subtitle}</Text>
+            {description ? (
+              <Text className="mt-2.5 px-2 text-center text-[15px] leading-snug text-stone-600">
+                {description}
+              </Text>
+            ) : null}
           </View>
 
-          <View style={styles.form}>{children}</View>
+          <View className="w-full max-w-[480px] gap-5 self-center">{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

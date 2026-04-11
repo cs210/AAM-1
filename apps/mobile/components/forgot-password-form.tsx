@@ -1,7 +1,11 @@
-import { AUTH_PLACEHOLDER, authScreenStyles as styles } from '@/lib/auth-screen-styles';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Text } from '@/components/ui/text';
+import { AUTH_INPUT_CLASSNAME } from '@/lib/auth-ui';
 import { router } from 'expo-router';
 import * as React from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = React.useState('');
@@ -12,11 +16,11 @@ export function ForgotPasswordForm() {
 
   return (
     <>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
+      <View className="gap-2">
+        <Label nativeID="forgot-email">Email</Label>
+        <Input
+          nativeID="forgot-email"
           placeholder="you@example.com"
-          placeholderTextColor={AUTH_PLACEHOLDER}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -24,20 +28,23 @@ export function ForgotPasswordForm() {
           autoCapitalize="none"
           returnKeyType="send"
           onSubmitEditing={onSubmit}
-          style={styles.input}
+          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
-      <Pressable
-        onPress={onSubmit}
-        style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
-        <Text style={styles.primaryButtonText}>Send reset link</Text>
-      </Pressable>
+      <Button
+        className="mt-1 h-auto min-h-[52px] w-full rounded-xl py-4 shadow-md shadow-black/10"
+        size="lg"
+        onPress={onSubmit}>
+        <Text className="text-base font-semibold text-white">Send reset link</Text>
+      </Button>
 
       <Pressable
         onPress={() => router.push('/sign-in')}
-        style={({ pressed }) => [styles.footerLinkButton, pressed && styles.pressed]}>
-        <Text style={[styles.footerLinkText, styles.footerLinkBold]}>Back to sign in</Text>
+        className="items-center py-4 active:opacity-[0.85]">
+        <Text className="text-center text-[15px] font-semibold text-stone-900 underline">
+          Back to sign in
+        </Text>
       </Pressable>
     </>
   );

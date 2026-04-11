@@ -15,11 +15,12 @@ export {
 
 export default function RootLayout() {
   const { theme } = useUniwind();
+  const colorScheme = theme === 'dark' ? 'dark' : 'light';
 
   return (
     <ConvexClientProvider>
-      <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <ThemeProvider value={NAV_THEME[colorScheme]}>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false }} />
         <PortalHost />
       </ThemeProvider>

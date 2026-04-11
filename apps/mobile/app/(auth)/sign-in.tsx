@@ -1,9 +1,13 @@
 import { AuthScreenLayout } from '@/components/auth-screen-layout';
-import { AUTH_PLACEHOLDER, authScreenStyles as styles } from '@/lib/auth-screen-styles';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Text } from '@/components/ui/text';
 import { authClient } from '@/lib/auth-client';
+import { AUTH_INPUT_CLASSNAME } from '@/lib/auth-ui';
 import { router } from 'expo-router';
 import * as React from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
 export default function SignInScreen() {
   const passwordInputRef = React.useRef<TextInput>(null);
@@ -48,16 +52,16 @@ export default function SignInScreen() {
   return (
     <AuthScreenLayout subtitle="Your Cultural Passport">
       {error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View className="rounded-xl border border-destructive/25 bg-destructive/10 p-3">
+          <Text className="text-center text-sm text-destructive">{error}</Text>
         </View>
       ) : null}
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
+      <View className="gap-2">
+        <Label nativeID="sign-in-email">Email</Label>
+        <Input
+          nativeID="sign-in-email"
           placeholder="your@email.com"
-          placeholderTextColor={AUTH_PLACEHOLDER}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -65,51 +69,50 @@ export default function SignInScreen() {
           autoCapitalize="none"
           onSubmitEditing={onEmailSubmitEditing}
           returnKeyType="next"
-          style={styles.input}
+          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <View style={styles.labelRow}>
-          <Text style={styles.label}>Password</Text>
-          <Pressable
-            onPress={() => router.push('/forgot-password')}
-            style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}>
-            <Text style={styles.forgotText}>Forgot?</Text>
-          </Pressable>
+      <View className="gap-2">
+        <View className="flex-row items-center justify-between">
+          <Label nativeID="sign-in-password">Password</Label>
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto px-2 py-1"
+            onPress={() => router.push('/forgot-password')}>
+            <Text>Forgot?</Text>
+          </Button>
         </View>
-        <TextInput
+        <Input
           ref={passwordInputRef}
+          nativeID="sign-in-password"
           placeholder="••••••••"
-          placeholderTextColor={AUTH_PLACEHOLDER}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           returnKeyType="send"
           onSubmitEditing={onSubmit}
-          style={styles.input}
+          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
-      <Pressable
-        onPress={onSubmit}
+      <Button
+        className="mt-1 h-auto min-h-[52px] w-full rounded-xl py-4 shadow-md shadow-black/10"
+        size="lg"
         disabled={isLoading}
-        style={({ pressed }) => [
-          styles.primaryButton,
-          pressed && styles.pressed,
-          isLoading && styles.buttonDisabled,
-        ]}>
-        <Text style={styles.primaryButtonText}>
+        onPress={onSubmit}>
+        <Text className="text-base font-semibold text-white">
           {isLoading ? 'Signing in...' : 'Sign In'}
         </Text>
-      </Pressable>
+      </Button>
 
       <Pressable
         onPress={() => router.push('/sign-up')}
-        style={({ pressed }) => [styles.footerLinkButton, pressed && styles.pressed]}>
-        <Text style={styles.footerLinkText}>
+        className="items-center py-4 active:opacity-[0.85]">
+        <Text className="text-center text-[15px] text-stone-600">
           {"Don't have an account? "}
-          <Text style={styles.footerLinkBold}>Sign up</Text>
+          <Text className="font-semibold text-stone-900 underline">Sign up</Text>
         </Text>
       </Pressable>
     </AuthScreenLayout>

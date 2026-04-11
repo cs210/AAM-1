@@ -305,7 +305,7 @@ export default function SearchScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       {/* Top right bubble gradient */}
       <View style={styles.topRightBubble} pointerEvents="none">
         <LinearGradient
