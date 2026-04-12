@@ -77,6 +77,29 @@ export function EventCard({ event, showMuseum = true, compactDate = true, classN
   const iconColor = COLOR_VALUES[cardIndex % COLOR_VALUES.length];
   const dateLabel = formatDateRange(event, formatDate);
   const showImageBackground = event.kind === 'exhibition' && Boolean(event.imageUrl);
+  const isExhibition = event.kind === 'exhibition';
+  const isPressable = isExhibition ? Boolean(event._id) : Boolean(event.museumId);
+
+  const handlePress = () => {
+    if (isExhibition) {
+      const exhibitionId = event._id.startsWith('exhibition-')
+        ? event._id.slice('exhibition-'.length)
+        : event._id;
+
+      router.push({
+        pathname: '/exhibitions/[exhibitionId]',
+        params: {
+          exhibitionId,
+          ...(event.museumId ? { museumId: event.museumId } : {}),
+        },
+      });
+      return;
+    }
+
+    if (event.museumId) {
+      router.push(`/${event.museumId}`);
+    }
+  };
 
   return (
     <Pressable 
@@ -85,8 +108,8 @@ export function EventCard({ event, showMuseum = true, compactDate = true, classN
         colorScheme.bg,
         className
       )}
-      onPress={() => event.museumId && router.push(`/${event.museumId}`)}
-      disabled={!event.museumId}
+      onPress={handlePress}
+      disabled={!isPressable}
     >
       {showImageBackground && (
         <>
