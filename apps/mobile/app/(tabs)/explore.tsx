@@ -331,6 +331,9 @@ export default function SearchScreen() {
         renderScene={renderScene}
         onIndexChange={setIndex}
         initialLayout={{ width: layout.width }}
+        commonOptions={{
+          labelStyle: { fontSize: 16, fontWeight: '500', textTransform: 'none' },
+        }}
         renderTabBar={props => (
           <TabBar
             {...props}
@@ -338,7 +341,6 @@ export default function SearchScreen() {
             style={{ backgroundColor: '#FFFFFF', elevation: 0, shadowOpacity: 0, marginTop: 0 }}
             activeColor="#1A1A1A"
             inactiveColor="#999"
-            labelStyle={{ fontSize: 16, fontWeight: '500', textTransform: 'none' }}
           />
         )}
       />

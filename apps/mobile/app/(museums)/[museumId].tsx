@@ -142,10 +142,10 @@ export default function MuseumDetailScreen() {
         endDate: event.endDate,
         imageUrl: event.imageUrl,
         kind: 'event' as const,
-        museumId: id,
+        museumId: event.museumId ? String(event.museumId) : id,
       })),
       ...exhibitions.map((exhibition) => ({
-        _id: `exhibition-${String(exhibition._id)}`,
+        _id: String(exhibition._id),
         title: exhibition.name,
         description: exhibition.description,
         category: 'Exhibition',
@@ -153,7 +153,7 @@ export default function MuseumDetailScreen() {
         endDate: exhibition.endDate,
         imageUrl: exhibition.imageUrl,
         kind: 'exhibition' as const,
-        museumId: id,
+        museumId: String(exhibition.museumId),
       })),
     ];
 
