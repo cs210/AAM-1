@@ -13,7 +13,7 @@ pnpm dev
 
 ## Product architecture
 
-High-level interfaces: museum goers use the **Expo (iPhone) app**; **curators** use the **Next.js web dashboard**; both talk to **Convex** (shared museum catalog).
+High-level interfaces: museum goers use the **Expo (iPhone) app**; **curators** use the **Next.js web dashboard**; both talk to **Convex** (shared museum catalog). Museum coordinates are indexed for **nearby** recommendations via the Convex **geospatial** component (same backend as catalog queries — not a separate product surface).
 
 **Google Places** and **Firecrawl** power automated museum catalog enrichment via Convex actions (`museumsAutoFill`).
 
@@ -30,11 +30,9 @@ flowchart TB
 
     subgraph convex["2) Convex — catalog + realtime"]
       direction TB
-      FN["Queries · mutations · actions"]
-      CAT["Tables: museums · exhibitions · events<br/>checkIns · profiles · follows …"]
-      GEO["Geospatial index"]
+      FN["Convex functions<br/>queries · mutations · actions<br/>+ nearby geospatial"]
+      CAT["Tables<br/>museums<br/>exhibitions<br/>events<br/>checkIns · profiles · follows …"]
       FN --> CAT
-      FN --> GEO
     end
 
     subgraph curators["3) Museum curators — web dashboard"]
