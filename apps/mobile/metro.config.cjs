@@ -30,13 +30,13 @@ finalConfig = {
         try {
           const filePath = require.resolve(moduleName, { paths: [monorepoRoot] });
           return { type: "sourceFile", filePath };
-        } catch (_) {}
+        } catch (_) { }
       }
       if (moduleName === "react-dom" || moduleName.startsWith("react-dom/")) {
         try {
           const filePath = require.resolve(moduleName, { paths: [monorepoRoot] });
           return { type: "sourceFile", filePath };
-        } catch (_) {}
+        } catch (_) { }
       }
       return baseResolveRequest(context, moduleName, platform);
     },
