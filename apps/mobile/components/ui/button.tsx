@@ -14,8 +14,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: cn(
-          'bg-primary active:bg-primary/90 shadow-sm shadow-black/5',
-          Platform.select({ web: 'hover:bg-primary/90' })
+          'bg-yellow-900 active:bg-yellow-900/90 shadow-sm shadow-black/5',
+          Platform.select({ web: 'hover:bg-yellow-900/90' })
         ),
         destructive: cn(
           'bg-destructive active:bg-destructive/90 dark:bg-destructive/60 shadow-sm shadow-black/5',
@@ -61,7 +61,7 @@ const buttonTextVariants = cva(
   {
     variants: {
       variant: {
-        default: 'text-primary-foreground',
+        default: 'text-white',
         destructive: 'text-white',
         outline: cn(
           'group-active:text-accent-foreground',

@@ -1,6 +1,7 @@
 import { router, Stack } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useConvexAuth } from 'convex/react';
 import { Text } from '@/components/ui/text';
 
@@ -25,12 +26,12 @@ export default function Screen() {
   return (
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
         <ActivityIndicator size="large" color="#D4915A" />
         <Text style={{ marginTop: 16, fontSize: 16, color: '#8E8E93' }}>
           Loading...
         </Text>
-      </View>
+      </SafeAreaView>
     </>
   );
 }

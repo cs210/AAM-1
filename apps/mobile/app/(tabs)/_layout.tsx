@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, ActivityIndicator, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs, router } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon } from 'lucide-react-native';
 import { useConvexAuth } from 'convex/react';
@@ -17,9 +18,9 @@ export default function TabLayout() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
         <ActivityIndicator size="large" color="#D4915A" />
-      </View>
+      </SafeAreaView>
     );
   }
 
