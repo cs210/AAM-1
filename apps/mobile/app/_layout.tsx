@@ -20,7 +20,7 @@ export {
 function RootLayout() {
   const { theme } = useUniwind();
   const navigationRef = useNavigationContainerRef();
-  const colorScheme = theme === "dark" ? "dark" : "light";
+  const colorScheme = theme === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
     if (navigationRef) {
@@ -32,8 +32,8 @@ function RootLayout() {
     <ConvexClientProvider>
       <SentryUserSync />
       <ThemeProvider value={NAV_THEME[colorScheme]}>
-        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-        <Stack />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <Stack screenOptions={{ headerShown: false }} />
         <PortalHost />
       </ThemeProvider>
     </ConvexClientProvider>

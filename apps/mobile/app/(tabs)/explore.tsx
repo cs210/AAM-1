@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SearchIcon } from 'lucide-react-native';
@@ -9,7 +9,6 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { router, useLocalSearchParams } from 'expo-router';
-import { TabView, TabBar } from 'react-native-tab-view';
 
 const MUSEUMS_PER_PAGE = 10;
 
@@ -197,13 +196,15 @@ function TasteAlignedRoute({
 }
 
 export default function SearchScreen() {
-  const layout = useWindowDimensions();
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
   const [index, setIndex] = useState(0);
-  const routes = React.useMemo(() => [
-    { key: 'aligned', title: 'Taste Aligned' },
-    { key: 'museums', title: 'Museums' },
-  ], []);
+  const tabs = React.useMemo(
+    () => [
+      { key: 'aligned', title: 'Taste Aligned' },
+      { key: 'museums', title: 'Museums' },
+    ],
+    []
+  );
 
   // People tab state (restore from URL when returning from profile)
   const [peopleSearch, setPeopleSearch] = useState('');
@@ -263,49 +264,12 @@ export default function SearchScreen() {
     );
   }, [users, peopleSearch]);
 
-  // renderScene directly returns the route components with current props
   const currUser = useQuery(api.auth.getCurrentUser);
   const compatibleCheckins = useQuery(api.wrapped.getCompatibleCheckIns);
-  const renderScene = React.useCallback(
-    ({ route }: { route: { key: string } }) => {
-      switch (route.key) {
-        case 'aligned':
-          return (
-            <TasteAlignedRoute
-              peopleSearch={peopleSearch}
-              setPeopleSearch={setPeopleSearch}
-              users={users}
-              filteredUsers={filteredUsers}
-              compatibleCheckins={compatibleCheckins}
-              styles={styles}
-              currUser={currUser}
-              currUserId={currUser?._id ?? null}
-            />
-          );
-        case 'museums':
-          return (
-            <MuseumsRoute
-              museumSearch={museumSearch}
-              setMuseumSearch={setMuseumSearch}
-              museums={museums}
-              pagedMuseums={pagedMuseums}
-              filteredMuseums={filteredMuseums}
-              museumPage={currentMuseumPage}
-              totalMuseumPages={totalMuseumPages}
-              onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
-              onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
-              styles={styles}
-            />
-          );
-        default:
-          return null;
-      }
-    },
-    [museumSearch, setMuseumSearch, museums, pagedMuseums, filteredMuseums, currentMuseumPage, totalMuseumPages, peopleSearch, setPeopleSearch, users, filteredUsers, currUser, compatibleCheckins, styles]
-  );
+  const activeTabKey = tabs[index]?.key ?? 'aligned';
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       {/* Top right bubble gradient */}
       <View style={styles.topRightBubble} pointerEvents="none">
         <LinearGradient
@@ -326,22 +290,51 @@ export default function SearchScreen() {
         />
       </View>
       
-      <TabView
-        navigationState={{ index, routes }}
-        renderScene={renderScene}
-        onIndexChange={setIndex}
-        initialLayout={{ width: layout.width }}
-        renderTabBar={props => (
-          <TabBar
-            {...props}
-            indicatorStyle={{ backgroundColor: '#D4915A', height: 2 }}
-            style={{ backgroundColor: '#FFFFFF', elevation: 0, shadowOpacity: 0, marginTop: 0 }}
-            activeColor="#1A1A1A"
-            inactiveColor="#999"
-            labelStyle={{ fontSize: 16, fontWeight: '500', textTransform: 'none' }}
-          />
-        )}
-      />
+      <View style={styles.tabBar}>
+        {tabs.map((tab, tabIndex) => {
+          const isActive = tabIndex === index;
+          return (
+            <Pressable
+              key={tab.key}
+              style={styles.tabItem}
+              onPress={() => setIndex(tabIndex)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text style={[styles.tabLabel, isActive ? styles.tabLabelActive : styles.tabLabelInactive]}>
+                {tab.title}
+              </Text>
+              <View style={[styles.tabIndicator, isActive && styles.tabIndicatorActive]} />
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {activeTabKey === 'aligned' ? (
+        <TasteAlignedRoute
+          peopleSearch={peopleSearch}
+          setPeopleSearch={setPeopleSearch}
+          users={users}
+          filteredUsers={filteredUsers}
+          compatibleCheckins={compatibleCheckins}
+          styles={styles}
+          currUser={currUser}
+          currUserId={currUser?._id ?? null}
+        />
+      ) : (
+        <MuseumsRoute
+          museumSearch={museumSearch}
+          setMuseumSearch={setMuseumSearch}
+          museums={museums}
+          pagedMuseums={pagedMuseums}
+          filteredMuseums={filteredMuseums}
+          museumPage={currentMuseumPage}
+          totalMuseumPages={totalMuseumPages}
+          onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+          styles={styles}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -374,6 +367,37 @@ const styles = StyleSheet.create({
   bubbleGradient: {
     width: '100%',
     height: '100%',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  tabLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  tabLabelActive: {
+    color: '#1A1A1A',
+  },
+  tabLabelInactive: {
+    color: '#999999',
+  },
+  tabIndicator: {
+    marginTop: 8,
+    height: 2,
+    width: '70%',
+    backgroundColor: 'transparent',
+  },
+  tabIndicatorActive: {
+    backgroundColor: '#D4915A',
   },
   searchContainer: {
     flexDirection: 'row',
