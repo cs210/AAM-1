@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, FlatList, ScrollView, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles, CameraIcon, Grid3x3Icon, ListIcon } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
@@ -429,7 +430,8 @@ export default function WrappedScreen() {
   };
 
   return (
-    <Pressable style={styles.container} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <Pressable style={{ flex: 1 }} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
       {isViewingOtherProfile ? (
         <View style={styles.backBar}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -673,6 +675,7 @@ export default function WrappedScreen() {
         onClose={() => setEditingVisit(null)}
       />
     </Pressable>
+    </SafeAreaView>
   );
 }
 
