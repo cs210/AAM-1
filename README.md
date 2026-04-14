@@ -24,7 +24,7 @@ flowchart TB
     subgraph goers["1) Museum goers — iPhone app"]
       direction TB
       MG["Museum goers<br/>ages 16–30"]
-      IOS["Expo mobile app<br/>check-ins · search · social · location"]
+      IOS["Expo mobile app<br/>check-ins<br/>search<br/>social<br/>location"]
       MG --> IOS
     end
 
