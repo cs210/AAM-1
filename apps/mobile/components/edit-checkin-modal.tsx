@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Pressable,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Modal, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { StarIcon } from 'lucide-react-native';
+import { Text } from '@/components/ui/text';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 type Props = {
   visible: boolean;
@@ -51,7 +44,14 @@ export function EditCheckinModal({
       'Remove this check-in from your passport? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => { onDelete(); onClose(); } },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            onDelete();
+            onClose();
+          },
+        },
       ]
     );
   };
@@ -62,21 +62,23 @@ export function EditCheckinModal({
     <Modal visible={visible} transparent animationType="slide">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
-      >
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <Text style={styles.title}>Edit check-in</Text>
+        className="flex-1 justify-end"
+        style={{ flex: 1 }}>
+        <Pressable className="absolute inset-0 bg-black/40" onPress={onClose} accessibilityLabel="Dismiss" />
+        <View className="z-10 rounded-t-2xl bg-background px-6 pb-8 pt-3 shadow-lg">
+          <View className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted" />
+          <Text className="mb-5 text-xl font-bold text-foreground">Edit check-in</Text>
 
-          <Text style={styles.label}>Rating</Text>
-          <View style={styles.starsRow}>
+          <Label nativeID="edit-checkin-rating" className="mb-2 text-muted-foreground">
+            Rating
+          </Label>
+          <View className="mb-5 flex-row gap-2">
             {[1, 2, 3, 4, 5].map((star) => (
               <Pressable
                 key={star}
+                accessibilityLabel={`${star} stars`}
                 onPress={() => setRating(rating === star ? null : star)}
-                style={styles.starButton}
-              >
+                className="rounded-lg p-1 active:opacity-80">
                 <StarIcon
                   size={36}
                   color={star <= (rating ?? 0) ? '#FFB800' : '#E0E0E0'}
@@ -86,28 +88,43 @@ export function EditCheckinModal({
             ))}
           </View>
 
-          <Text style={styles.label}>Comment (optional)</Text>
-          <TextInput
-            style={styles.input}
+          <Label nativeID="edit-checkin-review" className="mb-2 text-muted-foreground">
+            Comment (optional)
+          </Label>
+          <Input
+            nativeID="edit-checkin-review"
             value={review}
             onChangeText={setReview}
             placeholder="What did you think?"
-            placeholderTextColor="#9ca3af"
             multiline
             numberOfLines={3}
+            className="mb-6 min-h-[88px] h-auto py-3 text-base leading-5"
+            textAlignVertical="top"
           />
 
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Text style={styles.deleteButtonText}>Delete check-in</Text>
-            </TouchableOpacity>
-            <View style={styles.saveRow}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
+          <View className="gap-3">
+            <Button
+              variant="ghost"
+              className="h-auto self-start px-0 py-2 active:opacity-80"
+              onPress={handleDelete}>
+              <Text className="text-base font-semibold text-destructive">Delete check-in</Text>
+            </Button>
+            <View className="flex-row justify-end gap-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="h-auto min-h-[48px] border-0 px-5 py-3"
+                onPress={onClose}>
+                <Text className="text-base font-semibold leading-normal text-secondary-foreground">
+                  Cancel
+                </Text>
+              </Button>
+              <Button
+                size="lg"
+                className="h-auto min-h-[48px] border-0 px-6 py-3"
+                onPress={handleSave}>
+                <Text className="text-base font-semibold leading-normal">Save</Text>
+              </Button>
             </View>
           </View>
         </View>
@@ -115,101 +132,3 @@ export function EditCheckinModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    paddingTop: 12,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 8,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  starButton: {
-    padding: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1e293b',
-    minHeight: 88,
-    textAlignVertical: 'top',
-    marginBottom: 24,
-  },
-  actions: {
-    gap: 12,
-  },
-  deleteButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-  },
-  deleteButtonText: {
-    fontSize: 15,
-    color: '#dc2626',
-    fontWeight: '600',
-  },
-  saveRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    backgroundColor: '#f1f5f9',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  saveButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    backgroundColor: '#0f172a',
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});

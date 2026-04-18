@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as checkIns from "../checkIns.js";
 import type * as email from "../email.js";
 import type * as events from "../events.js";
 import type * as exhibitions from "../exhibitions.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
+  checkIns: typeof checkIns;
   email: typeof email;
   events: typeof events;
   exhibitions: typeof exhibitions;

@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, StyleSheet, Pressable } from 'react-native';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SearchIcon } from 'lucide-react-native';
@@ -9,8 +10,10 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, MuseumCardData } from '../../components/museum-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { router, useLocalSearchParams } from 'expo-router';
+import { RN_API_PRIMARY_FOREGROUND_ON_BRAND, RN_STYLE } from '@/constants/rn-api-colors';
 
 const MUSEUMS_PER_PAGE = 10;
+const L = RN_STYLE.light;
 
 
 // --- Tab Scenes defined outside main component for stability ---
@@ -40,7 +43,7 @@ function MuseumsRoute({
       </View>
       {museums === undefined ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4915A" />
+          <BrandActivityIndicator size="large" />
           <Text style={styles.loadingText}>Loading museums...</Text>
         </View>
       ) : (
@@ -131,7 +134,7 @@ function TasteAlignedRoute({
         // Person search results
         users === undefined ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#D4915A" />
+            <BrandActivityIndicator size="large" />
             <Text style={styles.loadingText}>Loading people...</Text>
           </View>
         ) : (
@@ -165,7 +168,7 @@ function TasteAlignedRoute({
         // Taste-aligned posts when not searching
         compatibleCheckins === undefined ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#D4915A" />
+            <BrandActivityIndicator size="large" />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         ) : compatibleCheckins.length === 0 ? (
@@ -370,9 +373,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: L.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: L.border,
   },
   tabItem: {
     flex: 1,
@@ -385,10 +388,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: '#1A1A1A',
+    color: L.foreground,
   },
   tabLabelInactive: {
-    color: '#999999',
+    color: L.mutedForeground,
   },
   tabIndicator: {
     marginTop: 8,
@@ -397,7 +400,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   tabIndicatorActive: {
-    backgroundColor: '#D4915A',
+    backgroundColor: L.primary,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -416,21 +419,21 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: L.foreground,
   },
   userCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: L.card,
     borderRadius: 12,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: L.border,
   },
   userName: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#1A1A1A',
+    color: L.foreground,
   },
   listContainer: {
     paddingBottom: 80,
@@ -444,7 +447,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   pageButton: {
-    backgroundColor: '#D4915A',
+    backgroundColor: L.primary,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -456,13 +459,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#DDD',
   },
   pageButtonText: {
-    color: '#FFFFFF',
+    color: RN_API_PRIMARY_FOREGROUND_ON_BRAND,
     fontSize: 13,
     fontWeight: '600',
   },
   pageIndicatorText: {
     fontSize: 13,
-    color: '#666',
+    color: L.mutedForeground,
     fontWeight: '500',
   },
   loadingContainer: {
@@ -472,7 +475,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: L.mutedForeground,
     fontSize: 16,
   },
   noResultsContainer: {
