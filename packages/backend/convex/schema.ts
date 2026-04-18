@@ -31,6 +31,10 @@ export default defineSchema({
     // Category for recommendation
     category: v.string(), // e.g., "art", "history", "science", "contemporary"
 
+    /** WGS84 — duplicate of geospatial pin; shown in dashboard and used as distance fallback in Search. */
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+
     // Optional metadata
     imageUrl: v.optional(v.string()),
     website: v.optional(v.string()),

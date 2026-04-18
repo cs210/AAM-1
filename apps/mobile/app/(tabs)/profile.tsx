@@ -866,12 +866,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
   },
-  followButtonBase: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
-  },
   viewWrappedButtonText: {
     color: '#fff',
     fontSize: 14,

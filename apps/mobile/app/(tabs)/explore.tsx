@@ -1,17 +1,69 @@
-
-import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, FlatList, StyleSheet, Pressable, ActivityIndicator, Linking } from 'react-native';
+import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SearchIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { MuseumCard, MuseumCardData } from '../../components/museum-card';
+import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { router, useLocalSearchParams } from 'expo-router';
 
 const MUSEUMS_PER_PAGE = 10;
 
+/** Prefer cached fix (fast), then network/Wi‑Fi/GPS with coarse → finer fallbacks. */
+async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
+  const lastKnown = await Location.getLastKnownPositionAsync({
+    maxAge: 1000 * 60 * 60 * 24,
+    requiredAccuracy: 100_000,
+  });
+  if (lastKnown?.coords) {
+    return { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude };
+  }
+
+  try {
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  } catch {
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message = 'LOCATION_TIMEOUT'): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      }
+    );
+  });
+}
+
+function formatLocationFailure(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lower = raw.toLowerCase();
+  if (raw === 'LOCATION_TIMEOUT' || lower.includes('location_timeout')) {
+    return 'Location is taking too long. Try again, or move near a window.';
+  }
+  if (lower.includes('timeout') || lower.includes('timed out')) {
+    return 'Location timed out. Try again, or move outdoors for a better GPS signal.';
+  }
+  if (lower.includes('locationunknown') || lower.includes('location unknown')) {
+    return 'No position yet. On the iOS Simulator, set Features → Location to a real place (not “None”). On a device, try again in a few seconds.';
+  }
+  if (lower.includes('denied') || lower.includes('permission')) {
+    return 'Location access is off. Enable it in Settings to see miles away and sort by distance.';
+  }
+  return 'Could not read your location. Try again, open Settings, or on Simulator set Features → Location.';
+}
 
 // --- Tab Scenes defined outside main component for stability ---
 function MuseumsRoute({
@@ -24,8 +76,28 @@ function MuseumsRoute({
   totalMuseumPages,
   onPrevPage,
   onNextPage,
+  sortedByDistance,
+  expectDistanceOnCards,
+  locationNote,
+  onRetryLocation,
   styles,
-}: any) {
+}: {
+  museumSearch: string;
+  setMuseumSearch: (v: string) => void;
+  museums: unknown;
+  pagedMuseums: MuseumCardData[];
+  filteredMuseums: MuseumCardData[];
+  museumPage: number;
+  totalMuseumPages: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+  sortedByDistance: boolean;
+  /** Pass through when GPS worked — cards show "—" if a museum has no map coordinates in Convex. */
+  expectDistanceOnCards: boolean;
+  locationNote: string | null;
+  onRetryLocation: () => void;
+  styles: Record<string, any>;
+}) {
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.searchContainer}>
@@ -38,6 +110,23 @@ function MuseumsRoute({
           placeholderTextColor="#C7C7CC"
         />
       </View>
+      {sortedByDistance ? (
+        <Text style={styles.distanceSortCaption} accessibilityLiveRegion="polite">
+          Nearest first — distances in miles from you
+        </Text>
+      ) : locationNote ? (
+        <View style={styles.locationHintBox}>
+          <Text style={styles.locationHintText}>{locationNote}</Text>
+          <View style={styles.locationHintActions}>
+            <Pressable onPress={onRetryLocation} style={styles.locationHintButton}>
+              <Text style={styles.locationHintButtonText}>Try again</Text>
+            </Pressable>
+            <Pressable onPress={() => Linking.openSettings()} style={styles.locationHintButton}>
+              <Text style={styles.locationHintButtonText}>Open Settings</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {museums === undefined ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#D4915A" />
@@ -46,7 +135,9 @@ function MuseumsRoute({
       ) : (
         <FlatList
           data={pagedMuseums}
-          renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
+          renderItem={({ item }) => (
+            <MuseumCard museum={item} expectDistance={expectDistanceOnCards} />
+          )}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
@@ -224,7 +315,55 @@ export default function SearchScreen() {
   // Museums tab state
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumPage, setMuseumPage] = useState(1);
-  const museums = useQuery(api.museums.listMuseumsWithStats);
+
+  type LocState =
+    | { status: 'pending' }
+    | { status: 'ok'; viewer: { latitude: number; longitude: number } }
+    | { status: 'unavailable'; message: string };
+  const [locState, setLocState] = useState<LocState>({ status: 'pending' });
+  const [locationRetryKey, setLocationRetryKey] = useState(0);
+
+  const resolveLocation = useCallback(async () => {
+    try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        setLocState({
+          status: 'unavailable',
+          message: 'Location Services are off. Turn them on to see distance and sort museums nearest first.',
+        });
+        return;
+      }
+
+      let perm = await Location.getForegroundPermissionsAsync();
+      if (perm.status !== 'granted') {
+        perm = await Location.requestForegroundPermissionsAsync();
+      }
+      if (perm.status !== 'granted') {
+        setLocState({
+          status: 'unavailable',
+          message: 'Location access is off. Enable it to see miles away and sort by distance.',
+        });
+        return;
+      }
+
+      const viewer = await withTimeout(fetchViewerCoordinates(), 25_000);
+      setLocState({ status: 'ok', viewer });
+    } catch (err) {
+      setLocState({
+        status: 'unavailable',
+        message: formatLocationFailure(err),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    void resolveLocation();
+  }, [locationRetryKey, resolveLocation]);
+
+  const museums = useQuery(
+    api.museums.listMuseumsWithStats,
+    locState.status === 'ok' ? { viewer: locState.viewer } : {}
+  );
   const filteredMuseums = useMemo(() => {
     if (!museums) return [];
     if (!museumSearch.trim()) return museums;
@@ -332,6 +471,10 @@ export default function SearchScreen() {
           totalMuseumPages={totalMuseumPages}
           onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
           onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+          sortedByDistance={locState.status === 'ok'}
+          expectDistanceOnCards={locState.status === 'ok'}
+          locationNote={locState.status === 'unavailable' ? locState.message : null}
+          onRetryLocation={() => setLocationRetryKey((k) => k + 1)}
           styles={styles}
         />
       )}
@@ -483,5 +626,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8E8E93',
     textAlign: 'center',
+  },
+  distanceSortCaption: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    marginTop: -4,
+  },
+  locationHintBox: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    marginTop: -4,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  locationHintText: {
+    fontSize: 13,
+    color: '#4B5563',
+    lineHeight: 18,
+  },
+  locationHintActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 10,
+  },
+  locationHintButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#D4915A',
+  },
+  locationHintButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

@@ -452,9 +452,14 @@ export const listMuseumsForAdmin = action({
         const geospatialDoc = await ctx.runQuery(components.geospatial.document.get, {
           key: museum._id,
         });
+        const fromIndex = geospatialDoc?.coordinates ?? null;
+        const fromDoc =
+          typeof museum.latitude === "number" && typeof museum.longitude === "number"
+            ? { latitude: museum.latitude, longitude: museum.longitude }
+            : null;
         return {
           ...museum,
-          point: geospatialDoc?.coordinates ?? null,
+          point: fromIndex ?? fromDoc,
         };
       })
     );
@@ -506,7 +511,11 @@ export const updateMuseumForAdmin = mutation({
     const existingMuseum = await ctx.db.get(museumId);
     if (!existingMuseum) throw new Error("Museum not found");
 
-    await ctx.db.patch(museumId, museum);
+    await ctx.db.patch(museumId, {
+      ...museum,
+      latitude: point.latitude,
+      longitude: point.longitude,
+    });
     await geospatial.insert(ctx, museumId, point, { category: museum.category });
     return museumId;
   },

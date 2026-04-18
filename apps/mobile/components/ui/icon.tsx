@@ -10,15 +10,8 @@ function IconImpl({ as: IconComponent, ...props }: IconProps) {
   return <IconComponent {...props} />;
 }
 
-withUniwind(IconImpl, {
-  className: {
-    target: 'style',
-    nativeStyleToProp: {
-      height: 'size',
-      width: 'size',
-    },
-  },
-});
+/** Uniwind auto-maps `className` onto supported Lucide props. */
+const IconImplWithUniwind = withUniwind(IconImpl);
 
 /**
  * A wrapper component for Lucide icons with Nativewind `className` support via `cssInterop`.
@@ -42,7 +35,7 @@ withUniwind(IconImpl, {
  */
 function Icon({ as: IconComponent, className, size = 14, ...props }: IconProps) {
   return (
-    <IconImpl
+    <IconImplWithUniwind
       as={IconComponent}
       className={cn('text-foreground', className)}
       size={size}

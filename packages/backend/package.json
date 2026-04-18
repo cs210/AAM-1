@@ -7,7 +7,9 @@
         "dev": "convex dev",
         "setup": "convex dev --until-success",
         "deploy": "convex deploy",
-        "typecheck": "tsc --noEmit -p convex"
+        "deploy:dev": "convex dev --once --typecheck disable",
+        "seed:museums": "convex run fakeData:populateFakeMuseums",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
     },
     "author": "",
     "license": "ISC",

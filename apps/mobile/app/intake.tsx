@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { useMutation } from 'convex/react';
@@ -182,7 +182,7 @@ export default function IntakeScreen() {
 
   const handleDone = React.useCallback(() => {
     if (redirect) {
-      router.replace(redirect);
+      router.replace(redirect as Href);
     } else {
       router.back();
     }

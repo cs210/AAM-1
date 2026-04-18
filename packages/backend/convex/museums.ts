@@ -70,6 +70,43 @@ async function getMuseumPoint(ctx: QueryCtx | MutationCtx, museumId: string): Pr
   return geospatialDoc?.coordinates ?? null;
 }
 
+/** Prefer geospatial index; fall back to optional `latitude` / `longitude` on the museum row (dashboard + seeds). */
+async function resolvePointForDistance(
+  ctx: QueryCtx | MutationCtx,
+  museumId: Id<"museums">,
+  storedLat?: number,
+  storedLon?: number
+): Promise<MuseumPoint> {
+  const fromIndex = await getMuseumPoint(ctx, museumId);
+  if (fromIndex) return fromIndex;
+  if (
+    typeof storedLat === "number" &&
+    typeof storedLon === "number" &&
+    Number.isFinite(storedLat) &&
+    Number.isFinite(storedLon)
+  ) {
+    return { latitude: storedLat, longitude: storedLon };
+  }
+  return null;
+}
+
+/** Great-circle distance in meters (WGS84 approximation). */
+function haversineDistanceMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+): number {
+  const earthRadiusMeters = 6371000;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const lat1 = (a.latitude * Math.PI) / 180;
+  const lat2 = (b.latitude * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const h =
+    sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  return 2 * earthRadiusMeters * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
 async function listMuseumImagesBySort(ctx: QueryCtx | MutationCtx, museumId: Id<"museums">) {
   return await ctx.db
     .query("museumImages")
@@ -231,7 +268,11 @@ export const addMuseum = mutation({
   },
   handler: async (ctx, { point, ...args }) => {
     await requireAdmin(ctx);
-    const id = await ctx.db.insert("museums", args);
+    const id = await ctx.db.insert("museums", {
+      ...args,
+      latitude: point.latitude,
+      longitude: point.longitude,
+    });
     await geospatial.insert(ctx, id, point, { category: args.category });
     return id;
   },
@@ -245,10 +286,18 @@ export const listMuseums = query({
   },
 });
 
-// List all museums with computed stats (average rating, rating count)
+// List all museums with computed stats (average rating, rating count).
+// Optional `viewer` adds straight-line distance and sorts nearest-first.
 export const listMuseumsWithStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    viewer: v.optional(
+      v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
     const museums = await ctx.db.query("museums").collect();
 
     // Get stats for each museum
@@ -277,7 +326,32 @@ export const listMuseumsWithStats = query({
       })
     );
 
-    return museumsWithStats;
+    if (!args.viewer) {
+      return museumsWithStats;
+    }
+
+    const viewer = args.viewer;
+    const withDistance = await Promise.all(
+      museumsWithStats.map(async (row) => {
+        const point = await resolvePointForDistance(ctx, row._id, row.latitude, row.longitude);
+        if (!point) {
+          return { ...row, distanceMeters: undefined as number | undefined };
+        }
+        const distanceMeters = haversineDistanceMeters(viewer, point);
+        return { ...row, distanceMeters };
+      })
+    );
+
+    withDistance.sort((a, b) => {
+      const da = a.distanceMeters;
+      const db = b.distanceMeters;
+      if (da === undefined && db === undefined) return 0;
+      if (da === undefined) return 1;
+      if (db === undefined) return -1;
+      return da - db;
+    });
+
+    return withDistance;
   },
 });
 
@@ -298,7 +372,7 @@ export const getMuseumDetailsForDashboard = query({
     if (!museum) return null;
     await assertDashboardMuseumAccess(ctx, user as { _id: string; role?: string | null }, args.id);
 
-    const point = await getMuseumPoint(ctx, args.id);
+    const point = await resolvePointForDistance(ctx, museum._id, museum.latitude, museum.longitude);
     return {
       ...museum,
       point,
@@ -357,7 +431,12 @@ export const updateMuseumDetailsForDashboard = mutation({
       args.museumId
     );
 
-    const currentPoint = await getMuseumPoint(ctx, args.museumId);
+    const currentPoint = await resolvePointForDistance(
+      ctx,
+      args.museumId,
+      museum.latitude,
+      museum.longitude
+    );
     if (!museumMatchesSnapshot(museum, currentPoint, args.expected)) {
       throw new Error("Museum data changed since you opened this form. Refresh and review latest values.")
     }
@@ -380,6 +459,8 @@ export const updateMuseumDetailsForDashboard = mutation({
       operatingHours: args.next.operatingHours,
       accessibilityFeatures: args.next.accessibilityFeatures,
       accessibilityNotes: args.next.accessibilityNotes,
+      latitude: args.next.point.latitude,
+      longitude: args.next.point.longitude,
     });
     await geospatial.insert(ctx, args.museumId, args.next.point, { category: args.next.category });
   },
