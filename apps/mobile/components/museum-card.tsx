@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Doc } from '@packages/backend/convex/_generated/dataModel';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
@@ -40,11 +40,11 @@ export function MuseumCard({ museum, className }: Props) {
           <>
             <Image
               source={{ uri: museum.imageUrl }}
-              style={styles.backgroundImage}
+              className="absolute inset-0 size-full"
               resizeMode="cover"
               onError={() => setImageFailed(true)}
             />
-            <View style={styles.backgroundOverlay} />
+            <View className="absolute inset-0 bg-black/50" />
           </>
         )}
         <CardHeader className="pb-2">
@@ -86,13 +86,3 @@ export function MuseumCard({ museum, className }: Props) {
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-});
