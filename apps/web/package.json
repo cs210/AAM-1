@@ -19,6 +19,7 @@
     "@better-fetch/fetch": "1.1.21",
     "@convex-dev/better-auth": "latest",
     "@packages/backend": "workspace:*",
+    "@sentry/nextjs": "^10.47.0",
     "better-auth": "1.4.9",
     "better-call": "1.1.7",
     "class-variance-authority": "^0.7.1",
