@@ -2,7 +2,7 @@ import '@/global.css';
 
 import { SentryUserSync } from '@/components/sentry-user-sync';
 import { navigationIntegration } from '@/lib/sentry';
-import { NAV_THEME } from '@/lib/theme';
+import { NAV_THEME } from '@/constants/rn-api-colors';
 import ConvexClientProvider from '@/providers/ConvexClientProvider';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';

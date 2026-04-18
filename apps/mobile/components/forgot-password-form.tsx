@@ -33,10 +33,10 @@ export function ForgotPasswordForm() {
       </View>
 
       <Button
-        className="mt-1 h-auto min-h-[52px] w-full rounded-xl py-4 shadow-md shadow-black/10"
+        className="mt-1 h-auto min-h-[52px] w-full py-4 shadow-md shadow-black/10"
         size="lg"
         onPress={onSubmit}>
-        <Text className="text-base font-semibold text-white">Send reset link</Text>
+        <Text className="text-base font-semibold text-primary-foreground">Send reset link</Text>
       </Button>
 
       <Pressable
