@@ -84,7 +84,7 @@ function PassportCard({
               <Image source={{ uri: museum.imageUrl }} className="size-full" resizeMode="cover" />
             ) : (
               <View className="size-full items-center justify-center bg-muted">
-                <Text className="text-[32px] font-bold text-muted-foreground">
+                <Text className="text-3xl font-bold text-muted-foreground">
                   {museum.name ? museum.name[0].toUpperCase() : '?'}
                 </Text>
               </View>
@@ -110,7 +110,7 @@ function PassportCard({
             {museum.city ? (
               <View className="mb-1.5 flex-row items-center gap-1">
                 <MapPinIcon size={12} color={mutedHex} />
-                <Text className="text-[13px] text-muted-foreground">{museum.city}</Text>
+                <Text className="text-sm text-muted-foreground">{museum.city}</Text>
               </View>
             ) : null}
             <View className="mb-1.5 flex-row items-center self-start rounded-md bg-muted px-2 py-1">
@@ -131,11 +131,11 @@ function PassportCard({
                     fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
                   />
                 ))}
-                <Text className="text-[13px] font-semibold text-amber-500">{checkIn.rating.toFixed(1)}</Text>
+                <Text className="text-sm font-semibold text-amber-500">{checkIn.rating.toFixed(1)}</Text>
               </View>
             ) : null}
             {checkIn.review ? (
-              <Text className="mt-1 text-[13px] leading-[18px] text-muted-foreground" numberOfLines={2}>
+              <Text className="mt-1 text-sm leading-snug text-muted-foreground" numberOfLines={2}>
                 {checkIn.review}
               </Text>
             ) : null}
@@ -182,17 +182,17 @@ function MosaicGallery({
   const AVAILABLE_WIDTH = width - (CONTAINER_PADDING * 2);
   const largeSize = (AVAILABLE_WIDTH - GAP) * 0.66;
   const smallSize = (AVAILABLE_WIDTH - GAP) * 0.34;
-  
+
   // Create mosaic pattern: alternating between large and small images
   // Pattern: [Large, Small, Small] repeating
   const renderMosaicRows = () => {
     const rows = [];
     let index = 0;
-    
+
     while (index < allImages.length) {
       const rowImages = allImages.slice(index, index + 3);
       const rowNumber = Math.floor(index / 3);
-      
+
       // Only render complete rows (3 images) OR the last partial row
       if (rowImages.length === 3 || index + rowImages.length === allImages.length) {
         // Pattern 1: One large on left, two small stacked on right
@@ -287,10 +287,10 @@ function MosaicGallery({
           );
         }
       }
-      
+
       index += 3;
     }
-    
+
     return rows;
   };
 
@@ -505,12 +505,12 @@ export default function ProfileScreen() {
             disabled={!!isViewingOtherProfile}>
             <ImageBackground
               source={profile?.bannerUrl ? { uri: profile.bannerUrl } : require('@/assets/images/login-background.jpg')}
-              className="h-[120px] w-full"
+              className="h-30 w-full"
               imageStyle={{ resizeMode: 'cover' }}
               resizeMode="cover">
               <View className="absolute inset-0 bg-black/20" />
               {!isViewingOtherProfile && (
-                <View className="absolute bottom-2 right-2 rounded-[14px] bg-black/45 p-1.5">
+                <View className="absolute bottom-2 right-2 rounded-xl bg-black/45 p-1.5">
                   {uploadingBanner ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
@@ -526,25 +526,25 @@ export default function ProfileScreen() {
             <View className="-mt-10 mb-3 flex-row items-start justify-between">
               {/* Avatar */}
               <TouchableOpacity
-                className="rounded-[44px] border-4 border-background"
+                className="rounded-full border-4 border-background"
                 onPress={!isViewingOtherProfile ? () => pickAndUploadImage('avatar') : undefined}
                 activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
                 disabled={!!isViewingOtherProfile}>
                 {uploadingAvatar ? (
-                  <View className="size-20 items-center justify-center rounded-[40px] bg-primary opacity-70">
+                  <View className="size-20 items-center justify-center rounded-full bg-primary opacity-70">
                     <ActivityIndicator size="small" color="#fff" />
                   </View>
                 ) : profile?.imageUrl ? (
-                  <Image source={{ uri: profile.imageUrl }} className="size-20 rounded-[40px] bg-primary/20" />
+                  <Image source={{ uri: profile.imageUrl }} className="size-20 rounded-full bg-primary/20" />
                 ) : (
-                  <View className="size-20 items-center justify-center rounded-[40px] bg-primary">
-                    <Text className="text-[36px] font-semibold text-primary-foreground">
+                  <View className="size-20 items-center justify-center rounded-full bg-primary">
+                    <Text className="text-4xl font-semibold text-primary-foreground">
                       {(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}
                     </Text>
                   </View>
                 )}
                 {!isViewingOtherProfile && !uploadingAvatar && (
-                  <View className="absolute bottom-0 right-0 size-5 items-center justify-center rounded-[10px] border-2 border-background bg-primary">
+                  <View className="absolute bottom-0 right-0 size-5 items-center justify-center rounded-full border-2 border-background bg-primary">
                     <CameraIcon size={10} color="#fff" />
                   </View>
                 )}
@@ -561,7 +561,7 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
 
                   {showSettingsDropdown && (
-                    <View className="absolute right-0 top-[88px] z-1000 min-w-[160px] rounded-lg border border-border bg-card shadow-md">
+                    <View className="absolute right-0 top-22 z-1000 min-w-40 rounded-lg border border-border bg-card shadow-md">
                       <TouchableOpacity
                         className="px-4 py-3"
                         onPress={() => {
@@ -597,12 +597,12 @@ export default function ProfileScreen() {
             {/* Name and Taste profile badge */}
             <View className="mb-2">
               <View className="mb-0.5 flex-row flex-wrap items-center gap-2">
-                <Text className="max-w-[60%] shrink text-[22px] font-semibold text-foreground" numberOfLines={1}>
+                <Text className="max-w-3/5 shrink text-2xl font-semibold text-foreground" numberOfLines={1}>
                   {displayName}
                 </Text>
                 {tasteProfile?.profileName ? (
-                  <View className="flex-row items-center gap-1 rounded-[14px] bg-primary/15 px-2.5 py-1">
-                    <Text className="text-[13px] font-semibold text-primary">{tasteProfile.profileName}</Text>
+                  <View className="flex-row items-center gap-1 rounded-xl bg-primary/15 px-2.5 py-1">
+                    <Text className="text-sm font-semibold text-primary">{tasteProfile.profileName}</Text>
                   </View>
                 ) : null}
                 {!isViewingOtherProfile && (
@@ -611,23 +611,23 @@ export default function ProfileScreen() {
                     onPress={() => router.push('/wrapped')}
                     activeOpacity={0.8}>
                     <Sparkles size={14} color="#FFFFFF" />
-                    <Text className="text-[13px] font-bold text-primary-foreground">Wrapped</Text>
+                    <Text className="text-sm font-bold text-primary-foreground">Wrapped</Text>
                   </TouchableOpacity>
                 )}
               </View>
               {viewedUserId === currentUserId && profile?.email && (
-                <Text className="mb-2 text-[13px] text-muted-foreground">{profile.email}</Text>
+                <Text className="mb-2 text-sm text-muted-foreground">{profile.email}</Text>
               )}
 
               <View className="mt-1 flex-row gap-4">
-                <Text className="text-[13px]">
-                  <Text className="text-[13px] font-bold text-foreground">
+                <Text className="text-sm">
+                  <Text className="text-sm font-bold text-foreground">
                     {followers ? followers.length : '0'}
                   </Text>
                   <Text className="text-sm text-muted-foreground"> Followers</Text>
                 </Text>
-                <Text className="text-[13px]">
-                  <Text className="text-[13px] font-bold text-foreground">
+                <Text className="text-sm">
+                  <Text className="text-sm font-bold text-foreground">
                     {following ? following.length : '0'}
                   </Text>
                   <Text className="text-sm text-muted-foreground"> Following</Text>
@@ -679,8 +679,8 @@ export default function ProfileScreen() {
                   : 'This user has not checked in anywhere yet.'}
               </Text>
               {viewedUserId === currentUserId && (
-                <Button className="rounded-lg px-6 py-3" onPress={() => router.push('/(tabs)/explore')}>
-                  <Text className="font-semibold">Explore museums</Text>
+                <Button variant="secondary" onPress={() => router.push('/(tabs)/explore')}>
+                  <Text>Explore museums</Text>
                 </Button>
               )}
             </View>
@@ -700,7 +700,7 @@ export default function ProfileScreen() {
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={
                 <View className="bg-background px-5 pb-2 pt-4">
-                  <Text variant="muted" className="mt-0.5 text-[13px]">
+                  <Text variant="muted" className="mt-0.5 text-sm">
                     {profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}
                   </Text>
                 </View>

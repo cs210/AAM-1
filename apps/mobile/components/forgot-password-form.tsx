@@ -33,7 +33,7 @@ export function ForgotPasswordForm() {
       </View>
 
       <Button
-        className="mt-1 h-auto min-h-[52px] w-full py-4 shadow-md shadow-black/10"
+        className="mt-1 h-auto min-h-14 w-full py-4 shadow-md shadow-black/10"
         size="lg"
         onPress={onSubmit}>
         <Text className="text-base font-semibold text-primary-foreground">Send reset link</Text>
@@ -41,8 +41,8 @@ export function ForgotPasswordForm() {
 
       <Pressable
         onPress={() => router.push('/sign-in')}
-        className="items-center py-4 active:opacity-[0.85]">
-        <Text className="text-center text-[15px] font-semibold text-stone-900 underline">
+        className="items-center py-4 active:opacity-85">
+        <Text className="text-center text-sm font-semibold text-stone-900 underline">
           Back to sign in
         </Text>
       </Pressable>

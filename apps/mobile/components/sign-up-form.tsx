@@ -102,7 +102,7 @@ export function SignUpForm() {
       </View>
 
       <Button
-        className="mt-1 h-auto min-h-[52px] w-full py-4 shadow-md shadow-black/10"
+        className="mt-1 h-auto min-h-14 w-full py-4 shadow-md shadow-black/10"
         size="lg"
         disabled={isLoading}
         onPress={onSubmit}>
@@ -113,8 +113,8 @@ export function SignUpForm() {
 
       <Pressable
         onPress={() => router.push('/sign-in')}
-        className="items-center py-4 active:opacity-[0.85]">
-        <Text className="text-center text-[15px] text-stone-600">
+        className="items-center py-4 active:opacity-85">
+        <Text className="text-center text-sm text-stone-600">
           {'Already have an account? '}
           <Text className="font-semibold text-stone-900 underline">Sign in</Text>
         </Text>

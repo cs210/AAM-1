@@ -64,7 +64,7 @@ function MuseumsRoute({
             filteredMuseums.length > 0 ? (
               <View className="mb-6 mt-2.5 flex-row items-center justify-center gap-2.5">
                 <PaginationPill label="Previous" onPress={onPrevPage} disabled={museumPage <= 1} />
-                <Text className="text-[13px] font-medium text-muted-foreground">
+                <Text className="text-sm font-medium text-muted-foreground">
                   Page {museumPage} of {totalMuseumPages}
                 </Text>
                 <PaginationPill
@@ -269,7 +269,7 @@ export default function SearchScreen() {
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
       <View
-        className="absolute -right-[150px] -top-[200px] z-0 h-[400px] w-[550px] overflow-hidden rounded-[200px]"
+        className="absolute -right-38 -top-50 z-0 h-100 w-137.5 overflow-hidden rounded-full"
         pointerEvents="none">
         <LinearGradient
           colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
@@ -280,7 +280,7 @@ export default function SearchScreen() {
       </View>
 
       <View
-        className="absolute -bottom-[200px] -left-[150px] z-0 h-[400px] w-[550px] overflow-hidden rounded-[200px]"
+        className="absolute -bottom-50 -left-38 z-0 h-100 w-137.5 overflow-hidden rounded-full"
         pointerEvents="none">
         <LinearGradient
           colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
@@ -309,7 +309,7 @@ export default function SearchScreen() {
               </Text>
               <View
                 className={cn(
-                  'mt-2 h-0.5 w-[70%] rounded-full',
+                  'mt-2 h-0.5 w-2/3 rounded-full',
                   isActive ? 'bg-primary' : 'bg-transparent'
                 )}
               />

@@ -9,8 +9,6 @@ import {
 } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 
-/** Layout-only — shape/radius comes from `Button` (pill / rounded-full). */
-const PRIMARY_CTA_LAYOUT = 'h-auto min-h-[52px] border-0 px-8 py-4 shadow-sm shadow-black/10';
 
 /**
  * Empty home feed CTA. Colors are defined by `Button` + theme tokens, not the parent screen.
@@ -27,9 +25,8 @@ export function FeedEmptyState() {
       <CardContent className="items-center pb-6">
         <Button
           size="lg"
-          className={PRIMARY_CTA_LAYOUT}
           onPress={() => router.push('/(tabs)/explore')}>
-          <Text className="text-base font-semibold leading-normal">Explore Museums</Text>
+          <Text className="">Explore Museums</Text>
         </Button>
       </CardContent>
     </Card>

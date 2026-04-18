@@ -61,7 +61,7 @@ export default function HomeScreen() {
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
       <View
-        className="absolute -right-[150px] -top-[200px] z-0 h-[400px] w-[550px] overflow-hidden rounded-[200px]"
+        className="absolute -right-38 -top-50 z-0 h-100 w-137.5 overflow-hidden rounded-full"
         pointerEvents="none">
         <LinearGradient
           colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
@@ -72,7 +72,7 @@ export default function HomeScreen() {
       </View>
 
       <View
-        className="absolute -bottom-[200px] -left-[150px] z-0 h-[400px] w-[550px] overflow-hidden rounded-[200px]"
+        className="absolute -bottom-50 -left-38 z-0 h-100 w-137.5 overflow-hidden rounded-full"
         pointerEvents="none">
         <LinearGradient
           colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
@@ -90,10 +90,10 @@ export default function HomeScreen() {
         <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
           <View className="min-w-0 flex-1">
             <Text className="mb-0.5 text-sm font-normal text-muted-foreground">Welcome</Text>
-            <Text className="mb-2 text-[42px] font-semibold leading-none tracking-tight text-foreground">
+            <Text className="mb-2 text-5xl font-semibold leading-none tracking-tight text-foreground">
               {firstName}
             </Text>
-            <Separator className="mt-2 max-w-[60%] self-start bg-border" />
+            <Separator className="mt-2 max-w-3/5 self-start bg-border" />
           </View>
           <Pressable
             accessibilityRole="button"
