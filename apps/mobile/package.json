@@ -44,6 +44,7 @@
     "@rn-primitives/toggle": "^1.2.0",
     "@rn-primitives/toggle-group": "^1.2.0",
     "@rn-primitives/tooltip": "^1.2.0",
+    "@sentry/react-native": "^8.7.0",
     "better-auth": "1.4.9",
     "better-call": "1.1.7",
     "class-variance-authority": "^0.7.1",
