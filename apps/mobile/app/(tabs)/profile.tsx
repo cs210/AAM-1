@@ -11,7 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
   ArrowLeftIcon,
@@ -46,6 +46,8 @@ import {
 } from '@/constants/rn-api-colors';
 
 const { width } = Dimensions.get('window');
+/** Matches `h-30` banner (30 × 4px). */
+const PROFILE_BANNER_HEIGHT = 120;
 
 type TabType = 'visits' | 'gallery';
 
@@ -480,6 +482,12 @@ export default function ProfileScreen() {
   const fgHex = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
   const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
+  const insets = useSafeAreaInsets();
+  /** Own profile: bleed banner under status bar / Dynamic Island; other profile: back row sits in safe area. */
+  const bannerBleedStyle =
+    !isViewingOtherProfile && insets.top > 0
+      ? { height: PROFILE_BANNER_HEIGHT + insets.top }
+      : { height: PROFILE_BANNER_HEIGHT };
 
   return (
     <SafeAreaView
@@ -502,10 +510,12 @@ export default function ProfileScreen() {
           <TouchableOpacity
             onPress={!isViewingOtherProfile ? () => pickAndUploadImage('banner') : undefined}
             activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
-            disabled={!!isViewingOtherProfile}>
+            disabled={!!isViewingOtherProfile}
+            style={!isViewingOtherProfile ? { marginTop: -insets.top } : undefined}>
             <ImageBackground
               source={profile?.bannerUrl ? { uri: profile.bannerUrl } : require('@/assets/images/login-background.jpg')}
-              className="h-30 w-full"
+              className="w-full"
+              style={bannerBleedStyle}
               imageStyle={{ resizeMode: 'cover' }}
               resizeMode="cover">
               <View className="absolute inset-0 bg-black/20" />
