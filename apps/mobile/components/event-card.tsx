@@ -79,11 +79,32 @@ export function EventCard({
   const badgeSurface = showImageBackground ? 'bg-white/25' : 'bg-white/20';
   const iconColor = '#FFFFFF';
 
+  const isExhibition = event.kind === 'exhibition';
+  const isPressable = isExhibition ? Boolean(event._id) : Boolean(event.museumId);
+
+  const handlePress = () => {
+    if (isExhibition) {
+      const exhibitionId = event._id.startsWith('exhibition-')
+        ? event._id.slice('exhibition-'.length)
+        : event._id;
+
+      router.push({
+        pathname: '/(exhibitions)/[exhibitionId]',
+        params: {
+          exhibitionId,
+          ...(event.museumId ? { museumId: event.museumId } : {}),
+        },
+      });
+      return;
+    }
+
+    if (event.museumId) {
+      router.push(`/${event.museumId}`);
+    }
+  };
+
   return (
-    <Pressable
-      className={cn('mb-4 active:opacity-90', className)}
-      onPress={() => event.museumId && router.push(`/${event.museumId}`)}
-      disabled={!event.museumId}>
+    <Pressable className={cn('mb-4 active:opacity-90', className)} onPress={handlePress} disabled={!isPressable}>
       <Card
         className={cn(
           'relative gap-0 overflow-hidden rounded-2xl border-0 p-5 shadow-sm shadow-black/5',
