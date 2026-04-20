@@ -120,6 +120,28 @@ export const listPublicExhibitionsByMuseum = query({
   },
 });
 
+export const getPublicExhibition = query({
+  args: { id: v.id("exhibitions") },
+  handler: async (ctx, args) => {
+    const exhibition = await ctx.db.get(args.id);
+    if (!exhibition) return null;
+
+    const museum = await ctx.db.get(exhibition.museumId);
+    return {
+      ...exhibition,
+      museum: museum
+        ? {
+            _id: museum._id,
+            name: museum.name,
+            category: museum.category,
+            imageUrl: museum.imageUrl,
+            location: museum.location,
+          }
+        : null,
+    };
+  },
+});
+
 export const getExhibition = query({
   args: { id: v.id("exhibitions") },
   handler: async (ctx, args) => {
