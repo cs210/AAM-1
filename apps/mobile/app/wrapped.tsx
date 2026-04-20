@@ -12,7 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Share2, Download } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
@@ -352,6 +352,7 @@ const ProgressDots = ({ total, current }: { total: number; current: number }) =>
 const SLIDES = ['intro', 'tasteprofile', 'hours', 'museums', 'topspot', 'styles', 'share'] as const;
 
 export default function WrappedScreen() {
+  const insets = useSafeAreaInsets();
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -408,7 +409,7 @@ export default function WrappedScreen() {
         {renderCurrentSlide()}
         {/* Close button */}
         <TouchableOpacity
-          style={styles.closeButton}
+          style={[styles.closeButton, { top: Math.max(insets.top + 8, 16) }]}
           onPress={() => router.back()}
           hitSlop={12}
           activeOpacity={0.7}

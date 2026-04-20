@@ -1,9 +1,29 @@
-
-
 import React, { useState } from 'react';
-import { View, Text, FlatList, ScrollView, StyleSheet, Dimensions, TouchableOpacity, Image, Pressable, ImageBackground, Modal, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  FlatList,
+  ScrollView,
+  Dimensions,
+  TouchableOpacity,
+  Image,
+  Pressable,
+  ImageBackground,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeftIcon, StarIcon, MapPinIcon, PencilIcon, SettingsIcon, Sparkles, CameraIcon, Grid3x3Icon, ListIcon } from 'lucide-react-native';
+import {
+  ArrowLeftIcon,
+  StarIcon,
+  MapPinIcon,
+  PencilIcon,
+  SettingsIcon,
+  Sparkles,
+  CameraIcon,
+  Grid3x3Icon,
+  ListIcon,
+} from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
@@ -11,6 +31,19 @@ import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
+import { cn } from '@/lib/utils';
+import { useUniwind } from 'uniwind';
+import {
+  RN_API_FOREGROUND_DARK,
+  RN_API_FOREGROUND_LIGHT,
+  RN_API_MUTED_FOREGROUND_DARK,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+  RN_API_PRIMARY_DARK,
+  RN_API_PRIMARY_LIGHT,
+} from '@/constants/rn-api-colors';
 
 const { width } = Dimensions.get('window');
 
@@ -34,45 +67,62 @@ function PassportCard({
   isOwnProfile: boolean;
   onEditPress?: () => void;
 }) {
+  const { theme } = useUniwind();
+  const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const { checkIn, museum } = visit;
   const onCardPress = () => router.push(`/(museums)/${museum._id}` as any);
 
   return (
-    <View style={styles.passportCardWrapper}>
-      <Pressable style={({ pressed }) => [styles.passportCard, pressed && styles.passportCardPressed]} onPress={onCardPress}>
-        <View style={styles.passportCardInner}>
-          <View style={styles.passportImageWrap}>
+    <View className="mb-3.5">
+      <Pressable
+        className="overflow-hidden rounded-xl border border-border bg-card shadow-sm shadow-black/5 active:opacity-95"
+        onPress={onCardPress}>
+        <View className="flex-row p-3">
+          <View className="mr-3.5 h-24 w-24 overflow-hidden rounded-lg">
             {museum.imageUrl ? (
-              <Image source={{ uri: museum.imageUrl }} style={styles.passportImage} resizeMode="cover" />
+              <Image source={{ uri: museum.imageUrl }} className="size-full" resizeMode="cover" />
             ) : (
-              <View style={[styles.passportImage, styles.passportImagePlaceholder]}>
-                <Text style={styles.passportImageLetter}>{museum.name ? museum.name[0].toUpperCase() : '?'}</Text>
+              <View className="size-full items-center justify-center bg-muted">
+                <Text className="text-[32px] font-bold text-muted-foreground">
+                  {museum.name ? museum.name[0].toUpperCase() : '?'}
+                </Text>
               </View>
             )}
           </View>
-          <View style={styles.passportBody}>
-            <View style={styles.passportTitleRow}>
-              <Text style={styles.passportMuseumName} numberOfLines={2}>{museum.name}</Text>
+          <View className="min-h-24 flex-1 justify-between">
+            <View className="mb-1 flex-row items-start justify-between gap-2">
+              <Text className="flex-1 text-base font-bold text-foreground" numberOfLines={2}>
+                {museum.name}
+              </Text>
               {isOwnProfile && onEditPress ? (
-                <Pressable onPress={(e) => { e.stopPropagation(); onEditPress(); }} style={styles.editButton} hitSlop={8}>
-                  <PencilIcon size={18} color="#D4915A" />
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onEditPress();
+                  }}
+                  className="p-1"
+                  hitSlop={8}>
+                  <PencilIcon size={18} color={primaryHex} />
                 </Pressable>
               ) : null}
             </View>
             {museum.city ? (
-              <View style={styles.passportLocationRow}>
-                <MapPinIcon size={12} color="#6b7280" />
-                <Text style={styles.passportLocation}>{museum.city}</Text>
+              <View className="mb-1.5 flex-row items-center gap-1">
+                <MapPinIcon size={12} color={mutedHex} />
+                <Text className="text-[13px] text-muted-foreground">{museum.city}</Text>
               </View>
             ) : null}
-            <View style={styles.passportDateStamp}>
-              <Text style={styles.passportDateText}>{formatVisitDate(checkIn.visitDate)}</Text>
+            <View className="mb-1.5 flex-row items-center self-start rounded-md bg-muted px-2 py-1">
+              <Text className="text-xs font-semibold tracking-wide text-muted-foreground">
+                {formatVisitDate(checkIn.visitDate)}
+              </Text>
               {checkIn.editedAt != null ? (
-                <Text style={styles.editedLabel}> · Edited</Text>
+                <Text className="text-xs italic text-muted-foreground"> · Edited</Text>
               ) : null}
             </View>
             {checkIn.rating != null ? (
-              <View style={styles.passportStarsRow}>
+              <View className="flex-row items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <StarIcon
                     key={star}
@@ -81,11 +131,13 @@ function PassportCard({
                     fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
                   />
                 ))}
-                <Text style={styles.passportRatingNum}>{checkIn.rating.toFixed(1)}</Text>
+                <Text className="text-[13px] font-semibold text-amber-500">{checkIn.rating.toFixed(1)}</Text>
               </View>
             ) : null}
             {checkIn.review ? (
-              <Text style={styles.passportReview} numberOfLines={2}>{checkIn.review}</Text>
+              <Text className="mt-1 text-[13px] leading-[18px] text-muted-foreground" numberOfLines={2}>
+                {checkIn.review}
+              </Text>
             ) : null}
           </View>
         </View>
@@ -94,16 +146,18 @@ function PassportCard({
   );
 }
 
-function MosaicGallery({ 
-  visits, 
-  onImagePress 
-}: { 
+function MosaicGallery({
+  visits,
+  onImagePress,
+}: {
   visits: ProfileVisit[];
   onImagePress: (visit: ProfileVisit) => void;
 }) {
+  const { theme } = useUniwind();
+  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   // Collect all images from all visits
   const allImages: Array<{ url: string; visit: ProfileVisit }> = [];
-  
+
   visits.forEach((visit) => {
     const imageUrls = (visit.checkIn as any).imageUrls || [];
     imageUrls.forEach((url: string) => {
@@ -113,10 +167,10 @@ function MosaicGallery({
 
   if (allImages.length === 0) {
     return (
-      <View style={styles.galleryEmpty}>
-        <CameraIcon size={48} color="#D0D0D0" />
-        <Text style={styles.galleryEmptyTitle}>No photos yet</Text>
-        <Text style={styles.galleryEmptySub}>
+      <View className="flex-1 items-center justify-center bg-background p-12">
+        <CameraIcon size={48} color={mutedHex} />
+        <Text className="mb-2 mt-4 text-lg font-bold text-foreground">No photos yet</Text>
+        <Text className="text-center text-base text-muted-foreground">
           Photos from your check-ins will appear here
         </Text>
       </View>
@@ -144,31 +198,29 @@ function MosaicGallery({
         // Pattern 1: One large on left, two small stacked on right
         if (rowNumber % 2 === 0) {
           rows.push(
-            <View key={`row-${index}`} style={[styles.mosaicRow, { gap: GAP }]}>
+            <View key={`row-${index}`} className="mb-1 flex-row" style={{ gap: GAP }}>
               {/* Large image on left */}
               <TouchableOpacity
                 onPress={() => onImagePress(rowImages[0].visit)}
                 activeOpacity={0.8}
-                style={{ width: largeSize, height: largeSize }}
-              >
+                style={{ width: largeSize, height: largeSize }}>
                 <Image
                   source={{ uri: rowImages[0].url }}
-                  style={styles.mosaicImage}
+                  className="size-full rounded-lg bg-muted"
                   resizeMode="cover"
                 />
               </TouchableOpacity>
-              
+
               {/* Two small images stacked on right */}
-              <View style={{ flex: 1, gap: GAP }}>
+              <View className="flex-1" style={{ gap: GAP }}>
                 {rowImages[1] && (
                   <TouchableOpacity
                     onPress={() => onImagePress(rowImages[1].visit)}
                     activeOpacity={0.8}
-                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
-                  >
+                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[1].url }}
-                      style={styles.mosaicImage}
+                      className="size-full rounded-lg bg-muted"
                       resizeMode="cover"
                     />
                   </TouchableOpacity>
@@ -177,11 +229,10 @@ function MosaicGallery({
                   <TouchableOpacity
                     onPress={() => onImagePress(rowImages[2].visit)}
                     activeOpacity={0.8}
-                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
-                  >
+                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[2].url }}
-                      style={styles.mosaicImage}
+                      className="size-full rounded-lg bg-muted"
                       resizeMode="cover"
                     />
                   </TouchableOpacity>
@@ -192,17 +243,16 @@ function MosaicGallery({
         } else {
           // Pattern 2: Two small stacked on left, one large on right
           rows.push(
-            <View key={`row-${index}`} style={[styles.mosaicRow, { gap: GAP }]}>
+            <View key={`row-${index}`} className="mb-1 flex-row" style={{ gap: GAP }}>
               {/* Two small images stacked on left */}
-              <View style={{ flex: 1, gap: GAP }}>
+              <View className="flex-1" style={{ gap: GAP }}>
                 <TouchableOpacity
                   onPress={() => onImagePress(rowImages[0].visit)}
                   activeOpacity={0.8}
-                  style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
-                >
+                  style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                   <Image
                     source={{ uri: rowImages[0].url }}
-                    style={styles.mosaicImage}
+                    className="size-full rounded-lg bg-muted"
                     resizeMode="cover"
                   />
                 </TouchableOpacity>
@@ -210,27 +260,25 @@ function MosaicGallery({
                   <TouchableOpacity
                     onPress={() => onImagePress(rowImages[1].visit)}
                     activeOpacity={0.8}
-                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}
-                  >
+                    style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[1].url }}
-                      style={styles.mosaicImage}
+                      className="size-full rounded-lg bg-muted"
                       resizeMode="cover"
                     />
                   </TouchableOpacity>
                 )}
               </View>
-              
+
               {/* Large image on right */}
               {rowImages[2] && (
                 <TouchableOpacity
                   onPress={() => onImagePress(rowImages[2].visit)}
                   activeOpacity={0.8}
-                  style={{ width: largeSize, height: largeSize }}
-                >
+                  style={{ width: largeSize, height: largeSize }}>
                   <Image
                     source={{ uri: rowImages[2].url }}
-                    style={styles.mosaicImage}
+                    className="size-full rounded-lg bg-muted"
                     resizeMode="cover"
                   />
                 </TouchableOpacity>
@@ -247,18 +295,18 @@ function MosaicGallery({
   };
 
   return (
-    <ScrollView 
-      style={styles.mosaicContainer}
-      contentContainerStyle={styles.mosaicContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView
+      className="flex-1 bg-background"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}>
       {renderMosaicRows()}
     </ScrollView>
   );
 }
 
 
-export default function WrappedScreen() {
+export default function ProfileScreen() {
   const { userId: paramUserId, search: paramSearch } = useLocalSearchParams<{ userId?: string | string[]; search?: string | string[] }>();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
@@ -428,720 +476,258 @@ export default function WrappedScreen() {
     router.replace(`/(tabs)/explore?tab=people&search=${search}`);
   };
 
+  const { theme } = useUniwind();
+  const fgHex = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
+  const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
+
   return (
-    <Pressable style={styles.container} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
-      {isViewingOtherProfile ? (
-        <View style={styles.backBar}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackToSearch} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <ArrowLeftIcon size={24} color="#222" />
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      <View style={styles.profileHeader}>
-        {/* Banner Image */}
-        <TouchableOpacity
-          onPress={!isViewingOtherProfile ? () => pickAndUploadImage('banner') : undefined}
-          activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
-          disabled={!!isViewingOtherProfile}
-        >
-          <ImageBackground
-            source={profile?.bannerUrl ? { uri: profile.bannerUrl } : require('@/assets/images/login-background.jpg')}
-            style={styles.bannerImage}
-            imageStyle={styles.bannerImageStyle}
-            resizeMode="cover"
-          >
-            <View style={styles.bannerOverlay} />
-            {!isViewingOtherProfile && (
-              <View style={styles.bannerEditHint}>
-                {uploadingBanner ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <CameraIcon size={16} color="#fff" />
-                )}
-              </View>
-            )}
-          </ImageBackground>
-        </TouchableOpacity>
-        
-        {/* Profile Content */}
-        <View style={styles.profileContent}>
-          <View style={styles.topRow}>
-            {/* Avatar */}
+    <SafeAreaView
+      className="flex-1 bg-background"
+      style={{ flex: 1 }}
+      edges={['top', 'left', 'right']}>
+      <Pressable className="flex-1" style={{ flex: 1 }} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
+        {isViewingOtherProfile ? (
+          <View className="flex-row items-center bg-background px-3 pb-2 pt-3">
             <TouchableOpacity
-              style={styles.avatarContainer}
-              onPress={!isViewingOtherProfile ? () => pickAndUploadImage('avatar') : undefined}
-              activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
-              disabled={!!isViewingOtherProfile}
-            >
-              {uploadingAvatar ? (
-                <View style={[styles.avatarPlaceholder, styles.avatarUploading]}>
-                  <ActivityIndicator size="small" color="#fff" />
-                </View>
-              ) : profile?.imageUrl ? (
-                <Image source={{ uri: profile.imageUrl }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarInitial}>{(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}</Text>
-                </View>
-              )}
-              {!isViewingOtherProfile && !uploadingAvatar && (
-                <View style={styles.avatarEditBadge}>
-                  <CameraIcon size={10} color="#fff" />
-                </View>
-              )}
+              className="p-2"
+              onPress={handleBackToSearch}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <ArrowLeftIcon size={24} color={fgHex} />
             </TouchableOpacity>
-            
-            {/* Settings Icon or Follow/Unfollow Button - Top Right */}
-            {!isViewingOtherProfile ? (
-              <View>
-                <TouchableOpacity
-                  style={styles.settingsButton}
-                  onPress={() => setShowSettingsDropdown(!showSettingsDropdown)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <SettingsIcon size={20} color="#1A1A1A" />
-                </TouchableOpacity>
-                
-                {/* Settings Dropdown */}
-                {showSettingsDropdown && (
-                  <View style={styles.dropdownContainer}>
-                    <TouchableOpacity
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setShowSettingsDropdown(false);
-                        router.push('/intake?redirect=/(tabs)/profile');
-                      }}
-                    >
-                      <Text style={styles.dropdownItemText}>Preferences</Text>
-                    </TouchableOpacity>
-                    <View style={styles.dropdownDivider} />
-                    <TouchableOpacity
-                      style={styles.dropdownItem}
-                      onPress={async () => {
-                        setShowSettingsDropdown(false);
-                        const { authClient } = await import('@/lib/auth-client');
-                        await authClient.signOut();
-                        router.replace('/sign-in');
-                      }}
-                    >
-                      <Text style={[styles.dropdownItemText, styles.logoutText]}>Log out</Text>
-                    </TouchableOpacity>
+          </View>
+        ) : null}
+        <View className="border-b border-border bg-background">
+          {/* Banner Image */}
+          <TouchableOpacity
+            onPress={!isViewingOtherProfile ? () => pickAndUploadImage('banner') : undefined}
+            activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+            disabled={!!isViewingOtherProfile}>
+            <ImageBackground
+              source={profile?.bannerUrl ? { uri: profile.bannerUrl } : require('@/assets/images/login-background.jpg')}
+              className="h-[120px] w-full"
+              imageStyle={{ resizeMode: 'cover' }}
+              resizeMode="cover">
+              <View className="absolute inset-0 bg-black/20" />
+              {!isViewingOtherProfile && (
+                <View className="absolute bottom-2 right-2 rounded-[14px] bg-black/45 p-1.5">
+                  {uploadingBanner ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <CameraIcon size={16} color="#fff" />
+                  )}
+                </View>
+              )}
+            </ImageBackground>
+          </TouchableOpacity>
+
+          {/* Profile Content */}
+          <View className="px-5 pb-3 pt-0">
+            <View className="-mt-10 mb-3 flex-row items-start justify-between">
+              {/* Avatar */}
+              <TouchableOpacity
+                className="rounded-[44px] border-4 border-background"
+                onPress={!isViewingOtherProfile ? () => pickAndUploadImage('avatar') : undefined}
+                activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+                disabled={!!isViewingOtherProfile}>
+                {uploadingAvatar ? (
+                  <View className="size-20 items-center justify-center rounded-[40px] bg-primary opacity-70">
+                    <ActivityIndicator size="small" color="#fff" />
+                  </View>
+                ) : profile?.imageUrl ? (
+                  <Image source={{ uri: profile.imageUrl }} className="size-20 rounded-[40px] bg-primary/20" />
+                ) : (
+                  <View className="size-20 items-center justify-center rounded-[40px] bg-primary">
+                    <Text className="text-[36px] font-semibold text-primary-foreground">
+                      {(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}
+                    </Text>
                   </View>
                 )}
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[styles.topRightFollowButton, isFollowing ? styles.unfollowButton : styles.followButton]}
-                onPress={isFollowing ? handleUnfollow : handleFollow}
-              >
-                <Text style={isFollowing ? styles.unfollowButtonText : styles.followButtonText}>
-                  {isFollowing ? 'Unfollow' : 'Follow'}
-                </Text>
+                {!isViewingOtherProfile && !uploadingAvatar && (
+                  <View className="absolute bottom-0 right-0 size-5 items-center justify-center rounded-[10px] border-2 border-background bg-primary">
+                    <CameraIcon size={10} color="#fff" />
+                  </View>
+                )}
               </TouchableOpacity>
-            )}
-          </View>
-          
-          {/* Name and Taste profile badge */}
-          <View style={styles.nameSection}>
-            <View style={styles.nameAndBadgeRow}>
-              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
-              {tasteProfile?.profileName ? (
-                <View style={styles.tasteProfileBadge}>
-                  <Text style={styles.tasteProfileBadgeText}>{tasteProfile.profileName}</Text>
+
+              {/* Settings Icon or Follow/Unfollow Button - Top Right */}
+              {!isViewingOtherProfile ? (
+                <View>
+                  <TouchableOpacity
+                    className="mt-12 size-9 items-center justify-center rounded-full border border-border bg-background"
+                    onPress={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <SettingsIcon size={20} color={fgHex} />
+                  </TouchableOpacity>
+
+                  {showSettingsDropdown && (
+                    <View className="absolute right-0 top-[88px] z-1000 min-w-[160px] rounded-lg border border-border bg-card shadow-md">
+                      <TouchableOpacity
+                        className="px-4 py-3"
+                        onPress={() => {
+                          setShowSettingsDropdown(false);
+                          router.push('/intake?redirect=/(tabs)/profile');
+                        }}>
+                        <Text className="text-sm font-medium text-foreground">Preferences</Text>
+                      </TouchableOpacity>
+                      <View className="my-1 h-px bg-border" />
+                      <TouchableOpacity
+                        className="px-4 py-3"
+                        onPress={async () => {
+                          setShowSettingsDropdown(false);
+                          const { authClient } = await import('@/lib/auth-client');
+                          await authClient.signOut();
+                          router.replace('/sign-in');
+                        }}>
+                        <Text className="text-sm font-medium text-destructive">Log out</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
-              ) : null}
-              {/* Wrapped button (own profile only) */}
-              {!isViewingOtherProfile && (
-                <TouchableOpacity
-                  style={styles.wrappedPill}
-                  onPress={() => router.push('/wrapped')}
-                  activeOpacity={0.8}
-                >
-                  <Sparkles size={14} color="#FFFFFF" />
-                  <Text style={styles.wrappedPillText}>Wrapped</Text>
-                </TouchableOpacity>
+              ) : (
+                <Button
+                  variant={isFollowing ? 'outline' : 'default'}
+                  className="mt-12 rounded-lg px-5 py-2"
+                  onPress={isFollowing ? handleUnfollow : handleFollow}>
+                  <Text className="text-sm font-semibold">{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+                </Button>
               )}
             </View>
-            {viewedUserId === currentUserId && profile?.email && (
-              <Text style={styles.profileEmail}>{profile.email}</Text>
-            )}
-            
-            {/* Followers/Following Row */}
-            <View style={styles.countsRow}>
-              <Text style={styles.countText}>
-                <Text style={styles.countNumber}>{followers ? followers.length : '0'}</Text>
-                <Text style={styles.countLabel}> Followers</Text>
-              </Text>
-              <Text style={styles.countText}>
-                <Text style={styles.countNumber}>{following ? following.length : '0'}</Text>
-                <Text style={styles.countLabel}> Following</Text>
-              </Text>
+
+            {/* Name and Taste profile badge */}
+            <View className="mb-2">
+              <View className="mb-0.5 flex-row flex-wrap items-center gap-2">
+                <Text className="max-w-[60%] shrink text-[22px] font-semibold text-foreground" numberOfLines={1}>
+                  {displayName}
+                </Text>
+                {tasteProfile?.profileName ? (
+                  <View className="flex-row items-center gap-1 rounded-[14px] bg-primary/15 px-2.5 py-1">
+                    <Text className="text-[13px] font-semibold text-primary">{tasteProfile.profileName}</Text>
+                  </View>
+                ) : null}
+                {!isViewingOtherProfile && (
+                  <TouchableOpacity
+                    className="flex-row items-center gap-1.5 rounded-full bg-primary px-2.5 py-1.5 active:opacity-90"
+                    onPress={() => router.push('/wrapped')}
+                    activeOpacity={0.8}>
+                    <Sparkles size={14} color="#FFFFFF" />
+                    <Text className="text-[13px] font-bold text-primary-foreground">Wrapped</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {viewedUserId === currentUserId && profile?.email && (
+                <Text className="mb-2 text-[13px] text-muted-foreground">{profile.email}</Text>
+              )}
+
+              <View className="mt-1 flex-row gap-4">
+                <Text className="text-[13px]">
+                  <Text className="text-[13px] font-bold text-foreground">
+                    {followers ? followers.length : '0'}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground"> Followers</Text>
+                </Text>
+                <Text className="text-[13px]">
+                  <Text className="text-[13px] font-bold text-foreground">
+                    {following ? following.length : '0'}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground"> Following</Text>
+                </Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-      {/* Tab Selector - Icons Only */}
-      {viewedUserId && (
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'visits' && styles.tabActive]}
-            onPress={() => setActiveTab('visits')}
-            activeOpacity={0.7}
-          >
-            <ListIcon 
-              size={22} 
-              color={activeTab === 'visits' ? '#D4915A' : '#8E8E93'} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'gallery' && styles.tabActive]}
-            onPress={() => setActiveTab('gallery')}
-            activeOpacity={0.7}
-          >
-            <Grid3x3Icon 
-              size={22} 
-              color={activeTab === 'gallery' ? '#D4915A' : '#8E8E93'} 
-            />
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      {/* Content based on active tab */}
-      {viewedUserId ? (
-        profileVisits === undefined ? (
-          <View style={styles.passportLoading}>
-            <Text style={styles.passportLoadingText}>Loading...</Text>
+        {viewedUserId && (
+          <View className="flex-row border-b border-border bg-background px-5">
+            <TouchableOpacity
+              className={cn(
+                'flex-1 items-center justify-center border-b-2 py-3.5',
+                activeTab === 'visits' ? 'border-primary' : 'border-transparent'
+              )}
+              onPress={() => setActiveTab('visits')}
+              activeOpacity={0.7}>
+              <ListIcon size={22} color={activeTab === 'visits' ? primaryHex : mutedHex} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={cn(
+                'flex-1 items-center justify-center border-b-2 py-3.5',
+                activeTab === 'gallery' ? 'border-primary' : 'border-transparent'
+              )}
+              onPress={() => setActiveTab('gallery')}
+              activeOpacity={0.7}>
+              <Grid3x3Icon size={22} color={activeTab === 'gallery' ? primaryHex : mutedHex} />
+            </TouchableOpacity>
           </View>
-        ) : profileVisits.length === 0 ? (
-          <View style={styles.passportEmpty}>
-            <Text style={styles.passportEmptyTitle}>
-              {viewedUserId === currentUserId ? 'No visits yet' : 'No visits'}
-            </Text>
-            <Text style={styles.passportEmptySub}>
-              {viewedUserId === currentUserId
-                ? 'Check in at a museum to start your passport.'
-                : 'This user has not checked in anywhere yet.'}
-            </Text>
-            {viewedUserId === currentUserId && (
-              <TouchableOpacity
-                style={styles.passportEmptyButton}
-                onPress={() => router.push('/(tabs)/explore')}
-              >
-                <Text style={styles.passportEmptyButtonText}>Explore museums</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : activeTab === 'visits' ? (
-          <FlatList
-            data={profileVisits}
-            keyExtractor={(item) => item.checkIn._id}
-            renderItem={({ item }) => (
-              <PassportCard
-                visit={item}
-                isOwnProfile={viewedUserId === currentUserId}
-                onEditPress={viewedUserId === currentUserId ? () => setEditingVisit(item) : undefined}
-              />
-            )}
-            contentContainerStyle={styles.passportListContent}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <View style={styles.passportSectionHeader}>
-                <Text style={styles.passportSectionSub}>{profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}</Text>
-              </View>
-            }
-          />
-        ) : (
-          <MosaicGallery 
-            visits={profileVisits} 
-            onImagePress={(visit) => router.push(`/(museums)/${visit.museum._id}` as any)}
-          />
-        )
-      ) : null}
+        )}
 
-      <EditCheckinModal
-        visible={editingVisit != null}
-        initialRating={editingVisit?.checkIn.rating ?? null}
-        initialReview={editingVisit?.checkIn.review}
-        onSave={(rating, review) =>
-          editingVisit &&
-          saveCheckIn(editingVisit.checkIn._id as Id<'checkIns'>, rating, review)
-        }
-        onDelete={() =>
-          editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
-        }
-        onClose={() => setEditingVisit(null)}
-      />
-    </Pressable>
+        {viewedUserId ? (
+          profileVisits === undefined ? (
+            <View className="flex-1 items-center justify-center bg-background p-6">
+              <BrandActivityIndicator size="large" />
+              <Text variant="muted" className="mt-3 text-base">
+                Loading...
+              </Text>
+            </View>
+          ) : profileVisits.length === 0 ? (
+            <View className="flex-1 items-center justify-center bg-background p-8">
+              <Text className="mb-2 text-lg font-bold text-foreground">
+                {viewedUserId === currentUserId ? 'No visits yet' : 'No visits'}
+              </Text>
+              <Text className="mb-5 text-center text-base text-muted-foreground">
+                {viewedUserId === currentUserId
+                  ? 'Check in at a museum to start your passport.'
+                  : 'This user has not checked in anywhere yet.'}
+              </Text>
+              {viewedUserId === currentUserId && (
+                <Button className="rounded-lg px-6 py-3" onPress={() => router.push('/(tabs)/explore')}>
+                  <Text className="font-semibold">Explore museums</Text>
+                </Button>
+              )}
+            </View>
+          ) : activeTab === 'visits' ? (
+            <FlatList
+              className="flex-1 bg-background"
+              data={profileVisits}
+              keyExtractor={(item) => item.checkIn._id}
+              renderItem={({ item }) => (
+                <PassportCard
+                  visit={item}
+                  isOwnProfile={viewedUserId === currentUserId}
+                  onEditPress={viewedUserId === currentUserId ? () => setEditingVisit(item) : undefined}
+                />
+              )}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={
+                <View className="bg-background px-5 pb-2 pt-4">
+                  <Text variant="muted" className="mt-0.5 text-[13px]">
+                    {profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              }
+            />
+          ) : (
+            <MosaicGallery
+              visits={profileVisits}
+              onImagePress={(visit) => router.push(`/(museums)/${visit.museum._id}` as any)}
+            />
+          )
+        ) : null}
+
+        <EditCheckinModal
+          visible={editingVisit != null}
+          initialRating={editingVisit?.checkIn.rating ?? null}
+          initialReview={editingVisit?.checkIn.review}
+          onSave={(rating, review) =>
+            editingVisit &&
+            saveCheckIn(editingVisit.checkIn._id as Id<'checkIns'>, rating, review)
+          }
+          onDelete={() =>
+            editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
+          }
+          onClose={() => setEditingVisit(null)}
+        />
+      </Pressable>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  backBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  backButton: {
-    padding: 8,
-  },
-  profileHeader: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  bannerImage: {
-    width: '100%',
-    height: 120,
-  },
-  bannerImageStyle: {
-    resizeMode: 'cover',
-  },
-  bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-  },
-  bannerEditHint: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 14,
-    padding: 6,
-  },
-  avatarUploading: {
-    opacity: 0.7,
-  },
-  avatarEditBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#D4915A',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  profileContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    paddingTop: 0,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: -40,
-    marginBottom: 12,
-  },
-  avatarContainer: {
-    borderWidth: 4,
-    borderColor: '#FFFFFF',
-    borderRadius: 44,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#E8D5C4',
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#D4915A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontSize: 36,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  settingsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D0D0D0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 48,
-  },
-  dropdownContainer: {
-    position: 'absolute',
-    top: 88,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    minWidth: 160,
-    zIndex: 1000,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '500',
-  },
-  dropdownDivider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 4,
-  },
-  logoutText: {
-    color: '#DC2626',
-  },
-  nameSection: {
-    marginBottom: 8,
-  },
-  nameAndBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 2,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    flexShrink: 1,
-  },
-  tasteProfileBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(212, 145, 90, 0.15)',
-    borderRadius: 14,
-  },
-  tasteProfileBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#D4915A',
-  },
-  profileEmail: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 8,
-  },
-  countsRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 4,
-  },
-  countText: {
-    fontSize: 13,
-  },
-  countNumber: {
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  countLabel: {
-    fontSize: 14,
-    color: '#888',
-  },
-  followButtonBase: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
-  },
-  viewWrappedButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  followButtonBase: {
-    paddingHorizontal: 32,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 8,
-    alignSelf: 'flex-start',
-  },
-  followButton: {
-    backgroundColor: '#D4915A',
-  },
-  unfollowButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D0D0D0',
-  },
-  followButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  unfollowButtonText: {
-    color: '#666',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  topRightFollowButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 48,
-  },
-  wrappedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#D4915A',
-    borderRadius: 999,
-  },
-  wrappedPillText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    paddingHorizontal: 20,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: '#D4915A',
-  },
-  mosaicContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  mosaicContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 32,
-    gap: 4,
-  },
-  mosaicRow: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  mosaicImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    backgroundColor: '#F0F0F0',
-  },
-  galleryEmpty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 48,
-    backgroundColor: '#FFFFFF',
-  },
-  galleryEmptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  galleryEmptySub: {
-    fontSize: 15,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  passportSectionHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  passportSectionSub: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  passportListContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    backgroundColor: '#FFFFFF',
-  },
-  passportCardWrapper: {
-    marginBottom: 14,
-  },
-  passportCard: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  passportCardPressed: {
-    opacity: 0.95,
-  },
-  passportCardInner: {
-    flexDirection: 'row',
-    padding: 12,
-  },
-  passportImageWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginRight: 14,
-  },
-  passportImage: {
-    width: '100%',
-    height: '100%',
-  },
-  passportImagePlaceholder: {
-    backgroundColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  passportImageLetter: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#94a3b8',
-  },
-  passportBody: {
-    flex: 1,
-    justifyContent: 'space-between',
-    minHeight: 96,
-  },
-  passportTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 4,
-  },
-  passportMuseumName: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  editButton: {
-    padding: 4,
-  },
-  editedLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    fontStyle: 'italic',
-  },
-  passportLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 6,
-  },
-  passportLocation: {
-    fontSize: 13,
-    color: '#64748b',
-  },
-  passportDateStamp: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 6,
-    marginBottom: 6,
-  },
-  passportDateText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-    letterSpacing: 0.3,
-  },
-  passportStarsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  passportRatingNum: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFB800',
-  },
-  passportReview: {
-    fontSize: 13,
-    color: '#64748b',
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  passportLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#FFFFFF',
-  },
-  passportLoadingText: {
-    fontSize: 15,
-    color: '#64748b',
-  },
-  passportEmpty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-    backgroundColor: '#FFFFFF',
-  },
-  passportEmptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  passportEmptySub: {
-    fontSize: 15,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  passportEmptyButton: {
-    backgroundColor: '#D4915A',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  passportEmptyButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});

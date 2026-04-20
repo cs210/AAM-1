@@ -1,8 +1,8 @@
 const path = require("path");
-const { getDefaultConfig } = require("expo/metro-config");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withUniwindConfig } = require("uniwind/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, "../..");
 const reactPath = path.resolve(monorepoRoot, "node_modules/react");
@@ -30,13 +30,13 @@ finalConfig = {
         try {
           const filePath = require.resolve(moduleName, { paths: [monorepoRoot] });
           return { type: "sourceFile", filePath };
-        } catch (_) {}
+        } catch (_) { }
       }
       if (moduleName === "react-dom" || moduleName.startsWith("react-dom/")) {
         try {
           const filePath = require.resolve(moduleName, { paths: [monorepoRoot] });
           return { type: "sourceFile", filePath };
-        } catch (_) {}
+        } catch (_) { }
       }
       return baseResolveRequest(context, moduleName, platform);
     },

@@ -1,15 +1,13 @@
+import { AuthScreenLayout } from '@/components/auth-screen-layout';
 import { ForgotPasswordForm } from '@/components/forgot-password-form';
-import { ScrollView, View } from 'react-native';
 
-export default function SignUpScreen() {
+export default function ForgotPasswordScreen() {
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      contentContainerClassName="sm:flex-1 items-center justify-center p-4 py-8 sm:py-4 sm:p-6 mt-safe"
-      keyboardDismissMode="interactive">
-      <View className="w-full max-w-sm">
-        <ForgotPasswordForm />
-      </View>
-    </ScrollView>
+    <AuthScreenLayout
+      subtitle="Reset your password"
+      description="Enter your email and we’ll send you a link to choose a new password."
+    >
+      <ForgotPasswordForm />
+    </AuthScreenLayout>
   );
 }
