@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Doc } from '@packages/backend/convex/_generated/dataModel';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
@@ -35,35 +35,50 @@ export function MuseumCard({ museum, className }: Props) {
       className={cn('mx-5 mb-3 active:opacity-90', className)}
       onPress={() => router.push(`/${museum._id}`)}
     >
-      <Card className={cn('relative overflow-hidden border-[#E8E8E8]', hasPrimaryImage && 'bg-[#111827]')}>
+      <Card className={cn('relative overflow-hidden border-border', hasPrimaryImage && 'bg-[#111827]')}>
         {hasPrimaryImage && (
           <>
             <Image
               source={{ uri: museum.imageUrl }}
-              style={styles.backgroundImage}
+              className="absolute inset-0 size-full"
               resizeMode="cover"
               onError={() => setImageFailed(true)}
             />
-            <View style={styles.backgroundOverlay} />
+            <View className="absolute inset-0 bg-black/50" />
           </>
         )}
         <CardHeader className="pb-2">
           <View className="flex-row justify-between items-start">
-            <Text className={cn('text-lg font-semibold flex-1 leading-6', hasPrimaryImage ? 'text-white' : 'text-[#1A1A1A]')} numberOfLines={2}>
+            <Text
+              className={cn('flex-1 text-lg font-semibold leading-6', hasPrimaryImage ? 'text-white' : 'text-foreground')}
+              numberOfLines={2}>
               {museum.name}
             </Text>
-            <View className={cn('px-2.5 py-1 rounded-lg ml-3', hasPrimaryImage ? 'bg-white/20' : 'bg-[#D4915A]/15')}>
-              <Text className={cn('text-[11px] font-semibold capitalize', hasPrimaryImage ? 'text-white' : 'text-[#D4915A]')}>
+            <View
+              className={cn(
+                'ml-3 rounded-lg px-2.5 py-1',
+                hasPrimaryImage ? 'bg-white/20' : 'bg-primary/15'
+              )}>
+              <Text
+                className={cn(
+                  'text-[11px] font-semibold capitalize',
+                  hasPrimaryImage ? 'text-white' : 'text-primary'
+                )}>
                 {museum.category}
               </Text>
             </View>
           </View>
         </CardHeader>
         <CardContent className="pt-0">
-          <Text className={cn('text-sm mb-3', hasPrimaryImage ? 'text-white/90' : 'text-[#666]')}>
+          <Text
+            className={cn('mb-3 text-sm', hasPrimaryImage ? 'text-white/90' : 'text-muted-foreground')}>
             {museum.location?.city || 'Unknown'}, {museum.location?.state || ''}
           </Text>
-          <Text className={cn('text-[13px] font-medium', hasPrimaryImage ? 'text-[#FFD9B3]' : 'text-[#D4915A]')}>
+          <Text
+            className={cn(
+              'text-[13px] font-medium',
+              hasPrimaryImage ? 'text-orange-100' : 'text-primary'
+            )}>
             {ratingLabel}
           </Text>
         </CardContent>
@@ -71,13 +86,3 @@ export function MuseumCard({ museum, className }: Props) {
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-});
