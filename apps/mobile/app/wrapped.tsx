@@ -24,29 +24,11 @@ const { width } = Dimensions.get('window');
 /** Slide containers use flex:1 inside SafeAreaView so content does not draw under status bar / home indicator. */
 const SLIDE_FLEX = { width: '100%' as const, flex: 1 as const };
 
-// ─── Dummy data (realistic) ────────────────────────────────────────────────
+// ─── Static display defaults for non-check-in slides ───────────────────────
 const DATA = {
-  year: 2026,
-  totalHours: 47,
-  totalDays: 2.0,
-  museumsVisited: 8,
-  citiesExplored: 4,
-  topMuseum: {
-    name: 'Art Institute of Chicago',
-    location: 'Chicago, IL',
-    visits: 6,
-    hours: 18,
-  },
-  artStyles: [
-    { name: 'Impressionism', pct: 32, color: '#D4915A' },
-    { name: 'Modern Art', pct: 24, color: '#A89BC4' },
-    { name: 'Renaissance', pct: 20, color: '#B4B4B4' },
-    { name: 'Contemporary', pct: 15, color: '#B4B4B4' },
-    { name: 'Ancient', pct: 9, color: '#B4B4B4' },
-  ],
+  year: new Date().getFullYear(),
   artworksSaved: 23,
   artistsDiscovered: 14,
-  eventsAttended: 5,
 };
 
 // ─── Slide 1: Intro ────────────────────────────────────────────────────────
@@ -104,17 +86,25 @@ const IntroSlide = ({ onNext, tasteProfileName }: { onNext: () => void; tastePro
 };
 
 // ─── Slide 2: Hours ────────────────────────────────────────────────────────
-const HoursSlide = ({ onNext }: { onNext: () => void }) => {
+const HoursSlide = ({
+  onNext,
+  totalHours,
+  totalDays,
+}: {
+  onNext: () => void;
+  totalHours: number;
+  totalDays: number;
+}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const countAnim = useRef(new Animated.Value(0)).current;
   const [displayed, setDisplayed] = useState(0);
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }).start();
-    Animated.timing(countAnim, { toValue: DATA.totalHours, duration: 1200, delay: 300, useNativeDriver: false }).start();
+    Animated.timing(countAnim, { toValue: totalHours, duration: 1200, delay: 300, useNativeDriver: false }).start();
     countAnim.addListener(({ value }) => setDisplayed(Math.round(value)));
     return () => countAnim.removeAllListeners();
-  }, []);
+  }, [countAnim, fadeAnim, totalHours]);
 
   return (
     <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
@@ -131,7 +121,7 @@ const HoursSlide = ({ onNext }: { onNext: () => void }) => {
         <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">lost in art and wonder</Text>
         <View className="mt-7 items-center gap-0.5">
           <Text className="text-xs font-normal tracking-[2.5px] text-muted-foreground">THAT&apos;S LIKE</Text>
-          <Text className="mt-1 text-2xl font-bold text-foreground">{DATA.totalDays} days</Text>
+          <Text className="mt-1 text-2xl font-bold text-foreground">{totalDays} days</Text>
           <Text className="mt-0.5 text-xs text-muted-foreground">of pure culture</Text>
         </View>
       </Animated.View>
@@ -140,7 +130,17 @@ const HoursSlide = ({ onNext }: { onNext: () => void }) => {
 };
 
 // ─── Slide 3: Museums ──────────────────────────────────────────────────────
-const MuseumsSlide = ({ onNext }: { onNext: () => void }) => {
+const MuseumsSlide = ({
+  onNext,
+  museumsVisited,
+  citiesExplored,
+  eventsAttended,
+}: {
+  onNext: () => void;
+  museumsVisited: number;
+  citiesExplored: number;
+  eventsAttended: number;
+}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -155,18 +155,18 @@ const MuseumsSlide = ({ onNext }: { onNext: () => void }) => {
         </Text>
         <View className="my-1 items-center">
           <Text className="text-8xl font-bold leading-none tracking-tighter text-foreground">
-            {DATA.museumsVisited}
+            {museumsVisited}
           </Text>
           <Text className="text-center text-5xl font-semibold leading-[52px] tracking-tight text-primary">
             museums
           </Text>
         </View>
         <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">
-          across {DATA.citiesExplored} cities
+          across {citiesExplored} cities
         </Text>
         <View className="mt-7 items-center gap-0.5">
           <Text className="text-xs font-normal tracking-[2.5px] text-muted-foreground">INCLUDING</Text>
-          <Text className="mt-1 text-2xl font-bold text-foreground">{DATA.eventsAttended} events</Text>
+          <Text className="mt-1 text-2xl font-bold text-foreground">{eventsAttended} events</Text>
           <Text className="mt-0.5 text-xs text-muted-foreground">attended in person</Text>
         </View>
       </Animated.View>
@@ -175,7 +175,13 @@ const MuseumsSlide = ({ onNext }: { onNext: () => void }) => {
 };
 
 // ─── Slide 4: Top Museum ───────────────────────────────────────────────────
-const TopSpotSlide = ({ onNext }: { onNext: () => void }) => {
+const TopSpotSlide = ({
+  onNext,
+  topMuseum,
+}: {
+  onNext: () => void;
+  topMuseum: { name: string; visits: number; hours: number } | null;
+}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.94)).current;
 
@@ -200,18 +206,17 @@ const TopSpotSlide = ({ onNext }: { onNext: () => void }) => {
             <Text className="text-6xl">🏛️</Text>
           </View>
         </Animated.View>
-        <Text className="mt-1 text-center text-2xl font-bold text-foreground">{DATA.topMuseum.name}</Text>
-        <Text className="mt-1 text-center text-sm tracking-wide text-muted-foreground">
-          {DATA.topMuseum.location}
+        <Text className="mt-1 text-center text-2xl font-bold text-foreground">
+          {topMuseum?.name ?? 'No top museum yet'}
         </Text>
         <View className="mt-5 flex-row items-center gap-6">
           <View className="items-center">
-            <Text className="text-3xl font-bold text-primary">{DATA.topMuseum.visits}</Text>
+            <Text className="text-3xl font-bold text-primary">{topMuseum?.visits ?? 0}</Text>
             <Text className="mt-0.5 text-xs font-normal tracking-widest text-muted-foreground">visits</Text>
           </View>
           <View className="h-9 w-px bg-border" />
           <View className="items-center">
-            <Text className="text-3xl font-bold text-primary">{DATA.topMuseum.hours}</Text>
+            <Text className="text-3xl font-bold text-primary">{topMuseum?.hours ?? 0}</Text>
             <Text className="mt-0.5 text-xs font-normal tracking-widest text-muted-foreground">hours</Text>
           </View>
         </View>
@@ -221,11 +226,19 @@ const TopSpotSlide = ({ onNext }: { onNext: () => void }) => {
 };
 
 // ─── Slide 5: Art Styles ───────────────────────────────────────────────────
-const StylesSlide = ({ onNext }: { onNext: () => void }) => {
+const StylesSlide = ({
+  onNext,
+  artStyles,
+  hasEnoughData,
+}: {
+  onNext: () => void;
+  artStyles: Array<{ name: string; pct: number; color: string }>;
+  hasEnoughData: boolean;
+}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const imageScale = useRef(new Animated.Value(1.2)).current;
   const imageOpacity = useRef(new Animated.Value(0)).current;
-  const barAnims = useRef(DATA.artStyles.map(() => new Animated.Value(0))).current;
+  const barAnims = useRef(artStyles.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -242,16 +255,35 @@ const StylesSlide = ({ onNext }: { onNext: () => void }) => {
         useNativeDriver: false,
       }).start();
     });
-  }, []);
+  }, [barAnims]);
 
   const impressionBox = { width: width * 0.7, height: width * 0.38 };
+
+  if (!hasEnoughData || artStyles.length === 0) {
+    return (
+      <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+        <Animated.View className="items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+          <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+            YOUR TASTE MAP
+          </Text>
+          <Text className="text-center text-2xl font-semibold text-foreground">
+            Keep exploring to discover{'\n'}your style preferences
+          </Text>
+          <Text className="mt-4 text-center text-sm text-muted-foreground">
+            Check in to at least 3 museums to unlock your personalized taste profile
+          </Text>
+        </Animated.View>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
       <Animated.View className="w-full items-center justify-center px-8" style={{ opacity: fadeAnim }}>
         <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
           YOU GRAVITATED TOWARDS
         </Text>
-        <Text className="mb-3 text-center text-3xl font-semibold text-primary">{DATA.artStyles[0].name}</Text>
+        <Text className="mb-3 text-center text-3xl font-semibold text-primary">{artStyles[0].name}</Text>
 
         <Animated.View
           className="mb-5 overflow-hidden rounded-xl shadow-md shadow-black/15"
@@ -264,7 +296,7 @@ const StylesSlide = ({ onNext }: { onNext: () => void }) => {
         </Animated.View>
 
         <View className="w-full gap-2.5">
-          {DATA.artStyles.map((style, i) => (
+          {artStyles.map((style, i) => (
             <View key={style.name} className="flex-row items-center gap-2.5">
               <Text className="w-[110px] text-right text-xs text-muted-foreground">{style.name}</Text>
               <View className="h-1 flex-1 overflow-hidden rounded-sm bg-muted">
@@ -287,7 +319,7 @@ const StylesSlide = ({ onNext }: { onNext: () => void }) => {
           ))}
         </View>
         <Text className="mt-4 text-center text-sm text-muted-foreground">
-          Those dreamy brushstrokes really speak to you
+          Based on your check-ins, ratings, and follows
         </Text>
       </Animated.View>
     </Pressable>
@@ -334,7 +366,15 @@ const TasteProfileSlide = ({
 };
 
 // ─── Slide 7: Share ────────────────────────────────────────────────────────
-const ShareSlide = () => {
+const ShareSlide = ({
+  museumsVisited,
+  totalHours,
+  topMuseumName,
+}: {
+  museumsVisited: number;
+  totalHours: number;
+  topMuseumName: string | null;
+}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
 
@@ -347,7 +387,7 @@ const ShareSlide = () => {
 
   const handleShare = async () => {
     await Share.share({
-      message: `I explored ${DATA.museumsVisited} museums and spent ${DATA.totalHours} hours lost in art in ${DATA.year}. My top spot was ${DATA.topMuseum.name}. #MuseumWrapped`,
+      message: `I explored ${museumsVisited} museums and spent ${totalHours} hours lost in art in ${DATA.year}. My top spot was ${topMuseumName ?? 'museum hopping'}. #MuseumWrapped`,
     });
   };
 
@@ -423,6 +463,21 @@ export default function WrappedScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const tasteProfile = useQuery(api.wrapped.getTasteProfile);
+  const wrappedStats = useQuery(api.wrapped.getWrappedStats);
+  const totalHours = wrappedStats?.totalHours ?? 0;
+  const totalDays = wrappedStats?.totalDays ?? 0;
+  const museumsVisited = wrappedStats?.museumsVisited ?? 0;
+  const citiesExplored = wrappedStats?.citiesExplored ?? 0;
+  const eventsAttended = wrappedStats?.eventsAttended ?? 0;
+  const artStyles = wrappedStats?.artStyles ?? [];
+  const hasEnoughData = wrappedStats?.hasEnoughData ?? false;
+  const topMuseum = wrappedStats?.topMuseum
+    ? {
+        name: wrappedStats.topMuseum.name,
+        visits: wrappedStats.topMuseum.visits,
+        hours: wrappedStats.topMuseum.hours,
+      }
+    : null;
 
   const goToNext = () => {
     if (currentSlide < SLIDES.length - 1) {
@@ -458,25 +513,30 @@ export default function WrappedScreen() {
       case 'hours':
         return (
           <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
-            <HoursSlide onNext={goToNext} />
+            <HoursSlide onNext={goToNext} totalHours={totalHours} totalDays={totalDays} />
           </Animated.View>
         );
       case 'museums':
         return (
           <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
-            <MuseumsSlide onNext={goToNext} />
+            <MuseumsSlide
+              onNext={goToNext}
+              museumsVisited={museumsVisited}
+              citiesExplored={citiesExplored}
+              eventsAttended={eventsAttended}
+            />
           </Animated.View>
         );
       case 'topspot':
         return (
           <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
-            <TopSpotSlide onNext={goToNext} />
+            <TopSpotSlide onNext={goToNext} topMuseum={topMuseum} />
           </Animated.View>
         );
       case 'styles':
         return (
           <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
-            <StylesSlide onNext={goToNext} />
+            <StylesSlide onNext={goToNext} artStyles={artStyles} hasEnoughData={hasEnoughData} />
           </Animated.View>
         );
       case 'tasteprofile':
@@ -492,7 +552,11 @@ export default function WrappedScreen() {
       case 'share':
         return (
           <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
-            <ShareSlide />
+            <ShareSlide
+              museumsVisited={museumsVisited}
+              totalHours={totalHours}
+              topMuseumName={topMuseum?.name ?? null}
+            />
           </Animated.View>
         );
       default:
