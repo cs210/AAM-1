@@ -19,8 +19,6 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
-console.log(process.env.EXPO_PUBLIC_POSTHOG_PROJECT_KEY)
-
 function RootLayout() {
   const { theme } = useUniwind();
   const navigationRef = useNavigationContainerRef();
