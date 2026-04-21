@@ -20,7 +20,7 @@ export function PaginationPill({ label, onPress, disabled }: Props) {
       )}>
       <Text
         className={cn(
-          'text-[13px] font-semibold',
+          'text-sm font-semibold',
           disabled ? 'text-muted-foreground' : 'text-primary-foreground'
         )}>
         {label}

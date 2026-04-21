@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  StyleSheet,
   Pressable,
   TextInput,
-  ActivityIndicator,
   Alert,
   Image,
 } from 'react-native';
@@ -20,6 +17,13 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { AuthGuard } from '@/components/AuthGuard';
+import { Text } from '@/components/ui/text';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
+import { cn } from '@/lib/utils';
+import {
+  RN_API_FOREGROUND_LIGHT,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+} from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 const MAX_UPLOAD_IMAGE_SIZE = 512;
@@ -43,19 +47,14 @@ export default function CheckInScreen() {
     }
   }, [isTabSegment]);
 
-  // Fetch museum details (skip when param is a tab segment)
-  const museum = useQuery(api.museums.getMuseum, 
-    id ? { id: id as Id<"museums"> } : "skip"
-  );
+  const museum = useQuery(api.museums.getMuseum, id ? { id: id as Id<'museums'> } : 'skip');
 
-  // Fetch all users for friend selection
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
 
-  // Create check-in mutation
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (event: unknown, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setVisitDate(selectedDate);
@@ -64,7 +63,7 @@ export default function CheckInScreen() {
 
   const toggleFriend = (userId: string) => {
     setSelectedFriends((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
     );
   };
 
@@ -170,8 +169,8 @@ export default function CheckInScreen() {
       const imageStorageIds = await uploadSelectedImages();
 
       await createCheckIn({
-        contentType: "museum",
-        contentId: museumId as Id<"museums">,
+        contentType: 'museum',
+        contentId: museumId as Id<'museums'>,
         rating: rating || undefined,
         review: review.trim() || undefined,
         imageStorageIds: imageStorageIds.length > 0 ? imageStorageIds : undefined,
@@ -191,10 +190,10 @@ export default function CheckInScreen() {
 
   if (museum === undefined) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView className="flex-1 bg-muted" style={{ flex: 1 }}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+        <View className="flex-1 items-center justify-center">
+          <BrandActivityIndicator size="large" />
         </View>
       </SafeAreaView>
     );
@@ -202,17 +201,17 @@ export default function CheckInScreen() {
 
   if (museum === null) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.header}>
-          <Pressable style={styles.backIcon} onPress={() => router.back()}>
-            <ArrowLeftIcon size={24} color="#222" />
+        <View className="flex-row items-center justify-between border-b border-border bg-card px-4 py-3">
+          <Pressable className="size-10 items-center justify-center" onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
           </Pressable>
-          <Text style={styles.headerTitle}>Check In</Text>
-          <View style={{ width: 40 }} />
+          <Text className="flex-1 text-center text-base font-semibold text-foreground">Check In</Text>
+          <View className="w-10" />
         </View>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Museum not found</Text>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-base text-foreground">Museum not found</Text>
         </View>
       </SafeAreaView>
     );
@@ -220,390 +219,167 @@ export default function CheckInScreen() {
 
   return (
     <AuthGuard>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView className="flex-1 bg-muted" style={{ flex: 1 }}>
         <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.backIcon} onPress={() => router.back()}>
-          <ArrowLeftIcon size={24} color="#222" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Check In</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Museum Info */}
-        <View style={styles.museumInfo}>
-          <Text style={styles.museumName}>{museum.name}</Text>
-          <Text style={styles.museumCategory}>{museum.category}</Text>
+        <View className="flex-row items-center justify-between border-b border-border bg-card px-4 py-3">
+          <Pressable className="size-10 items-center justify-center" onPress={() => router.back()}>
+            <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
+          </Pressable>
+          <Text className="flex-1 text-center text-base font-semibold text-foreground">Check In</Text>
+          <View className="w-10" />
         </View>
 
-        {/* Rating Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rate Your Visit</Text>
-          <View style={styles.ratingContainer}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Pressable
-                key={star}
-                onPress={() => setRating(rating === star ? null : star)}
-                style={styles.starButton}
-              >
-                <StarIcon
-                  size={32}
-                  color={star <= (rating || 0) ? '#FFB800' : '#E0E0E0'}
-                  fill={star <= (rating || 0) ? '#FFB800' : 'none'}
-                />
-              </Pressable>
-            ))}
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}>
+          <View className="mb-6 rounded-xl border border-border bg-card p-4">
+            <Text className="mb-1 text-xl font-bold text-foreground">{museum.name}</Text>
+            <Text className="text-sm capitalize text-muted-foreground">{museum.category}</Text>
           </View>
-          {rating && (
-            <Text style={styles.ratingText}>{rating} star{rating !== 1 ? 's' : ''}</Text>
-          )}
-        </View>
 
-        {/* Review Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Write a Review</Text>
-          <TextInput
-            style={styles.reviewInput}
-            placeholder="Share your thoughts about this museum..."
-            placeholderTextColor="#999"
-            value={review}
-            onChangeText={setReview}
-            maxLength={500}
-            multiline
-            numberOfLines={5}
-          />
-          <Text style={styles.charCount}>{review.length}/500</Text>
-        </View>
+          <View className="mb-6">
+            <Text className="mb-3 text-base font-semibold text-foreground">Rate Your Visit</Text>
+            <View className="mb-2 flex-row justify-around">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable
+                  key={star}
+                  className="p-2"
+                  onPress={() => setRating(rating === star ? null : star)}>
+                  <StarIcon
+                    size={32}
+                    color={star <= (rating || 0) ? '#FFB800' : '#E0E0E0'}
+                    fill={star <= (rating || 0) ? '#FFB800' : 'none'}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            {rating ? (
+              <Text className="text-center text-sm italic text-muted-foreground">
+                {rating} star{rating !== 1 ? 's' : ''}
+              </Text>
+            ) : null}
+          </View>
 
-        {/* Photos Section */}
-        <View style={styles.section}>
-          <View style={styles.photosHeader}>
-            <Text style={styles.sectionTitle}>Photos</Text>
+          <View className="mb-6">
+            <Text className="mb-3 text-base font-semibold text-foreground">Write a Review</Text>
+            <TextInput
+              className="min-h-[120px] rounded-[10px] border border-border bg-card p-3 text-[15px] text-foreground"
+              placeholder="Share your thoughts about this museum..."
+              placeholderTextColor={RN_API_MUTED_FOREGROUND_LIGHT}
+              value={review}
+              onChangeText={setReview}
+              maxLength={500}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+            />
+            <Text className="mt-2 text-right text-xs text-muted-foreground">{review.length}/500</Text>
+          </View>
+
+          <View className="mb-6">
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-foreground">Photos</Text>
+              <Pressable
+                className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2"
+                onPress={pickImages}
+                disabled={isSubmitting}>
+                <Text className="text-[13px] font-semibold text-primary">
+                  {selectedImages.length > 0 ? 'Replace Photos' : 'Add Photos'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {selectedImages.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 10 }}>
+                {selectedImages.map((asset) => (
+                  <View key={asset.uri} className="relative size-[84px] overflow-hidden rounded-[10px] bg-muted">
+                    <Image source={{ uri: asset.uri }} className="size-full" resizeMode="cover" />
+                    <Pressable
+                      className="absolute right-1.5 top-1.5 size-5 items-center justify-center rounded-full bg-black/60"
+                      onPress={() => removeImage(asset.uri)}
+                      hitSlop={8}>
+                      <XIcon size={12} color="#FFF" />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text className="text-sm text-muted-foreground">Add up to 5 photos to your check-in.</Text>
+            )}
+          </View>
+
+          <View className="mb-6">
+            <Text className="mb-3 text-base font-semibold text-foreground">Date of Visit</Text>
             <Pressable
-              style={styles.addPhotoButton}
-              onPress={pickImages}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.addPhotoButtonText}>
-                {selectedImages.length > 0 ? 'Replace Photos' : 'Add Photos'}
+              className="rounded-[10px] border border-border bg-card py-3.5 px-3"
+              onPress={() => setShowDatePicker(true)}>
+              <Text className="text-[15px] font-medium text-foreground">
+                {visitDate.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
               </Text>
             </Pressable>
           </View>
 
-          {selectedImages.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photoPreviewRow}
-            >
-              {selectedImages.map((asset) => (
-                <View key={asset.uri} style={styles.photoPreviewItem}>
-                  <Image source={{ uri: asset.uri }} style={styles.photoPreviewImage} />
+          {showDatePicker && (
+            <DateTimePicker
+              value={visitDate}
+              mode="date"
+              display="spinner"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+            />
+          )}
+
+          {allUsers && allUsers.length > 0 && (
+            <View className="mb-6">
+              <Text className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {allUsers.map((user) => (
                   <Pressable
-                    style={styles.removePhotoButton}
-                    onPress={() => removeImage(asset.uri)}
-                    hitSlop={8}
-                  >
-                    <XIcon size={12} color="#FFF" />
+                    key={user.userId}
+                    className={cn(
+                      'flex-row items-center gap-1.5 rounded-full border px-3 py-2',
+                      selectedFriends.includes(user.userId)
+                        ? 'border-primary bg-primary'
+                        : 'border-border bg-muted'
+                    )}
+                    onPress={() => toggleFriend(user.userId)}>
+                    <Text
+                      className={cn(
+                        'text-sm font-medium',
+                        selectedFriends.includes(user.userId) ? 'text-primary-foreground' : 'text-foreground'
+                      )}>
+                      {user.name || user.email}
+                    </Text>
+                    {selectedFriends.includes(user.userId) && <XIcon size={16} color="#FFF" />}
                   </Pressable>
-                </View>
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.photoHint}>Add up to 5 photos to your check-in.</Text>
-          )}
-        </View>
-
-        {/* Date Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date of Visit</Text>
-          <Pressable
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateButtonText}>
-              {visitDate.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </Pressable>
-        </View>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={visitDate}
-            mode="date"
-            display="spinner"
-            onChange={handleDateChange}
-            maximumDate={new Date()}
-          />
-        )}
-
-        {/* Friends Section */}
-        {allUsers && allUsers.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Who visited with you?</Text>
-            <View style={styles.friendsContainer}>
-              {allUsers.map((user) => (
-                <Pressable
-                  key={user.userId}
-                  style={[
-                    styles.friendChip,
-                    selectedFriends.includes(user.userId) && styles.friendChipSelected,
-                  ]}
-                  onPress={() => toggleFriend(user.userId)}
-                >
-                  <Text
-                    style={[
-                      styles.friendChipText,
-                      selectedFriends.includes(user.userId) && styles.friendChipTextSelected,
-                    ]}
-                  >
-                    {user.name || user.email}
-                  </Text>
-                  {selectedFriends.includes(user.userId) && (
-                    <XIcon size={16} color="#FFF" />
-                  )}
-                </Pressable>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
-        )}
-
-        {/* Submit Button */}
-        <Pressable
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>Complete Check-In</Text>
           )}
-        </Pressable>
-      </ScrollView>
+
+          <Pressable
+            className={cn(
+              'items-center justify-center rounded-[10px] bg-primary py-4 active:opacity-90',
+              isSubmitting && 'opacity-60'
+            )}
+            onPress={handleSubmit}
+            disabled={isSubmitting}>
+            {isSubmitting ? (
+              <BrandActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text className="text-base font-semibold text-primary-foreground">Complete Check-In</Text>
+            )}
+          </Pressable>
+        </ScrollView>
       </SafeAreaView>
     </AuthGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9F9F9',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFF',
-  },
-  backIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#222',
-    flex: 1,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#222',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  museumInfo: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  museumName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#222',
-    marginBottom: 4,
-  },
-  museumCategory: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textTransform: 'capitalize',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 12,
-  },
-  photosHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  addPhotoButton: {
-    backgroundColor: '#EEF5FF',
-    borderWidth: 1,
-    borderColor: '#C7DEFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  addPhotoButtonText: {
-    color: '#005FCC',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  photoHint: {
-    fontSize: 13,
-    color: '#8E8E93',
-  },
-  photoPreviewRow: {
-    gap: 10,
-  },
-  photoPreviewItem: {
-    width: 84,
-    height: 84,
-    borderRadius: 10,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#F0F0F0',
-  },
-  photoPreviewImage: {
-    width: '100%',
-    height: '100%',
-  },
-  removePhotoButton: {
-    position: 'absolute',
-    right: 6,
-    top: 6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 8,
-  },
-  starButton: {
-    padding: 8,
-  },
-  ratingText: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  reviewInput: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    fontSize: 15,
-    color: '#222',
-    textAlignVertical: 'top',
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#8E8E93',
-    marginTop: 8,
-    textAlign: 'right',
-  },
-  dateButton: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    justifyContent: 'center',
-  },
-  dateButtonText: {
-    fontSize: 15,
-    color: '#222',
-    fontWeight: '500',
-  },
-  friendsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  friendChip: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  friendChipSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  friendChipText: {
-    fontSize: 14,
-    color: '#222',
-    fontWeight: '500',
-  },
-  friendChipTextSelected: {
-    color: '#FFF',
-  },
-  submitButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

@@ -1,8 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   Dimensions,
   TouchableOpacity,
   Animated,
@@ -18,9 +16,13 @@ import { X, Share2, Download } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { AuthGuard } from '@/components/AuthGuard';
+import { Text } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
+import { RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
 
-const { width, height } = Dimensions.get('window');
-const SLIDE_HEIGHT = height;
+const { width } = Dimensions.get('window');
+/** Slide containers use flex:1 inside SafeAreaView so content does not draw under status bar / home indicator. */
+const SLIDE_FLEX = { width: '100%' as const, flex: 1 as const };
 
 // ─── Dummy data (realistic) ────────────────────────────────────────────────
 const DATA = {
@@ -68,21 +70,35 @@ const IntroSlide = ({ onNext, tasteProfileName }: { onNext: () => void; tastePro
   }, []);
 
   return (
-    <Pressable style={styles.slide} onPress={onNext}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <Text style={styles.eyebrow}>YOUR {DATA.year} IN REVIEW</Text>
-        <View style={styles.titleBlock}>
-          <Text style={styles.displayTitle}>Museum</Text>
-          <Text style={styles.displayAccent}>Wrapped</Text>
+    <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+      <Animated.View
+        className="items-center justify-center px-8"
+        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          YOUR {DATA.year} IN REVIEW
+        </Text>
+        <View className="mb-5 items-center">
+          <Text className="text-center text-5xl font-semibold leading-[50px] tracking-tight text-foreground">
+            Museum
+          </Text>
+          <Text className="text-center text-5xl font-semibold leading-[52px] tracking-tight text-primary">
+            Wrapped
+          </Text>
         </View>
-        <View style={styles.tasteProfilePill}>
-          <Text style={styles.tasteProfilePillText}>{tasteProfileName ?? 'Explorer'}</Text>
+        <View className="mt-3 flex-row items-center gap-1.5 rounded-full bg-primary/15 px-3.5 py-2">
+          <Text className="text-base font-semibold text-primary">{tasteProfileName ?? 'Explorer'}</Text>
         </View>
-        <Text style={styles.bodyText}>Let's explore your artistic{'\n'}journey this year</Text>
+        <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">
+          Let&apos;s explore your artistic{'\n'}journey this year
+        </Text>
       </Animated.View>
-      <Animated.View style={[styles.tapHint, { transform: [{ scale: pulseAnim }] }]}>
-        <Text style={styles.tapLabel}>TAP TO CONTINUE</Text>
-      </Animated.View>
+      <View
+        pointerEvents="box-none"
+        className="absolute bottom-0 left-0 right-0 items-center pb-4">
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <Text className="text-xs font-semibold tracking-[2.5px] text-primary">TAP TO CONTINUE</Text>
+        </Animated.View>
+      </View>
     </Pressable>
   );
 };
@@ -101,18 +117,22 @@ const HoursSlide = ({ onNext }: { onNext: () => void }) => {
   }, []);
 
   return (
-    <Pressable style={styles.slide} onPress={onNext}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        <Text style={styles.eyebrow}>YOU SPENT</Text>
-        <View style={styles.bigStatBlock}>
-          <Text style={styles.bigNumber}>{displayed}</Text>
-          <Text style={styles.displayAccent}>hours</Text>
+    <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+      <Animated.View className="items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          YOU SPENT
+        </Text>
+        <View className="my-1 items-center">
+          <Text className="text-8xl font-bold leading-none tracking-tighter text-foreground">{displayed}</Text>
+          <Text className="text-center text-5xl font-semibold leading-[52px] tracking-tight text-primary">
+            hours
+          </Text>
         </View>
-        <Text style={styles.bodyText}>lost in art and wonder</Text>
-        <View style={styles.subStatRow}>
-          <Text style={styles.subStatLabel}>THAT'S LIKE</Text>
-          <Text style={styles.subStatValue}>{DATA.totalDays} days</Text>
-          <Text style={styles.subStatCaption}>of pure culture</Text>
+        <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">lost in art and wonder</Text>
+        <View className="mt-7 items-center gap-0.5">
+          <Text className="text-xs font-normal tracking-[2.5px] text-muted-foreground">THAT&apos;S LIKE</Text>
+          <Text className="mt-1 text-2xl font-bold text-foreground">{DATA.totalDays} days</Text>
+          <Text className="mt-0.5 text-xs text-muted-foreground">of pure culture</Text>
         </View>
       </Animated.View>
     </Pressable>
@@ -128,18 +148,26 @@ const MuseumsSlide = ({ onNext }: { onNext: () => void }) => {
   }, []);
 
   return (
-    <Pressable style={styles.slide} onPress={onNext}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        <Text style={styles.eyebrow}>YOU EXPLORED</Text>
-        <View style={styles.bigStatBlock}>
-          <Text style={styles.bigNumber}>{DATA.museumsVisited}</Text>
-          <Text style={styles.displayAccent}>museums</Text>
+    <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+      <Animated.View className="items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          YOU EXPLORED
+        </Text>
+        <View className="my-1 items-center">
+          <Text className="text-8xl font-bold leading-none tracking-tighter text-foreground">
+            {DATA.museumsVisited}
+          </Text>
+          <Text className="text-center text-5xl font-semibold leading-[52px] tracking-tight text-primary">
+            museums
+          </Text>
         </View>
-        <Text style={styles.bodyText}>across {DATA.citiesExplored} cities</Text>
-        <View style={styles.subStatRow}>
-          <Text style={styles.subStatLabel}>INCLUDING</Text>
-          <Text style={styles.subStatValue}>{DATA.eventsAttended} events</Text>
-          <Text style={styles.subStatCaption}>attended in person</Text>
+        <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">
+          across {DATA.citiesExplored} cities
+        </Text>
+        <View className="mt-7 items-center gap-0.5">
+          <Text className="text-xs font-normal tracking-[2.5px] text-muted-foreground">INCLUDING</Text>
+          <Text className="mt-1 text-2xl font-bold text-foreground">{DATA.eventsAttended} events</Text>
+          <Text className="mt-0.5 text-xs text-muted-foreground">attended in person</Text>
         </View>
       </Animated.View>
     </Pressable>
@@ -158,26 +186,33 @@ const TopSpotSlide = ({ onNext }: { onNext: () => void }) => {
     ]).start();
   }, []);
 
+  const museumCardSize = { width: width * 0.72, height: width * 0.5 };
   return (
-    <Pressable style={styles.slide} onPress={onNext}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        <Text style={styles.eyebrow}>YOUR #1 SPOT</Text>
-        <Animated.View style={[styles.museumCard, { transform: [{ scale: scaleAnim }] }]}>
-          <View style={styles.museumCardPlaceholder}>
-            <Text style={styles.museumCardEmoji}>🏛️</Text>
+    <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+      <Animated.View className="items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          YOUR #1 SPOT
+        </Text>
+        <Animated.View
+          className="my-5 overflow-hidden rounded-2xl shadow-md shadow-black/10"
+          style={[museumCardSize, { transform: [{ scale: scaleAnim }] }]}>
+          <View className="size-full items-center justify-center bg-muted">
+            <Text className="text-6xl">🏛️</Text>
           </View>
         </Animated.View>
-        <Text style={styles.museumName}>{DATA.topMuseum.name}</Text>
-        <Text style={styles.museumLocation}>{DATA.topMuseum.location}</Text>
-        <View style={styles.museumStats}>
-          <View style={styles.museumStat}>
-            <Text style={[styles.museumStatValue, { color: '#D4915A' }]}>{DATA.topMuseum.visits}</Text>
-            <Text style={styles.museumStatLabel}>visits</Text>
+        <Text className="mt-1 text-center text-2xl font-bold text-foreground">{DATA.topMuseum.name}</Text>
+        <Text className="mt-1 text-center text-sm tracking-wide text-muted-foreground">
+          {DATA.topMuseum.location}
+        </Text>
+        <View className="mt-5 flex-row items-center gap-6">
+          <View className="items-center">
+            <Text className="text-3xl font-bold text-primary">{DATA.topMuseum.visits}</Text>
+            <Text className="mt-0.5 text-xs font-normal tracking-widest text-muted-foreground">visits</Text>
           </View>
-          <View style={styles.museumStatDivider} />
-          <View style={styles.museumStat}>
-            <Text style={[styles.museumStatValue, { color: '#D4915A' }]}>{DATA.topMuseum.hours}</Text>
-            <Text style={styles.museumStatLabel}>hours</Text>
+          <View className="h-9 w-px bg-border" />
+          <View className="items-center">
+            <Text className="text-3xl font-bold text-primary">{DATA.topMuseum.hours}</Text>
+            <Text className="mt-0.5 text-xs font-normal tracking-widest text-muted-foreground">hours</Text>
           </View>
         </View>
       </Animated.View>
@@ -209,31 +244,35 @@ const StylesSlide = ({ onNext }: { onNext: () => void }) => {
     });
   }, []);
 
+  const impressionBox = { width: width * 0.7, height: width * 0.38 };
   return (
-    <Pressable style={styles.slide} onPress={onNext}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        <Text style={styles.eyebrow}>YOU GRAVITATED TOWARDS</Text>
-        <Text style={[styles.displayAccent, { fontSize: 32, marginBottom: 12 }]}>
-          {DATA.artStyles[0].name}
+    <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+      <Animated.View className="w-full items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          YOU GRAVITATED TOWARDS
         </Text>
-        
-        <Animated.View style={[styles.impressionistImageContainer, { opacity: imageOpacity, transform: [{ scale: imageScale }] }]}>
-          <Image 
-            source={require('@/assets/images/dexmac-panorama-9573161_1920.jpg')} 
-            style={styles.impressionistImage}
+        <Text className="mb-3 text-center text-3xl font-semibold text-primary">{DATA.artStyles[0].name}</Text>
+
+        <Animated.View
+          className="mb-5 overflow-hidden rounded-xl shadow-md shadow-black/15"
+          style={[impressionBox, { opacity: imageOpacity, transform: [{ scale: imageScale }] }]}>
+          <Image
+            source={require('@/assets/images/dexmac-panorama-9573161_1920.jpg')}
+            className="size-full"
             resizeMode="cover"
           />
         </Animated.View>
 
-        <View style={styles.barChart}>
+        <View className="w-full gap-2.5">
           {DATA.artStyles.map((style, i) => (
-            <View key={style.name} style={styles.barRow}>
-              <Text style={styles.barLabel}>{style.name}</Text>
-              <View style={styles.barTrack}>
+            <View key={style.name} className="flex-row items-center gap-2.5">
+              <Text className="w-[110px] text-right text-xs text-muted-foreground">{style.name}</Text>
+              <View className="h-1 flex-1 overflow-hidden rounded-sm bg-muted">
                 <Animated.View
                   style={[
-                    styles.barFill,
                     {
+                      height: '100%',
+                      borderRadius: 2,
                       width: barAnims[i].interpolate({
                         inputRange: [0, 1],
                         outputRange: ['0%', `${style.pct * 2.5}%`],
@@ -243,11 +282,13 @@ const StylesSlide = ({ onNext }: { onNext: () => void }) => {
                   ]}
                 />
               </View>
-              <Text style={styles.barPct}>{style.pct}%</Text>
+              <Text className="w-8 text-right text-xs text-muted-foreground">{style.pct}%</Text>
             </View>
           ))}
         </View>
-        <Text style={styles.footnoteText}>Those dreamy brushstrokes really speak to you</Text>
+        <Text className="mt-4 text-center text-sm text-muted-foreground">
+          Those dreamy brushstrokes really speak to you
+        </Text>
       </Animated.View>
     </Pressable>
   );
@@ -274,15 +315,15 @@ const TasteProfileSlide = ({
   }, []);
 
   return (
-    <Pressable style={styles.slide} onPress={onNext}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        <Text style={styles.eyebrow}>YOUR TASTE PROFILE</Text>
+    <Pressable className="items-center justify-center bg-transparent" style={SLIDE_FLEX} onPress={onNext}>
+      <Animated.View className="items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          YOUR TASTE PROFILE
+        </Text>
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          <Text style={[styles.displayAccent, { fontSize: 48, marginBottom: 12 }]}>
-            {profileName ?? 'Explorer'}
-          </Text>
+          <Text className="mb-3 text-center text-5xl font-semibold text-primary">{profileName ?? 'Explorer'}</Text>
         </Animated.View>
-        <Text style={styles.bodyText}>
+        <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">
           {category
             ? `Based on your love of ${category} museums`
             : 'Follow museums to discover your taste profile'}
@@ -311,38 +352,63 @@ const ShareSlide = () => {
   };
 
   return (
-    <View style={styles.slide}>
-      <Animated.View style={[styles.slideContent, { opacity: fadeAnim }]}>
-        <Text style={styles.eyebrow}>THAT'S A WRAP!</Text>
-        <View style={styles.titleBlock}>
-          <Text style={styles.displayTitle}>Share your</Text>
-          <Text style={styles.displayAccent}>museum year</Text>
+    <View className="items-center justify-center bg-transparent" style={SLIDE_FLEX}>
+      <Animated.View className="items-center justify-center px-8" style={{ opacity: fadeAnim }}>
+        <Text className="mb-4 text-center text-xs font-normal tracking-[2.5px] text-muted-foreground">
+          THAT&apos;S A WRAP!
+        </Text>
+        <View className="mb-5 items-center">
+          <Text className="text-center text-5xl font-semibold leading-[50px] tracking-tight text-foreground">
+            Share your
+          </Text>
+          <Text className="text-center text-5xl font-semibold leading-[52px] tracking-tight text-primary">
+            museum year
+          </Text>
         </View>
-        <Text style={styles.bodyText}>Let the world know about{'\n'}your cultural adventures</Text>
-        <Animated.View style={[styles.shareButtons, { transform: [{ scale: buttonScale }] }]}>
-          <TouchableOpacity style={styles.shareIconButton} onPress={handleShare} activeOpacity={0.85}>
+        <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">
+          Let the world know about{'\n'}your cultural adventures
+        </Text>
+        <Animated.View
+          className="mt-8 flex-row justify-center gap-4"
+          style={{ transform: [{ scale: buttonScale }] }}>
+          <TouchableOpacity
+            className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
+            onPress={handleShare}
+            activeOpacity={0.85}>
             <Share2 size={24} color="#FFF" strokeWidth={1.5} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.shareIconButton} activeOpacity={0.85}>
+          <TouchableOpacity
+            className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
+            activeOpacity={0.85}>
             <Download size={24} color="#FFF" strokeWidth={1.5} />
           </TouchableOpacity>
         </Animated.View>
-        <Text style={styles.footerCredit}>Museum Wrapped {DATA.year}</Text>
+        <Text className="mt-8 text-center text-xs tracking-wide text-muted-foreground">
+          Museum Wrapped {DATA.year}
+        </Text>
       </Animated.View>
     </View>
   );
 };
 
 // ─── Progress dots ─────────────────────────────────────────────────────────
-const ProgressDots = ({ total, current }: { total: number; current: number }) => (
-  <View style={styles.dotsContainer}>
+const ProgressDots = ({
+  total,
+  current,
+  topInset,
+}: {
+  total: number;
+  current: number;
+  /** Safe-area top inset so dots sit below the status bar / Dynamic Island. */
+  topInset: number;
+}) => (
+  <View
+    className="pointer-events-none absolute left-0 right-0 z-10 flex-row justify-center gap-1.5"
+    style={{ top: topInset + 12 }}>
     {Array.from({ length: total }).map((_, i) => (
       <View
         key={i}
-        style={[
-          styles.dot,
-          i === current ? styles.dotActive : styles.dotInactive,
-        ]}
+        className={cn('h-1 rounded-sm', i === current ? 'w-5 bg-primary' : 'w-1 bg-muted-foreground/30')}
       />
     ))}
   </View>
@@ -383,378 +449,83 @@ export default function WrappedScreen() {
     };
 
     switch (SLIDES[currentSlide]) {
-      case 'intro': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><IntroSlide onNext={goToNext} tasteProfileName={tasteProfile?.profileName ?? null} /></Animated.View>;
-      case 'hours': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><HoursSlide onNext={goToNext} /></Animated.View>;
-      case 'museums': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><MuseumsSlide onNext={goToNext} /></Animated.View>;
-      case 'topspot': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><TopSpotSlide onNext={goToNext} /></Animated.View>;
-      case 'styles': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><StylesSlide onNext={goToNext} /></Animated.View>;
-      case 'tasteprofile': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><TasteProfileSlide profileName={tasteProfile?.profileName ?? null} category={tasteProfile?.category ?? null} onNext={goToNext} /></Animated.View>;
-      case 'share': return <Animated.View style={[styles.slideWrapper, animatedStyle]}><ShareSlide /></Animated.View>;
-      default: return null;
+      case 'intro':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <IntroSlide onNext={goToNext} tasteProfileName={tasteProfile?.profileName ?? null} />
+          </Animated.View>
+        );
+      case 'hours':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <HoursSlide onNext={goToNext} />
+          </Animated.View>
+        );
+      case 'museums':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <MuseumsSlide onNext={goToNext} />
+          </Animated.View>
+        );
+      case 'topspot':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <TopSpotSlide onNext={goToNext} />
+          </Animated.View>
+        );
+      case 'styles':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <StylesSlide onNext={goToNext} />
+          </Animated.View>
+        );
+      case 'tasteprofile':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <TasteProfileSlide
+              profileName={tasteProfile?.profileName ?? null}
+              category={tasteProfile?.category ?? null}
+              onNext={goToNext}
+            />
+          </Animated.View>
+        );
+      case 'share':
+        return (
+          <Animated.View className="flex-1 overflow-hidden" style={[SLIDE_FLEX, animatedStyle]}>
+            <ShareSlide />
+          </Animated.View>
+        );
+      default:
+        return null;
     }
   };
 
   return (
     <AuthGuard>
-      <SafeAreaView style={styles.root} edges={['top']}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" />
-        <View style={styles.topRightBubble} pointerEvents="none">
+        <View
+          className="pointer-events-none absolute -right-[120px] -top-[150px] z-0 h-[600px] w-[600px] overflow-hidden rounded-full"
+          pointerEvents="none">
           <LinearGradient
             colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
-            style={styles.bubbleGradient}
+            className="size-full"
+            style={{ width: '100%', height: '100%' }}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
           />
         </View>
         {renderCurrentSlide()}
-        {/* Close button */}
         <TouchableOpacity
-          style={[styles.closeButton, { top: Math.max(insets.top + 8, 16) }]}
+          className="absolute right-5 z-20 size-9 items-center justify-center rounded-full border border-border bg-card/90 shadow-sm shadow-black/10"
+          style={{ top: insets.top + 8 }}
           onPress={() => router.back()}
           hitSlop={12}
-          activeOpacity={0.7}
-        >
-          <X size={20} color="#666" strokeWidth={1.5} />
+          activeOpacity={0.7}>
+          <X size={20} color={RN_API_MUTED_FOREGROUND_LIGHT} strokeWidth={1.5} />
         </TouchableOpacity>
-        {/* Progress dots */}
-        <ProgressDots total={SLIDES.length} current={currentSlide} />
+        <ProgressDots total={SLIDES.length} current={currentSlide} topInset={insets.top} />
       </SafeAreaView>
     </AuthGuard>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  topRightBubble: {
-    position: 'absolute',
-    top: -150,
-    right: -120,
-    width: 600,
-    height: 600,
-    borderRadius: 300,
-    overflow: 'hidden',
-    zIndex: 0,
-  },
-  bubbleGradient: {
-    width: '100%',
-    height: '100%',
-  },
-  slideWrapper: {
-    width,
-    height: SLIDE_HEIGHT,
-  },
-  slide: {
-    width,
-    height: SLIDE_HEIGHT,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  slideContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-
-  // Typography
-  eyebrow: {
-    fontSize: 11,
-    letterSpacing: 2.5,
-    color: '#8E8E93',
-    marginBottom: 16,
-    textAlign: 'center',
-    fontWeight: '400',
-  },
-  titleBlock: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  displayTitle: {
-    fontSize: 42,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    lineHeight: 50,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  displayAccent: {
-    fontSize: 42,
-    fontWeight: '600',
-    color: '#D4915A',
-    lineHeight: 52,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  bodyText: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginTop: 8,
-  },
-  tasteProfilePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(212, 145, 90, 0.15)',
-    borderRadius: 20,
-  },
-  tasteProfilePillText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#D4915A',
-  },
-  footnoteText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  footerCredit: {
-    fontSize: 12,
-    letterSpacing: 1,
-    color: '#8E8E93',
-    fontWeight: '400',
-    marginTop: 32,
-  },
-
-  // Big stat block
-  bigStatBlock: {
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  bigNumber: {
-    fontSize: 96,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    lineHeight: 104,
-    letterSpacing: -2,
-  },
-
-  // Sub-stat callout
-  subStatRow: {
-    alignItems: 'center',
-    marginTop: 28,
-    gap: 2,
-  },
-  subStatLabel: {
-    fontSize: 10,
-    letterSpacing: 2.5,
-    color: '#8E8E93',
-    fontWeight: '400',
-  },
-  subStatValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginTop: 4,
-  },
-  subStatCaption: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#8E8E93',
-    marginTop: 2,
-  },
-
-  // Museum card
-  museumCard: {
-    width: width * 0.72,
-    height: width * 0.5,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginVertical: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  museumCardPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  museumCardEmoji: {
-    fontSize: 64,
-  },
-  museumName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  museumLocation: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#666',
-    marginTop: 4,
-    letterSpacing: 0.3,
-  },
-  museumStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-    gap: 24,
-  },
-  museumStat: {
-    alignItems: 'center',
-  },
-  museumStatValue: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  museumStatLabel: {
-    fontSize: 11,
-    fontWeight: '400',
-    color: '#8E8E93',
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-  museumStatDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#E5E5E5',
-  },
-
-  // Bar chart
-  barChart: {
-    width: '100%',
-    gap: 10,
-  },
-  barRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  barLabel: {
-    width: 110,
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#666',
-    textAlign: 'right',
-  },
-  barTrack: {
-    flex: 1,
-    height: 4,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  barPct: {
-    width: 32,
-    fontSize: 11,
-    fontWeight: '400',
-    color: '#8E8E93',
-    textAlign: 'right',
-  },
-
-  // Share buttons
-  shareButtons: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 32,
-    justifyContent: 'center',
-  },
-  shareIconButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1A1A1A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  // Close button
-  closeButton: {
-    position: 'absolute',
-    top: 16,
-    right: 20,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  // Progress dots
-  dotsContainer: {
-    position: 'absolute',
-    top: 20,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 5,
-    pointerEvents: 'none',
-  },
-  dot: {
-    height: 4,
-    borderRadius: 2,
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: '#D4915A',
-  },
-  dotInactive: {
-    width: 4,
-    backgroundColor: 'rgba(142, 142, 147, 0.3)',
-  },
-
-  // Tap hint
-  tapHint: {
-    position: 'absolute',
-    bottom: 60,
-    alignItems: 'center',
-  },
-  tapLabel: {
-    fontSize: 11,
-    letterSpacing: 2.5,
-    color: '#D4915A',
-    fontWeight: '600',
-  },
-
-  // Impressionist image
-  impressionistImageContainer: {
-    width: width * 0.7,
-    height: width * 0.38,
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  impressionistImage: {
-    width: '100%',
-    height: '100%',
-  },
-});

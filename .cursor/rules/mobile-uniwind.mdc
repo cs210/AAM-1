@@ -1,0 +1,17 @@
+---
+description: Expo mobile app uses Uniwind (Tailwind) and shared UI primitives—avoid StyleSheet for new UI.
+globs: apps/mobile/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Mobile UI: Uniwind first
+
+When editing `apps/mobile`:
+
+- **Do not** introduce `StyleSheet.create` or large `styles` objects for screens and feature components. Prefer **Uniwind `className`** on `View`, `Text`, `Pressable`, `Image`, etc., with `cn()` for conditional classes.
+- **Use** primitives from `@/components/ui` (`Text`, `Button`, `BrandActivityIndicator`, …) instead of raw `react-native` `Text` / `ActivityIndicator` where they exist, so typography and theme stay consistent.
+- **Hex colors for APIs only:** Lucide and other libraries need string colors. Import matching tokens from `@/constants/rn-api-colors` (e.g. `RN_API_PRIMARY_LIGHT`) instead of scattering one-off hex literals when a token exists.
+- **ScrollView / FlatList:** Prefer `contentContainerStyle` with a small inline object when padding or `flexGrow` must be reliable; `contentContainerClassName` is not always equivalent on native.
+- **Exceptions:** Inline `style` is fine for values Uniwind cannot express cleanly (e.g. `Animated` interpolated styles, `Dimensions`-based layout, third-party props that only accept `style`).
+
+Refactoring legacy StyleSheet blocks should move styles into `className` and delete the `StyleSheet` block once nothing references it.

@@ -18,8 +18,8 @@ type Props = {
 
 export function MuseumCard({ museum, className }: Props) {
   const [imageFailed, setImageFailed] = React.useState(false);
-  const displayRating = museum.averageRating 
-    ? museum.averageRating.toFixed(1) 
+  const displayRating = museum.averageRating
+    ? museum.averageRating.toFixed(1)
     : '—';
   const ratingLabel = museum.ratingCount && museum.ratingCount > 0
     ? `★ ${displayRating} (${museum.ratingCount})`
@@ -31,11 +31,11 @@ export function MuseumCard({ museum, className }: Props) {
   }, [museum.imageUrl]);
 
   return (
-    <Pressable 
+    <Pressable
       className={cn('mx-5 mb-3 active:opacity-90', className)}
       onPress={() => router.push(`/${museum._id}`)}
     >
-      <Card className={cn('relative overflow-hidden border-border', hasPrimaryImage && 'bg-[#111827]')}>
+      <Card className={cn('relative overflow-hidden border-border', hasPrimaryImage && 'bg-gray-900')}>
         {hasPrimaryImage && (
           <>
             <Image
@@ -61,7 +61,7 @@ export function MuseumCard({ museum, className }: Props) {
               )}>
               <Text
                 className={cn(
-                  'text-[11px] font-semibold capitalize',
+                  'text-xs font-semibold capitalize',
                   hasPrimaryImage ? 'text-white' : 'text-primary'
                 )}>
                 {museum.category}
@@ -76,7 +76,7 @@ export function MuseumCard({ museum, className }: Props) {
           </Text>
           <Text
             className={cn(
-              'text-[13px] font-medium',
+              'text-sm font-medium',
               hasPrimaryImage ? 'text-orange-100' : 'text-primary'
             )}>
             {ratingLabel}
