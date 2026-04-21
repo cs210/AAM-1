@@ -248,6 +248,9 @@ export const listAllProfiles = query({
   handler: async (ctx) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
+    if ((user as { role?: string | null }).role !== "admin") {
+      throw new Error("Admin access required");
+    }
     const profiles = await ctx.db.query("userProfiles").collect();
     return profiles.map((profile) => toPublicProfile(profile));
   },

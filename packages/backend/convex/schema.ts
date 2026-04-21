@@ -159,7 +159,6 @@ export default defineSchema({
   userProfiles: defineTable({
     userId: v.string(), // Better Auth user ID
     name: v.optional(v.string()),
-    email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     bannerUrl: v.optional(v.string()),
     museumData: v.optional(v.object({

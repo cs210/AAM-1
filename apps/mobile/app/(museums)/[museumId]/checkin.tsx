@@ -53,6 +53,7 @@ export default function CheckInScreen() {
 
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
+  const claimCheckInImageStorage = useMutation(api.checkIns.claimCheckInImageStorage);
 
   const handleDateChange = (event: unknown, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -152,6 +153,7 @@ export default function CheckInScreen() {
       const { storageId } = (await uploadResponse.json()) as {
         storageId: Id<'_storage'>;
       };
+      await claimCheckInImageStorage({ storageId });
       storageIds.push(storageId);
     }
 

@@ -18,7 +18,7 @@ withUniwind(IconImpl, {
       width: 'size',
     },
   },
-});
+} as any);
 
 /**
  * A wrapper component for Lucide icons with Nativewind `className` support via `cssInterop`.

@@ -345,6 +345,7 @@ export default function ProfileScreen() {
   const followUser = useMutation(api.follows.followUser);
   const unfollowUser = useMutation(api.follows.unfollowUser);
   const generateUploadUrl = useMutation(api.userProfiles.generateUploadUrl);
+  const claimProfileStorage = useMutation(api.userProfiles.claimProfileStorage);
   const updateProfileImage = useMutation(api.userProfiles.updateProfileImage);
   const updateBannerImage = useMutation(api.userProfiles.updateBannerImage);
 
@@ -438,6 +439,10 @@ export default function ProfileScreen() {
         body: await (await fetch(manipulated.uri)).blob(),
       });
       const { storageId } = await response.json();
+      await claimProfileStorage({
+        storageId,
+        purpose: type === 'avatar' ? 'profile_image' : 'banner_image',
+      });
 
       if (type === 'avatar') {
         await updateProfileImage({ storageId });
