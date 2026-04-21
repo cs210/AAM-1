@@ -100,7 +100,7 @@ function TasteAlignedRoute({
   peopleSearch: string;
   setPeopleSearch: (v: string) => void;
   users: ReturnType<typeof useQuery<typeof api.auth.listUsers>>;
-  filteredUsers: { userId: string; name?: string | null; email?: string | null }[];
+  filteredUsers: { userId: string; name?: string | null }[];
   compatibleCheckins: CheckinPostData[] | undefined;
   currUser: { _id: string } | null | undefined;
   currUserId: string | null;
@@ -127,7 +127,7 @@ function TasteAlignedRoute({
             data={filteredUsers}
             renderItem={({ item }) => {
               if (currUser && item.userId === currUser._id) return null;
-              const rawName = item.name || item.email || '';
+              const rawName = item.name || '';
               const displayName =
                 typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
               return (
@@ -253,9 +253,7 @@ export default function SearchScreen() {
     if (!peopleSearch.trim()) return [];
     const lowerSearch = peopleSearch.toLowerCase();
     return users.filter(
-      (user: { name?: string | null; email?: string | null }) =>
-        user.name?.toLowerCase().includes(lowerSearch) ||
-        user.email?.toLowerCase().includes(lowerSearch)
+      (user: { name?: string | null }) => user.name?.toLowerCase().includes(lowerSearch)
     );
   }, [users, peopleSearch]);
 

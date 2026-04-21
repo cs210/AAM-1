@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/card"
 import { authClient } from "@/lib/auth-client"
 import { Input } from "@/components/ui/input"
+import { sanitizeExternalUrl } from "@/lib/security"
 
 const ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY = "dashboard:activeMuseumContextId"
 
@@ -74,7 +75,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const t = useTranslations("dashboard.shell")
   const tCommon = useTranslations("common")
   const tTabs = useTranslations("dashboard.tabs")
-  const consumerAppUrl = process.env.NEXT_PUBLIC_CONSUMER_APP_URL ?? "yami://"
+  const consumerAppUrl = sanitizeExternalUrl(process.env.NEXT_PUBLIC_CONSUMER_APP_URL) ?? "/"
   const router = useRouter()
   const pathname = usePathname()
   const { activeTab, isAdminMode } = parseDashboardPathname(pathname ?? "")

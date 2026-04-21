@@ -34,7 +34,7 @@ export default function SignInScreen() {
       setIsLoading(false);
 
       if (signInError) {
-        console.error('Sign in error:', signInError);
+        if (__DEV__) console.error('Sign in error');
         setError(signInError.message ?? 'Sign in failed');
         return;
       }
@@ -43,7 +43,7 @@ export default function SignInScreen() {
         router.replace('/post-auth');
       }
     } catch (err) {
-      console.error('Unexpected error during sign in:', err);
+      if (__DEV__) console.error('Unexpected error during sign in');
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }

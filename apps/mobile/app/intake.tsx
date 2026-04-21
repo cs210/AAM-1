@@ -14,6 +14,11 @@ import { cn } from '@/lib/utils';
 const GRADIENT_COLORS = ['#F5E8DC', '#EDE6E8', '#E5E0E8'] as const;
 const GRADIENT_START = { x: 0, y: 0 };
 const GRADIENT_END = { x: 1, y: 1 };
+const ALLOWED_REDIRECTS = new Set([
+  '/(tabs)/home',
+  '/(tabs)/explore',
+  '/(tabs)/profile',
+]);
 
 /** Lucide / navigation APIs still need literal colors for this flow’s warm palette */
 const UI = {
@@ -110,10 +115,11 @@ const QUESTIONS: Question[] = [
 export default function IntakeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ redirect?: string }>();
-  const redirect =
+  const redirectParam =
     typeof params.redirect === 'string' && params.redirect.length > 0
       ? params.redirect
       : undefined;
+  const redirect = redirectParam && ALLOWED_REDIRECTS.has(redirectParam) ? redirectParam : undefined;
   const [step, setStep] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, string | number>>({});
   const [hasSubmitted, setHasSubmitted] = React.useState(false);

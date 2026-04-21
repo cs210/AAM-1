@@ -4,6 +4,76 @@ import { QueryCtx, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
+const MAX_REVIEW_LENGTH = 500;
+const MAX_FRIEND_TAGS = 20;
+const MAX_CHECKIN_IMAGES = 5;
+
+function validateCheckInPayload(review?: string, friendUserIds?: string[], imageStorageIds?: Id<"_storage">[]) {
+  if (review && review.length > MAX_REVIEW_LENGTH) {
+    throw new Error(`Review must be at most ${MAX_REVIEW_LENGTH} characters`);
+  }
+  if (friendUserIds && friendUserIds.length > MAX_FRIEND_TAGS) {
+    throw new Error(`friendUserIds must include at most ${MAX_FRIEND_TAGS} users`);
+  }
+  if (imageStorageIds && imageStorageIds.length > MAX_CHECKIN_IMAGES) {
+    throw new Error(`imageStorageIds must include at most ${MAX_CHECKIN_IMAGES} images`);
+  }
+}
+
+async function assertSelfOrAdmin(ctx: QueryCtx, targetUserId: string) {
+  const user = await authComponent.safeGetAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  if (user._id === targetUserId) return;
+  if ((user as { role?: string | null }).role === "admin") return;
+  throw new Error("Forbidden");
+}
+
+async function assertFriendTagsAreAllowed(
+  ctx: MutationCtx,
+  userId: string,
+  friendUserIds: string[]
+) {
+  const uniqueFriendIds = [...new Set(friendUserIds)].filter((id) => id !== userId);
+  if (uniqueFriendIds.length !== friendUserIds.length) {
+    throw new Error("friendUserIds must not contain duplicates or self");
+  }
+  for (const friendUserId of uniqueFriendIds) {
+    const followsForward = await ctx.db
+      .query("userUserFollows")
+      .withIndex("by_follower_and_following", (q) =>
+        q.eq("followerId", userId).eq("followingId", friendUserId)
+      )
+      .first();
+    const followsBackward = await ctx.db
+      .query("userUserFollows")
+      .withIndex("by_follower_and_following", (q) =>
+        q.eq("followerId", friendUserId).eq("followingId", userId)
+      )
+      .first();
+    if (!followsForward && !followsBackward) {
+      throw new Error("friendUserIds must be followed users or followers");
+    }
+  }
+}
+
+async function assertStorageOwnership(
+  ctx: MutationCtx,
+  userId: string,
+  storageIds: Id<"_storage">[]
+) {
+  for (const storageId of storageIds) {
+    const owner = await ctx.db
+      .query("storageOwnership")
+      .withIndex("by_userId_and_storageId", (q) =>
+        q.eq("userId", userId).eq("storageId", storageId)
+      )
+      .first();
+    if (!owner) {
+      throw new Error("Image upload ownership not found");
+    }
+  }
+}
+
 // Helper to convert storage IDs to URLs
 async function getImageUrlsFromStorageIds(
   ctx: QueryCtx | MutationCtx,
@@ -75,6 +145,29 @@ export const generateCheckInImageUploadUrl = mutation({
   },
 });
 
+export const claimCheckInImageStorage = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+    const existing = await ctx.db
+      .query("storageOwnership")
+      .withIndex("by_storageId", (q) => q.eq("storageId", args.storageId))
+      .first();
+    if (existing && existing.userId !== user._id) {
+      throw new Error("Storage already claimed by another user");
+    }
+    if (!existing) {
+      await ctx.db.insert("storageOwnership", {
+        storageId: args.storageId,
+        userId: user._id,
+        purpose: "checkin_image",
+        createdAt: Date.now(),
+      });
+    }
+  },
+});
+
 // Create a check-in (museum or event)
 export const createCheckIn = mutation({
   args: {
@@ -89,6 +182,7 @@ export const createCheckIn = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
+    validateCheckInPayload(args.review, args.friendUserIds, args.imageStorageIds);
 
     // Validate rating if provided
     if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
@@ -99,6 +193,8 @@ export const createCheckIn = mutation({
     const visitDate = args.visitDate ?? createdAt;
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
+    await assertFriendTagsAreAllowed(ctx, user._id, friendUserIds);
+    await assertStorageOwnership(ctx, user._id, imageStorageIds);
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -189,6 +285,7 @@ export const getCurrentUserCheckIns = query({
 export const getUserCheckIns = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    await assertSelfOrAdmin(ctx, args.userId);
     const userProfile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -203,8 +300,9 @@ export const getProfileVisits = query({
   args: { userId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const currentUser = await authComponent.safeGetAuthUser(ctx);
-    const targetUserId = args.userId ?? currentUser?._id;
-    if (!targetUserId) return [];
+    if (!currentUser) throw new Error("Not authenticated");
+    const targetUserId = args.userId ?? currentUser._id;
+    await assertSelfOrAdmin(ctx, targetUserId);
 
     const checkIns = await getCheckInsRaw(ctx, { userId: targetUserId });
 
@@ -307,6 +405,7 @@ export const getMuseumCheckInsWithUsers = query({
 export const getUserMuseumCheckIns = query({
   args: { userId: v.string(), museumId: v.id("museums") },
   handler: async (ctx, args) => {
+    await assertSelfOrAdmin(ctx, args.userId);
     const checkIns = await ctx.db
       .query("checkIns")
       .withIndex("by_user_and_content", (q) =>
@@ -330,6 +429,7 @@ export const updateCheckIn = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    validateCheckInPayload(args.review, args.friendUserIds, args.imageStorageIds);
 
     // Validate rating if provided
     if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
@@ -340,6 +440,10 @@ export const updateCheckIn = mutation({
     if (!checkIn) throw new ConvexError("Error thrown in updateCheckIn(): Check-in not found");
     if (checkIn.userId !== user._id)
       throw new ConvexError("Error thrown in updateCheckIn(): Unauthorized to update this check-in");
+    const nextFriendUserIds = args.friendUserIds ?? checkIn.friendUserIds ?? [];
+    const nextImageStorageIds = args.imageStorageIds ?? checkIn.imageIds ?? [];
+    await assertFriendTagsAreAllowed(ctx, user._id, nextFriendUserIds);
+    await assertStorageOwnership(ctx, user._id, nextImageStorageIds);
 
     const updateData: Record<string, unknown> = {};
     if (args.rating !== undefined) updateData.rating = args.rating;
@@ -425,6 +529,7 @@ export const createMuseumCheckIn = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
+    validateCheckInPayload(args.review, args.friendUserIds, args.imageStorageIds);
 
     // Validate rating if provided
     if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
@@ -435,6 +540,8 @@ export const createMuseumCheckIn = mutation({
     const visitDate = args.visitDate ?? createdAt;
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
+    await assertFriendTagsAreAllowed(ctx, user._id, friendUserIds);
+    await assertStorageOwnership(ctx, user._id, imageStorageIds);
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -516,6 +623,7 @@ export const createEventCheckIn = mutation({
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new ConvexError("Not authenticated");
+    validateCheckInPayload(args.review, args.friendUserIds, args.imageStorageIds);
 
     // Validate rating if provided
     if (args.rating !== undefined && (args.rating < 1 || args.rating > 5)) {
@@ -526,6 +634,8 @@ export const createEventCheckIn = mutation({
     const visitDate = args.visitDate ?? createdAt;
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
+    await assertFriendTagsAreAllowed(ctx, user._id, friendUserIds);
+    await assertStorageOwnership(ctx, user._id, imageStorageIds);
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -608,6 +718,7 @@ export const getEventCheckIns = query({
 export const getUserEventCheckIns = query({
   args: { userId: v.string(), eventId: v.id("events") },
   handler: async (ctx, args) => {
+    await assertSelfOrAdmin(ctx, args.userId);
     const checkIns = await ctx.db
       .query("checkIns")
       .withIndex("by_user_and_content", (q) =>

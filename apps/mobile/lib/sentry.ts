@@ -17,19 +17,24 @@ Sentry.init({
   enabled: enabled && Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN),
   environment: appEnv,
   release: mobileRelease(),
-  sendDefaultPii: true,
+  sendDefaultPii: false,
 
   tracesSampleRate: appEnv === "production" ? 0.15 : 0.35,
   profilesSampleRate: appEnv === "production" ? 0.1 : 0.3,
-  replaysSessionSampleRate: appEnv === "production" ? 0.08 : 0.15,
+  replaysSessionSampleRate: appEnv === "production" ? 0 : 0.15,
   replaysOnErrorSampleRate: 1,
-  enableLogs: true,
+  enableLogs: appEnv !== "production",
 
   integrations: [navigationIntegration, Sentry.mobileReplayIntegration()],
 
   enableNativeFramesTracking: !isRunningInExpoGo(),
 
   beforeSend(event) {
+    if (event.user) {
+      delete event.user.email;
+      delete event.user.ip_address;
+      delete event.user.username;
+    }
     event.tags = { ...event.tags, app: "mobile", os: Platform.OS };
     event.contexts = {
       ...event.contexts,
@@ -44,6 +49,22 @@ Sentry.init({
       },
     };
     return event;
+  },
+  beforeBreadcrumb(breadcrumb) {
+    if (breadcrumb.category?.includes("navigation") && typeof breadcrumb.data?.url === "string") {
+      try {
+        const parsed = new URL(breadcrumb.data.url);
+        parsed.search = "";
+        parsed.hash = "";
+        return {
+          ...breadcrumb,
+          data: { ...breadcrumb.data, url: parsed.toString() },
+        };
+      } catch {
+        return { ...breadcrumb, data: { ...breadcrumb.data, url: "[redacted-url]" } };
+      }
+    }
+    return breadcrumb;
   },
 });
 

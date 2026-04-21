@@ -179,7 +179,12 @@ export const getCompatibleCheckIns = query({
     if (myCategory == null) return [];
 
     // 2) All userFollows grouped by userId; unique museum IDs
-    const allFollows = await ctx.db.query("userFollows").collect();
+    const allFollowsByUser = await Promise.all(
+      [user._id, ...new Set(myProfile.map((f) => f.userId))].map((userId) =>
+        ctx.db.query("userFollows").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+      )
+    );
+    const allFollows = allFollowsByUser.flat();
     const museumIds = [...new Set(allFollows.map((f) => f.museumId))];
     const museumDocs = await Promise.all(museumIds.map((id) => ctx.db.get(id)));
     const museumCategory = new Map(
@@ -222,13 +227,17 @@ export const getCompatibleCheckIns = query({
     if (compatibleUserIds.size === 0) return [];
 
     // 4) Check-ins from compatible users (museum only), sorted by recent
-    const allCheckIns = await ctx.db.query("checkIns").collect();
-    const compatible = allCheckIns
-      .filter(
-        (ci) =>
-          ci.contentType === "museum" &&
-          compatibleUserIds.has(ci.userId)
+    const compatibleCheckIns = await Promise.all(
+      Array.from(compatibleUserIds).map((compatibleUserId) =>
+        ctx.db
+          .query("checkIns")
+          .withIndex("by_user", (q) => q.eq("userId", compatibleUserId))
+          .collect()
       )
+    );
+    const compatible = compatibleCheckIns
+      .flat()
+      .filter((ci) => ci.contentType === "museum")
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 50);
 

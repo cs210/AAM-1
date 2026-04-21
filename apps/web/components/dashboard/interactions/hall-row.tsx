@@ -56,7 +56,7 @@ export function HallRow({
       hallId: hall._id,
       type: selectedType,
       title,
-      config,
+      config: config as any,
       sortOrder: interactions?.length ?? 0,
     })
     setSelectedType(null)

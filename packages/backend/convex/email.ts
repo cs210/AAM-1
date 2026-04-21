@@ -33,7 +33,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<
   | { data: null; error: { message: string } }
 > {
   const to = Array.isArray(options.to) ? options.to : [options.to];
-  console.log("[email] sendEmail called", { to: to.join(","), subject: options.subject });
+  console.log("[email] sendEmail called", { recipients: to.length, subject: options.subject });
   const resend = getResendClient();
   if (!resend) {
     console.error("[email] RESEND_API_KEY is not set. Set it in Convex Dashboard → Settings → Environment Variables.");

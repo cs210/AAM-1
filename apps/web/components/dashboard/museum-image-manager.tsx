@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { sanitizeExternalUrl } from "@/lib/security"
 
 type MuseumImageManagerProps = {
   museumId: string
@@ -246,10 +247,17 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {imageList.map((image, index) => (
+            (() => {
+              const safeImageUrl = sanitizeExternalUrl(image.imageUrl)
+              return (
             <div key={image._id} className="space-y-2 rounded-lg border bg-muted/30 p-3">
               <div
                 className="aspect-4/3 rounded-md bg-cover bg-center"
-                style={{ backgroundImage: `url(${image.imageUrl})` }}
+                style={{
+                  backgroundImage: safeImageUrl
+                    ? `url(${safeImageUrl})`
+                    : "linear-gradient(135deg, rgba(15,23,42,0.12), rgba(15,23,42,0.35))",
+                }}
               />
               <div className="space-y-1">
                 <p className="truncate text-sm font-medium">
@@ -305,6 +313,8 @@ export function MuseumImageManager({ museumId, onPrimaryImageChange }: MuseumIma
                 </Button>
               </div>
             </div>
+              )
+            })()
           ))}
         </div>
       )}

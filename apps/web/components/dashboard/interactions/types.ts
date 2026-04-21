@@ -3,6 +3,11 @@ import { AwardIcon, HeadphonesIcon, HelpCircleIcon, MapIcon } from "lucide-react
 import type { Doc } from "@packages/backend/convex/_generated/dataModel"
 
 export type InteractionType = "quiz" | "scavenger_step" | "badge" | "info_audio"
+export type InteractionConfig =
+  | { question: string; options: string[]; correctIndex: number }
+  | { clue: string; answer?: string }
+  | { badgeName: string; criteria?: string }
+  | { script: string; audioUrl?: string }
 
 export type ExhibitionRow = Doc<"exhibitions">
 export type HallData = Doc<"halls">
@@ -27,7 +32,7 @@ export function formatDate(ts: number, locale?: string) {
   })
 }
 
-export function getDefaultConfig(type: InteractionType): Record<string, unknown> {
+export function getDefaultConfig(type: InteractionType): InteractionConfig {
   switch (type) {
     case "quiz":
       return { question: "", options: [], correctIndex: 0 }
@@ -38,6 +43,6 @@ export function getDefaultConfig(type: InteractionType): Record<string, unknown>
     case "info_audio":
       return { script: "", audioUrl: "" }
     default:
-      return {}
+      return { script: "", audioUrl: "" }
   }
 }

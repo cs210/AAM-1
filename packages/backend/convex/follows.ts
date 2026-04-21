@@ -1,14 +1,24 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import { authComponent } from "./auth";
+
+async function requireSelfOrAdmin(ctx: QueryCtx, targetUserId: string) {
+  const user = await authComponent.safeGetAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  if (user._id !== targetUserId && (user as { role?: string | null }).role !== "admin") {
+    throw new Error("Forbidden");
+  }
+}
+
 // Follow a user
 export const followUser = mutation({
-  args: { userId: v.string() }, // userId to follow
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
-
-    // Prevent following self
     if (user._id === args.userId) throw new Error("Cannot follow yourself");
 
-    // Check if already following
     const existing = await ctx.db
       .query("userUserFollows")
       .withIndex("by_follower_and_following", (q) =>
@@ -25,7 +35,6 @@ export const followUser = mutation({
   },
 });
 
-// Unfollow a user
 export const unfollowUser = mutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -38,21 +47,17 @@ export const unfollowUser = mutation({
         q.eq("followerId", user._id).eq("followingId", args.userId)
       )
       .first();
-    if (existing) {
-      await ctx.db.delete(existing._id);
-      return true;
-    }
-    return false;
+    if (!existing) return false;
+    await ctx.db.delete(existing._id);
+    return true;
   },
 });
 
-// Check if current user follows another user
 export const isFollowingUser = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
-    if (!user) return false;
-    if (user._id === args.userId) return false;
+    if (!user || user._id === args.userId) return false;
     const existing = await ctx.db
       .query("userUserFollows")
       .withIndex("by_follower_and_following", (q) =>
@@ -63,32 +68,29 @@ export const isFollowingUser = query({
   },
 });
 
-// Get followers for a user
 export const getFollowers = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    await requireSelfOrAdmin(ctx, args.userId);
     const follows = await ctx.db
       .query("userUserFollows")
       .withIndex("by_following", (q) => q.eq("followingId", args.userId))
       .collect();
-    return follows.map(f => f.followerId);
+    return follows.map((follow) => follow.followerId);
   },
 });
 
-// Get users a user is following
 export const getFollowing = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    await requireSelfOrAdmin(ctx, args.userId);
     const follows = await ctx.db
       .query("userUserFollows")
       .withIndex("by_follower", (q) => q.eq("followerId", args.userId))
       .collect();
-    return follows.map(f => f.followingId);
+    return follows.map((follow) => follow.followingId);
   },
 });
-import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { authComponent } from "./auth";
 
 // Follow a museum
 export const followMuseum = mutation({

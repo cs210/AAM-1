@@ -24,7 +24,8 @@ const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile
 
 type MuseumTab = 'about' | 'reviews';
 function normalizeExternalUrl(url: string): string {
-  if (/^https?:\/\//i.test(url)) return url;
+  if (/^https:\/\//i.test(url)) return url;
+  if (/^http:\/\//i.test(url)) throw new Error('Only https URLs are allowed');
   return `https://${url}`;
 }
 
@@ -407,7 +408,15 @@ export default function MuseumDetailScreen() {
                   {museum.website && (
                     <View className="gap-1">
                       <Text className="text-[13px] font-semibold text-foreground">Website</Text>
-                      <Pressable onPress={() => void Linking.openURL(normalizeExternalUrl(museum.website!))}>
+                      <Pressable
+                        onPress={() => {
+                          try {
+                            void Linking.openURL(normalizeExternalUrl(museum.website!));
+                          } catch {
+                            // ignore invalid website URLs
+                          }
+                        }}
+                      >
                         <Text className="text-sm text-primary underline underline-offset-2">{museum.website}</Text>
                       </Pressable>
                     </View>

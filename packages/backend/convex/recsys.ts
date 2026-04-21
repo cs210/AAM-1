@@ -13,9 +13,10 @@ export const nearestPoints = query({
     maxDistance: v.optional(v.number()),
   },
   handler: async (ctx, { point, maxRows, maxDistance }) => {
+    const safeMaxRows = Math.max(1, Math.min(maxRows, 50));
     const results = await geospatial.nearest(ctx, {
       point,
-      limit: maxRows,
+      limit: safeMaxRows,
       maxDistance,
     });
     return await Promise.all(

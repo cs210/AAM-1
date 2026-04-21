@@ -4,6 +4,47 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+
+async function requireAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
+  const user = await authComponent.safeGetAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  return user;
+}
+
+type OrganizationRow = { _id?: string; id?: string };
+function isSafeExternalUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function getOrganizationId(organization: OrganizationRow) {
+  return organization._id ?? organization.id ?? "";
+}
+
+async function assertDashboardMuseumAccess(
+  ctx: QueryCtx | MutationCtx,
+  user: { _id: string; role?: string | null },
+  museumId: Id<"museums">
+) {
+  if (user.role === "admin") return;
+  const organizations = (await ctx.runQuery(
+    (components.betterAuth as any).getOrganization.listOrganizationsForUser,
+    { userId: user._id }
+  )) as OrganizationRow[];
+  const orgIds = new Set(organizations.map(getOrganizationId).filter(Boolean));
+  const link = await ctx.db
+    .query("organizationMuseumLinks")
+    .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+    .first();
+  if (!link || !orgIds.has(link.betterAuthOrgId)) {
+    throw new Error("Museum access denied");
+  }
+}
 
 // Unified feed: events from museums the user follows and museums followed by people the user follows
 export const getUnifiedFeed = query({
@@ -29,13 +70,15 @@ export const getUnifiedFeed = query({
     // Museums followed by people the user follows
     let indirectMuseumIds: string[] = [];
     if (followedUserIds.length > 0) {
-      const allFollows = await ctx.db
-        .query("userFollows")
-        .withIndex("by_user")
-        .collect();
-      indirectMuseumIds = allFollows
-        .filter((f) => followedUserIds.includes(f.userId))
-        .map((f) => f.museumId);
+      const indirectFollows = await Promise.all(
+        followedUserIds.map((followedUserId) =>
+          ctx.db
+            .query("userFollows")
+            .withIndex("by_user", (q) => q.eq("userId", followedUserId))
+            .collect()
+        )
+      );
+      indirectMuseumIds = indirectFollows.flat().map((follow) => follow.museumId);
     }
 
     // Combine and dedupe museum IDs
@@ -123,6 +166,21 @@ export const addEvent = mutation({
     registrationUrl: v.optional(v.string()),
   },
   handler: async (ctx, { point, ...args}) => {
+    const user = await requireAuthenticatedUser(ctx);
+    if (!args.museumId) {
+      throw new Error("museumId is required");
+    }
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+    if (args.registrationUrl && !isSafeExternalUrl(args.registrationUrl)) {
+      throw new Error("registrationUrl must be an http(s) URL");
+    }
+    if (args.imageUrl && !isSafeExternalUrl(args.imageUrl)) {
+      throw new Error("imageUrl must be an http(s) URL");
+    }
     const id = await ctx.db.insert("events", args);
     await geospatial.insert(ctx, id, point, { category: args.category });
   },

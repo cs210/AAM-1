@@ -12,6 +12,35 @@ const interactionTypeValidator = v.union(
   v.literal("info_audio")
 );
 
+const interactionConfigValidator = v.union(
+  v.object({
+    question: v.string(),
+    options: v.array(v.string()),
+    correctIndex: v.number(),
+  }),
+  v.object({
+    clue: v.string(),
+    answer: v.optional(v.string()),
+  }),
+  v.object({
+    badgeName: v.string(),
+    criteria: v.optional(v.string()),
+  }),
+  v.object({
+    script: v.string(),
+    audioUrl: v.optional(v.string()),
+  })
+);
+
+function isSafeExternalUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 async function requireAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
   const user = await authComponent.safeGetAuthUser(ctx);
   if (!user) throw new Error("Not authenticated");
@@ -172,6 +201,9 @@ export const createExhibition = mutation({
       user as { _id: string; role?: string | null },
       args.museumId
     );
+    if (args.imageUrl && !isSafeExternalUrl(args.imageUrl)) {
+      throw new Error("imageUrl must be an http(s) URL");
+    }
     return await ctx.db.insert("exhibitions", args);
   },
 });
@@ -206,6 +238,9 @@ export const updateExhibition = mutation({
       patch.endDate = updates.endDate === null ? undefined : updates.endDate;
     }
     if (updates.imageUrl !== undefined) {
+      if (updates.imageUrl !== null && !isSafeExternalUrl(updates.imageUrl)) {
+        throw new Error("imageUrl must be an http(s) URL");
+      }
       patch.imageUrl = updates.imageUrl === null ? undefined : updates.imageUrl;
     }
     if (updates.sortOrder !== undefined) patch.sortOrder = updates.sortOrder;
@@ -346,7 +381,7 @@ export const createExhibitInteraction = mutation({
     hallId: v.id("halls"),
     type: interactionTypeValidator,
     title: v.string(),
-    config: v.any(),
+    config: interactionConfigValidator,
     sortOrder: v.number(),
   },
   handler: async (ctx, args) => {
@@ -365,7 +400,7 @@ export const updateExhibitInteraction = mutation({
     id: v.id("exhibitInteractions"),
     type: v.optional(interactionTypeValidator),
     title: v.optional(v.string()),
-    config: v.optional(v.any()),
+    config: v.optional(interactionConfigValidator),
     sortOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {

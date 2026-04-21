@@ -12,6 +12,10 @@ function pickUserId(user: Record<string, unknown> | null | undefined): string | 
   return undefined;
 }
 
+function toTruncatedUserId(value: string) {
+  return `usr_${value.slice(-12)}`;
+}
+
 export function SentryUserSync() {
   const user = useQuery(api.auth.getCurrentUser);
 
@@ -27,16 +31,7 @@ export function SentryUserSync() {
     }
 
     const id = pickUserId(user as Record<string, unknown>);
-    const email = typeof user.email === "string" ? user.email : undefined;
-    const username = typeof user.name === "string" ? user.name : undefined;
-
-    Sentry.setUser(
-      id
-        ? { id, email, username }
-        : email || username
-          ? { email, username }
-          : null,
-    );
+    Sentry.setUser(id ? { id: toTruncatedUserId(id) } : null);
   }, [user]);
 
   return null;

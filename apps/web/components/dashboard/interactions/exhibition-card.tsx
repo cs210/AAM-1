@@ -38,6 +38,7 @@ import { formatDate, type ExhibitionRow } from "@/components/dashboard/interacti
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { sanitizeExternalUrl } from "@/lib/security"
 
 function toDateInputValue(timestamp?: number) {
   if (!timestamp) return ""
@@ -101,6 +102,7 @@ export function ExhibitionCard({
 
   const startDateLabel = exhibition.startDate ? formatDateLocal(exhibition.startDate) : t("notSet")
   const endDateLabel = exhibition.endDate ? formatDateLocal(exhibition.endDate) : t("notSet")
+  const safeImageUrl = sanitizeExternalUrl(exhibition.imageUrl)
 
   const onStartEditing = () => {
     setSaveError(null)
@@ -284,23 +286,23 @@ export function ExhibitionCard({
                   </p>
                   <p className="break-all">
                     <span className="text-muted-foreground">{tForm("imageUrlOptional")}: </span>
-                    {exhibition.imageUrl ? (
+                    {safeImageUrl ? (
                       <a
-                        href={exhibition.imageUrl}
+                        href={safeImageUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="text-primary hover:underline"
                       >
-                        {exhibition.imageUrl}
+                        {safeImageUrl}
                       </a>
                     ) : (
                       t("notSet")
                     )}
                   </p>
-                  {exhibition.imageUrl && (
+                  {safeImageUrl && (
                     <div className="overflow-hidden rounded-md border border-border/70 bg-background">
                       <img
-                        src={exhibition.imageUrl}
+                        src={safeImageUrl}
                         alt={t("imageAlt", { name: exhibition.name })}
                         className="h-48 w-full object-cover"
                         loading="lazy"

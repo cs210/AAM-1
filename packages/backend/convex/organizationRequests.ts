@@ -3,6 +3,7 @@ import { mutation, query, internalQuery, internalMutation } from "./_generated/s
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { components } from "./_generated/api";
+import { authComponent } from "./auth";
 
 /** Id of an organization in the Better Auth component. Resolve via resolveOrganization or component getOrganization. */
 export type BetterAuthOrgId = string;
@@ -82,6 +83,20 @@ export const resolveOrganization = query({
   args: { betterAuthOrgId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     if (!args.betterAuthOrgId) return null;
+    const userId = await requireUserId(ctx);
+    const currentUser = await authComponent.safeGetAuthUser(ctx);
+    if (!currentUser) throw new Error("User not found");
+    if (currentUser.role !== "admin") {
+      const requests = await ctx.db
+        .query("organizationRequests")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .collect();
+      const isAuthorized = requests.some(
+        (request) =>
+          request.status === "approved" && request.betterAuthOrgId === args.betterAuthOrgId
+      );
+      if (!isAuthorized) throw new Error("Forbidden");
+    }
     return await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
       id: args.betterAuthOrgId,
     });

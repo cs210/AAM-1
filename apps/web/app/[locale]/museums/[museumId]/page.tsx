@@ -11,6 +11,7 @@ import { Syne, Newsreader } from "next/font/google";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { sanitizeExternalUrl } from "@/lib/security";
 
 const display = Syne({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
 const body = Newsreader({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-body" });
@@ -46,6 +47,8 @@ export default function MuseumDetailPage() {
         ),
     [exhibits],
   );
+  const safeWebsite = sanitizeExternalUrl(museum?.website);
+  const safeMuseumImageUrl = sanitizeExternalUrl(museum?.imageUrl);
 
   return (
     <div
@@ -56,8 +59,8 @@ export default function MuseumDetailPage() {
           <Button variant="outline" className="rounded-full" render={<Link href="/museums" />}>
             {t("backToMuseums")}
           </Button>
-          {museum?.website ? (
-            <Button className="rounded-full" render={<a href={museum.website} target="_blank" rel="noreferrer" />}>
+          {safeWebsite ? (
+            <Button className="rounded-full" render={<a href={safeWebsite} target="_blank" rel="noreferrer" />}>
               {t("visitMuseumSite")}
             </Button>
           ) : (
@@ -82,7 +85,9 @@ export default function MuseumDetailPage() {
                 className="absolute inset-0 bg-cover bg-center opacity-30"
                 style={{
                   backgroundImage: museum.imageUrl
-                    ? `url(${museum.imageUrl})`
+                    ? safeMuseumImageUrl
+                      ? `url(${safeMuseumImageUrl})`
+                      : "linear-gradient(130deg, rgba(15,23,42,0.12), rgba(15,23,42,0.36))"
                     : "linear-gradient(130deg, rgba(15,23,42,0.12), rgba(15,23,42,0.36))",
                 }}
               />
@@ -193,6 +198,9 @@ export default function MuseumDetailPage() {
               ) : (
                 <div className="grid gap-3">
                   {exhibitList.map((exhibition) => (
+                    (() => {
+                      const safeExhibitionImage = sanitizeExternalUrl(exhibition.imageUrl);
+                      return (
                     <article key={exhibition._id} className="rounded-2xl border border-border/60 bg-background/70 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <h3 className="text-sm font-semibold">{exhibition.name}</h3>
@@ -209,10 +217,10 @@ export default function MuseumDetailPage() {
                       {exhibition.description && (
                         <p className={`${body.className} mt-3 text-sm text-muted-foreground`}>{exhibition.description}</p>
                       )}
-                      {exhibition.imageUrl && (
+                      {safeExhibitionImage && (
                         <div className="mt-4 overflow-hidden rounded-xl border border-border/60">
                           <img
-                            src={exhibition.imageUrl}
+                            src={safeExhibitionImage}
                             alt={exhibition.name}
                             className="h-56 w-full object-cover"
                             loading="lazy"
@@ -221,6 +229,8 @@ export default function MuseumDetailPage() {
                         </div>
                       )}
                     </article>
+                      );
+                    })()
                   ))}
                 </div>
               )}

@@ -52,7 +52,6 @@ export default function SignUpPage() {
       try {
         await saveProfile({
           name: data.user.name || undefined,
-          email: data.user.email || undefined,
           imageUrl: data.user.image || undefined,
         });
       } catch (profileError) {

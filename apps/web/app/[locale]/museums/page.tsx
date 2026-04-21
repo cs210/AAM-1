@@ -9,6 +9,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { api } from "@packages/backend/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { sanitizeExternalUrl } from "@/lib/security";
 
 const display = Syne({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
 const body = Newsreader({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-body" });
@@ -84,6 +85,8 @@ export default function MuseumsPage() {
           )}
           {museumList.map((museum) => {
             const events = eventsByMuseum.get(museum._id) ?? [];
+            const safeWebsite = sanitizeExternalUrl(museum.website);
+            const safeImageUrl = sanitizeExternalUrl(museum.imageUrl);
             return (
               <Dialog.Root key={museum._id}>
                 <Dialog.Trigger
@@ -98,7 +101,9 @@ export default function MuseumsPage() {
                     className="absolute inset-0 bg-cover bg-center opacity-70 transition duration-300 group-hover:scale-[1.03]"
                     style={{
                       backgroundImage: museum.imageUrl
-                        ? `url(${museum.imageUrl})`
+                        ? safeImageUrl
+                          ? `url(${safeImageUrl})`
+                          : "linear-gradient(135deg, rgba(15,23,42,0.12), rgba(15,23,42,0.35))"
                         : "linear-gradient(135deg, rgba(15,23,42,0.12), rgba(15,23,42,0.35))",
                     }}
                   />
@@ -187,12 +192,12 @@ export default function MuseumsPage() {
                     </div>
 
                     <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-none bg-background/95 px-6 py-3 backdrop-blur sm:flex-row sm:justify-end">
-                      {museum.website ? (
+                      {safeWebsite ? (
                         <Button
                           variant="outline"
                           className="rounded-full"
                           render={
-                            <a href={museum.website} target="_blank" rel="noreferrer" />
+                            <a href={safeWebsite} target="_blank" rel="noreferrer" />
                           }
                         >
                           {t("visitMuseumSite")}

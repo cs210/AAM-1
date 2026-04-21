@@ -1,9 +1,20 @@
 import { mutation } from "./_generated/server";
+import { authComponent } from "./auth";
+import type { MutationCtx } from "./_generated/server";
+
+async function requireAdmin(ctx: MutationCtx) {
+  const user = await authComponent.safeGetAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  if ((user as { role?: string | null }).role !== "admin") {
+    throw new Error("Admin access required");
+  }
+}
 
 // Populate fake museums into Convex database
 export const populateFakeMuseums = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const museums = [
       {
         name: "The Metropolitan Museum of Art",
@@ -194,6 +205,7 @@ export const populateFakeMuseums = mutation({
 export const populateFakeEvents = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const museums = await ctx.db.query("museums").collect();
     if (museums.length === 0) {
       return { error: "No museums found. Run populateFakeMuseums first." };
@@ -245,6 +257,7 @@ export const populateFakeEvents = mutation({
 export const populateFakeRatings = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const museums = await ctx.db.query("museums").collect();
     if (museums.length === 0) {
       return { error: "No museums found. Run populateFakeMuseums first." };

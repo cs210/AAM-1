@@ -320,12 +320,10 @@ export default function ProfileScreen() {
   const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
 
   // Fetch user profile info
-  const userProfile = useQuery(api.auth.listUsers, {});
-  // Removed redundant saveUserProfile call. Profile upsert now only happens after sign-up.
-  const profile = React.useMemo(() => {
-    if (!userProfile || !viewedUserId) return null;
-    return userProfile.find((u: any) => u.userId === viewedUserId);
-  }, [userProfile, viewedUserId]);
+  const profile = useQuery(
+    api.userProfiles.getPublicProfileForUser,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
 
   // Fetch follower/following counts
   const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
@@ -466,7 +464,7 @@ export default function ProfileScreen() {
   const FALLBACK_DISPLAY_NAME = "Name can't be displayed";
   // Own profile: use current user's name/email from auth; else profile. Other users: name only (never show their email).
   const rawDisplayName = viewedUserId === currentUserId
-    ? (currentUser?.name ?? currentUser?.email ?? profile?.name ?? profile?.email ?? FALLBACK_DISPLAY_NAME)
+    ? (currentUser?.name ?? currentUser?.email ?? profile?.name ?? FALLBACK_DISPLAY_NAME)
     : (profile?.name ?? FALLBACK_DISPLAY_NAME);
   // Never show trailing " 2", " 3", etc. (e.g. from auth duplicate-name handling)
   const displayName = typeof rawDisplayName === 'string'
@@ -625,10 +623,6 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              {viewedUserId === currentUserId && profile?.email && (
-                <Text className="mb-2 text-sm text-muted-foreground">{profile.email}</Text>
-              )}
-
               <View className="mt-1 flex-row gap-4">
                 <Text className="text-sm">
                   <Text className="text-sm font-bold text-foreground">

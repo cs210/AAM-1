@@ -49,7 +49,7 @@ export default function CheckInScreen() {
 
   const museum = useQuery(api.museums.getMuseum, id ? { id: id as Id<'museums'> } : 'skip');
 
-  const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
+  const allUsers = useQuery(api.userProfiles.listFriendOptions, {});
 
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
@@ -356,7 +356,7 @@ export default function CheckInScreen() {
                         'text-sm font-medium',
                         selectedFriends.includes(user.userId) ? 'text-primary-foreground' : 'text-foreground'
                       )}>
-                      {user.name || user.email}
+                      {user.name || 'Unknown user'}
                     </Text>
                     {selectedFriends.includes(user.userId) && <XIcon size={16} color="#FFF" />}
                   </Pressable>

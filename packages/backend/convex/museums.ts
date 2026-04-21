@@ -448,6 +448,14 @@ export const addMuseumImageForDashboard = mutation({
     if (!resolvedImageUrl) {
       throw new Error("Image URL is required");
     }
+    try {
+      const parsed = new URL(resolvedImageUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("Invalid protocol");
+      }
+    } catch {
+      throw new Error("Image URL must be an http(s) URL");
+    }
 
     const now = Date.now();
     const existingImages = await listMuseumImagesBySort(ctx, args.museumId);

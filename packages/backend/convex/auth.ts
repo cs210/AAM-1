@@ -17,12 +17,13 @@ import { sendEmail } from "./email";
 export const listUsers = query({
   args: {},
   handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
     // Return all userProfiles (public info only)
     const profiles = await ctx.db.query("userProfiles").collect();
     return profiles.map((profile) => ({
       userId: profile.userId,
       name: profile.name ?? null,
-      email: profile.email ?? null,
       imageUrl: profile.imageUrl ?? null,
       bannerUrl: profile.bannerUrl ?? null,
     }));
@@ -71,6 +72,7 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
   const siteUrl = resolveSiteUrl() ?? "";
   const aliasUrls = getAliasUrls();
+  const isProduction = process.env.NODE_ENV === "production";
   const trustedOrigins = [siteUrl, ...aliasUrls, "http://localhost:8081", "yami://", "exp://"]
     .filter((origin): origin is string => Boolean(origin));
 
@@ -80,7 +82,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
+      requireEmailVerification: isProduction,
       sendResetPassword: async ({ user, url }) => {
         await sendEmail({
           to: user.email,
@@ -159,12 +161,14 @@ export const getCurrentUser = query({
 export const saveUserProfile = mutation({
   args: {
     name: v.optional(v.string()),
-    email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
   },
-  handler: async (ctx, { name, email, imageUrl }) => {
+  handler: async (ctx, { name, imageUrl }) => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
+    if (imageUrl && !imageUrl.startsWith("https://")) {
+      throw new Error("imageUrl must use https");
+    }
 
     const userId = user._id;
     const now = Date.now();
@@ -176,7 +180,6 @@ export const saveUserProfile = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         name,
-        email,
         imageUrl,
         updatedAt: now,
       });
@@ -184,7 +187,6 @@ export const saveUserProfile = mutation({
       await ctx.db.insert("userProfiles", {
         userId,
         name,
-        email,
         imageUrl,
         updatedAt: now,
       });

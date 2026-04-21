@@ -505,6 +505,26 @@ export const updateMuseumForAdmin = mutation({
     await requireAdmin(ctx);
     const existingMuseum = await ctx.db.get(museumId);
     if (!existingMuseum) throw new Error("Museum not found");
+    if (museum.imageUrl) {
+      try {
+        const imageUrl = new URL(museum.imageUrl);
+        if (imageUrl.protocol !== "http:" && imageUrl.protocol !== "https:") {
+          throw new Error("Invalid image protocol");
+        }
+      } catch {
+        throw new Error("imageUrl must be an http(s) URL");
+      }
+    }
+    if (museum.website) {
+      try {
+        const websiteUrl = new URL(museum.website);
+        if (websiteUrl.protocol !== "http:" && websiteUrl.protocol !== "https:") {
+          throw new Error("Invalid website protocol");
+        }
+      } catch {
+        throw new Error("website must be an http(s) URL");
+      }
+    }
 
     await ctx.db.patch(museumId, museum);
     await geospatial.insert(ctx, museumId, point, { category: museum.category });

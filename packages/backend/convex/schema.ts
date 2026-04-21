@@ -1,6 +1,26 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const interactionConfigValidator = v.union(
+  v.object({
+    question: v.string(),
+    options: v.array(v.string()),
+    correctIndex: v.number(),
+  }),
+  v.object({
+    clue: v.string(),
+    answer: v.optional(v.string()),
+  }),
+  v.object({
+    badgeName: v.string(),
+    criteria: v.optional(v.string()),
+  }),
+  v.object({
+    script: v.string(),
+    audioUrl: v.optional(v.string()),
+  })
+);
+
 export default defineSchema({
     // User-to-User Following
     userUserFollows: defineTable({
@@ -186,7 +206,7 @@ export default defineSchema({
       v.literal("info_audio")
     ),
     title: v.string(),
-    config: v.any(), // type-specific: quiz → { question, options, correctIndex }, etc.
+    config: interactionConfigValidator,
     sortOrder: v.number(),
   })
     .index("by_hall", ["hallId"])
@@ -209,6 +229,15 @@ export default defineSchema({
     .index("by_content", ["contentType", "contentId"])
     .index("by_user_and_content", ["userId", "contentType", "contentId"])
     .index("by_user_and_date", ["userId", "visitDate"]),
+
+  storageOwnership: defineTable({
+    storageId: v.id("_storage"),
+    userId: v.string(),
+    purpose: v.union(v.literal("checkin_image"), v.literal("profile_image"), v.literal("banner_image")),
+    createdAt: v.number(),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_userId_and_storageId", ["userId", "storageId"]),
 
   // Per-user museum interest survey responses
   userInterests: defineTable({

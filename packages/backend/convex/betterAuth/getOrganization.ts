@@ -1,6 +1,16 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+
+async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity?.subject) throw new Error("Not authenticated");
+  const currentUser = await ctx.db.get(identity.subject as Id<"user">);
+  if (!currentUser) throw new Error("User not found");
+  if (currentUser.role !== "admin") throw new Error("Admin access required");
+  return currentUser;
+}
 
 /**
  * Resolve an organization by id. Exposed so the main app can treat
@@ -9,6 +19,19 @@ import type { Id } from "./_generated/dataModel";
 export const getOrganization = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error("Not authenticated");
+    const currentUser = await ctx.db.get(identity.subject as Id<"user">);
+    if (!currentUser) throw new Error("User not found");
+    if (currentUser.role !== "admin") {
+      const membership = await ctx.db
+        .query("member")
+        .withIndex("organizationId_userId", (q) =>
+          q.eq("organizationId", args.id).eq("userId", identity.subject!)
+        )
+        .first();
+      if (!membership) throw new Error("Forbidden");
+    }
     return await ctx.db.get(args.id as Id<"organization">);
   },
 });
@@ -17,6 +40,7 @@ export const getOrganization = query({
 export const listOrganizations = query({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     return await ctx.db.query("organization").collect();
   },
 });
@@ -25,6 +49,13 @@ export const listOrganizations = query({
 export const listOrganizationsForUser = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.subject) throw new Error("Not authenticated");
+    const currentUser = await ctx.db.get(identity.subject as Id<"user">);
+    if (!currentUser) throw new Error("User not found");
+    if (currentUser.role !== "admin" && identity.subject !== args.userId) {
+      throw new Error("Forbidden");
+    }
     const members = await ctx.db
       .query("member")
       .withIndex("userId", (q) => q.eq("userId", args.userId))
@@ -42,6 +73,7 @@ export const listOrganizationsForUser = query({
 export const listMembersByOrganization = query({
   args: { organizationId: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     return await ctx.db
       .query("member")
       .withIndex("organizationId", (q) => q.eq("organizationId", args.organizationId))
@@ -57,6 +89,7 @@ export const addMemberToOrganization = mutation({
     role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const organization = await ctx.db.get(args.organizationId as Id<"organization">);
     if (!organization) throw new Error("Organization not found");
 
@@ -93,6 +126,7 @@ export const removeMemberFromOrganization = mutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const member = await ctx.db
       .query("member")
       .withIndex("organizationId_userId", (q) =>
