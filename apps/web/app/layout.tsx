@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Public_Sans, Instrument_Serif } from "next/font/goog
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
+import { SentryUserSync } from "@/components/sentry-user-sync";
 import { getToken } from "@/lib/auth-server";
 
 const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-sans" });
@@ -43,6 +44,7 @@ export default async function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ConvexClientProvider initialToken={token}>
+            <SentryUserSync />
             {children}
           </ConvexClientProvider>
         </ThemeProvider>

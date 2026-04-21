@@ -1,8 +1,8 @@
 const path = require("path");
-const { getDefaultConfig } = require("expo/metro-config");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withUniwindConfig } = require("uniwind/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, "../..");
 const reactPath = path.resolve(monorepoRoot, "node_modules/react");

@@ -1,11 +1,16 @@
 import '@/global.css';
 
-import { NAV_THEME } from '@/lib/theme';
+import { SentryUserSync } from '@/components/sentry-user-sync';
+import { navigationIntegration } from '@/lib/sentry';
+import { NAV_THEME } from '@/constants/rn-api-colors';
 import ConvexClientProvider from '@/providers/ConvexClientProvider';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
-import { Stack } from 'expo-router';
+import { Stack, useNavigationContainerRef } from 'expo-router';
+import * as Sentry from '@sentry/react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
 
 export {
@@ -13,17 +18,29 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
-export default function RootLayout() {
+function RootLayout() {
   const { theme } = useUniwind();
+  const navigationRef = useNavigationContainerRef();
   const colorScheme = theme === 'dark' ? 'dark' : 'light';
 
+  useEffect(() => {
+    if (navigationRef) {
+      navigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
+
   return (
-    <ConvexClientProvider>
-      <ThemeProvider value={NAV_THEME[colorScheme]}>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false }} />
-        <PortalHost />
-      </ThemeProvider>
-    </ConvexClientProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <ConvexClientProvider>
+        <SentryUserSync />
+        <ThemeProvider value={NAV_THEME[colorScheme]}>
+          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          <Stack screenOptions={{ headerShown: false }} />
+          <PortalHost />
+        </ThemeProvider>
+      </ConvexClientProvider>
+    </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

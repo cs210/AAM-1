@@ -5,17 +5,17 @@ import { Platform, Pressable } from 'react-native';
 
 const buttonVariants = cva(
   cn(
-    'group shrink-0 flex-row items-center justify-center gap-2 rounded-md shadow-none',
+    'group shrink-0 flex-row items-center justify-center gap-2 rounded-full shadow-none',
     Platform.select({
-      web: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+      web: "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap outline-none transition-all disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
     })
   ),
   {
     variants: {
       variant: {
         default: cn(
-          'bg-yellow-900 active:bg-yellow-900/90 shadow-sm shadow-black/5',
-          Platform.select({ web: 'hover:bg-yellow-900/90' })
+          'border border-transparent bg-primary active:bg-primary/80 shadow-sm shadow-black/5',
+          Platform.select({ web: 'hover:bg-primary/80' })
         ),
         destructive: cn(
           'bg-destructive active:bg-destructive/90 dark:bg-destructive/60 shadow-sm shadow-black/5',
@@ -40,10 +40,13 @@ const buttonVariants = cva(
         link: '',
       },
       size: {
-        default: cn('h-10 px-4 py-2 sm:h-9', Platform.select({ web: 'has-[>svg]:px-3' })),
-        sm: cn('h-9 gap-1.5 rounded-md px-3 sm:h-8', Platform.select({ web: 'has-[>svg]:px-2.5' })),
-        lg: cn('h-11 rounded-md px-6 sm:h-10', Platform.select({ web: 'has-[>svg]:px-4' })),
-        icon: 'h-10 w-10 sm:h-9 sm:w-9',
+        default: cn(
+          'h-9 min-h-9 px-6 py-0',
+          Platform.select({ web: 'has-[>svg]:px-3' })
+        ),
+        sm: cn('h-8 min-h-8 gap-1.5 px-4 py-0 sm:h-8', Platform.select({ web: 'has-[>svg]:px-2.5' })),
+        lg: cn('min-h-11 px-8 py-3 sm:h-11', Platform.select({ web: 'has-[>svg]:px-4' })),
+        icon: 'h-9 w-9 min-h-9 min-w-9 sm:h-9 sm:w-9',
       },
     },
     defaultVariants: {
@@ -61,7 +64,7 @@ const buttonTextVariants = cva(
   {
     variants: {
       variant: {
-        default: 'text-white',
+        default: 'text-primary-foreground',
         destructive: 'text-white',
         outline: cn(
           'group-active:text-accent-foreground',
