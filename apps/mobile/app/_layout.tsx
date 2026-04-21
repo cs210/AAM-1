@@ -19,6 +19,8 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
+console.log(process.env.EXPO_PUBLIC_POSTHOG_PROJECT_KEY)
+
 function RootLayout() {
   const { theme } = useUniwind();
   const navigationRef = useNavigationContainerRef();
@@ -30,11 +32,17 @@ function RootLayout() {
     }
   }, [navigationRef]);
 
+  const posthogProjectKey = process.env.EXPO_PUBLIC_POSTHOG_PROJECT_KEY
+
+  if (!posthogProjectKey) {
+    throw new Error("Missing EXPO_PUBLIC_POSTHOG_PROJECT_KEY");
+  }
+
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <ConvexClientProvider>
         <PostHogProvider
-            apiKey={process.env.POSTHOG_PROJECT_KEY}
+            apiKey={posthogProjectKey}
             options={{
                 host: "https://us.i.posthog.com",
             }}
