@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
+import { PostHogProvider } from 'posthog-react-native'
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -32,12 +33,19 @@ function RootLayout() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <ConvexClientProvider>
+        <PostHogProvider
+            apiKey="phc_s3guSKbY2NmVcu8EBV3Ew5mzBNtnt7RfHQoVnfCYQUkP"
+            options={{
+                host: "https://us.i.posthog.com",
+            }}
+        >
         <SentryUserSync />
         <ThemeProvider value={NAV_THEME[colorScheme]}>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           <Stack screenOptions={{ headerShown: false }} />
           <PortalHost />
         </ThemeProvider>
+        </PostHogProvider>
       </ConvexClientProvider>
     </SafeAreaProvider>
   );

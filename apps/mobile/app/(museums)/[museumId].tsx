@@ -3,6 +3,7 @@ import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
+import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon, StarIcon } from 'lucide-react-native';
@@ -199,8 +200,16 @@ export default function MuseumDetailScreen() {
     }
   };
 
+  const posthog = usePostHog();
+
   const handleCheckInPress = () => {
     if (!effectiveId) return;
+    
+    posthog?.capture('checkin_button_clicked', {
+      museumId: effectiveId,
+      isEditing: !!existingCheckIn,
+    });
+    
     if (existingCheckIn) {
       setEditingCheckIn(existingCheckIn);
     } else {
