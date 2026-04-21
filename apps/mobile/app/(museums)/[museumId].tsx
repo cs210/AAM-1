@@ -382,7 +382,7 @@ export default function MuseumDetailScreen() {
                 />
                 <View className="absolute inset-0 bg-black/35" />
                 <Text
-                  className="px-4 pb-3.5 text-2xl font-bold text-primary-foreground"
+                  className="px-4 pb-3.5 text-2xl font-bold text-white"
                   numberOfLines={2}>
                   {museum.name}
                 </Text>

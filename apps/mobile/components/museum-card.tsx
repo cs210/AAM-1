@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Image } from 'react-native';
+import { View, Pressable, Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Doc } from '@packages/backend/convex/_generated/dataModel';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
@@ -33,14 +33,19 @@ export function MuseumCard({ museum, className }: Props) {
   return (
     <Pressable
       className={cn('mx-5 mb-3 active:opacity-90', className)}
-      onPress={() => router.push(`/${museum._id}`)}
+      onPress={() =>
+        router.push({
+          pathname: '/(museums)/[museumId]',
+          params: { museumId: museum._id },
+        })
+      }
     >
       <Card className={cn('relative overflow-hidden border-border', hasPrimaryImage && 'bg-gray-900')}>
         {hasPrimaryImage && (
           <>
             <Image
               source={{ uri: museum.imageUrl }}
-              className="absolute inset-0 size-full"
+              style={StyleSheet.absoluteFillObject}
               resizeMode="cover"
               onError={() => setImageFailed(true)}
             />
