@@ -34,7 +34,7 @@ function RootLayout() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <ConvexClientProvider>
         <PostHogProvider
-            apiKey="phc_s3guSKbY2NmVcu8EBV3Ew5mzBNtnt7RfHQoVnfCYQUkP"
+            apiKey={process.env.POSTHOG_PROJECT_KEY}
             options={{
                 host: "https://us.i.posthog.com",
             }}
