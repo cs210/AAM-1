@@ -3,7 +3,7 @@ import { TextClassContext } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import * as PopoverPrimitive from '@rn-primitives/popover';
 import * as React from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 import { FadeIn, FadeOut } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
@@ -26,7 +26,11 @@ function PopoverContent({
   return (
     <PopoverPrimitive.Portal hostName={portalHost}>
       <FullWindowOverlay>
-        <PopoverPrimitive.Overlay style={Platform.select({ native: StyleSheet.absoluteFill })}>
+        <PopoverPrimitive.Overlay
+          style={Platform.select({
+            native: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+          })}
+        >
           <NativeOnlyAnimatedView entering={FadeIn.duration(200)} exiting={FadeOut}>
             <TextClassContext.Provider value="text-popover-foreground">
               <PopoverPrimitive.Content

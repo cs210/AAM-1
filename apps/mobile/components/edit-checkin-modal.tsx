@@ -98,7 +98,7 @@ export function EditCheckinModal({
             placeholder="What did you think?"
             multiline
             numberOfLines={3}
-            className="mb-6 min-h-[88px] h-auto py-3 text-base leading-5"
+            className="mb-6 min-h-24 h-auto py-3 text-base leading-5"
             textAlignVertical="top"
           />
 
@@ -113,7 +113,7 @@ export function EditCheckinModal({
               <Button
                 variant="secondary"
                 size="lg"
-                className="h-auto min-h-[48px] border-0 px-5 py-3"
+                className="h-auto min-h-12 border-0 px-5 py-3"
                 onPress={onClose}>
                 <Text className="text-base font-semibold leading-normal text-secondary-foreground">
                   Cancel
@@ -121,7 +121,7 @@ export function EditCheckinModal({
               </Button>
               <Button
                 size="lg"
-                className="h-auto min-h-[48px] border-0 px-6 py-3"
+                className="h-auto min-h-12 border-0 px-6 py-3"
                 onPress={handleSave}>
                 <Text className="text-base font-semibold leading-normal">Save</Text>
               </Button>
