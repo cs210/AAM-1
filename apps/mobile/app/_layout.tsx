@@ -10,6 +10,7 @@ import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as Sentry from '@sentry/react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
 
 export {
@@ -29,14 +30,16 @@ function RootLayout() {
   }, [navigationRef]);
 
   return (
-    <ConvexClientProvider>
-      <SentryUserSync />
-      <ThemeProvider value={NAV_THEME[colorScheme]}>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false }} />
-        <PortalHost />
-      </ThemeProvider>
-    </ConvexClientProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <ConvexClientProvider>
+        <SentryUserSync />
+        <ThemeProvider value={NAV_THEME[colorScheme]}>
+          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          <Stack screenOptions={{ headerShown: false }} />
+          <PortalHost />
+        </ThemeProvider>
+      </ConvexClientProvider>
+    </SafeAreaProvider>
   );
 }
 

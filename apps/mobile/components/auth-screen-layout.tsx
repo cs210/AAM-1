@@ -31,18 +31,18 @@ export function AuthScreenLayout({ children, subtitle, description }: AuthScreen
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 28 }}>
           {/* Avoid flex-1/grow inside ScrollView — on RN it often collapses to zero height. */}
           <View className="items-center pb-7 pt-3">
-            <Text className="mb-2 text-center text-[40px] font-bold tracking-tight text-stone-900">
+            <Text className="mb-2 text-center text-4xl font-bold tracking-tight text-stone-900">
               Museum&
             </Text>
             <Text className="text-center text-base leading-snug text-stone-600">{subtitle}</Text>
             {description ? (
-              <Text className="mt-2.5 px-2 text-center text-[15px] leading-snug text-stone-600">
+              <Text className="mt-2.5 px-2 text-center text-sm leading-snug text-stone-600">
                 {description}
               </Text>
             ) : null}
           </View>
 
-          <View className="w-full max-w-[480px] gap-5 self-center">{children}</View>
+          <View className="w-full max-w-lg gap-5 self-center">{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

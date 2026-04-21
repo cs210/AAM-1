@@ -25,12 +25,12 @@ export interface CheckinPostData {
 
 /** Left accent + rating color — theme chart tokens (synced with web). */
 const CARD_VARIANTS = [
-  { border: 'border-l-[3px] border-l-chart-1', accentText: 'text-chart-1' },
-  { border: 'border-l-[3px] border-l-chart-2', accentText: 'text-chart-2' },
-  { border: 'border-l-[3px] border-l-chart-3', accentText: 'text-chart-3' },
-  { border: 'border-l-[3px] border-l-chart-4', accentText: 'text-chart-4' },
-  { border: 'border-l-[3px] border-l-chart-5', accentText: 'text-chart-5' },
-  { border: 'border-l-[3px] border-l-chart-1', accentText: 'text-chart-1' },
+  { border: 'border-l-4 border-l-chart-1', accentText: 'text-chart-1' },
+  { border: 'border-l-4 border-l-chart-2', accentText: 'text-chart-2' },
+  { border: 'border-l-4 border-l-chart-3', accentText: 'text-chart-3' },
+  { border: 'border-l-4 border-l-chart-4', accentText: 'text-chart-4' },
+  { border: 'border-l-4 border-l-chart-5', accentText: 'text-chart-5' },
+  { border: 'border-l-4 border-l-chart-1', accentText: 'text-chart-1' },
 ];
 
 type CheckinPostProps = {
@@ -136,7 +136,7 @@ export const CheckinPost = ({
         </View>
 
         {checkin.review ? (
-          <Text className="mb-3 text-sm leading-[22px] text-foreground" numberOfLines={3}>
+          <Text className="mb-3 text-sm leading-6 text-foreground" numberOfLines={3}>
             {checkin.review}
           </Text>
         ) : null}
@@ -147,7 +147,7 @@ export const CheckinPost = ({
               <Image
                 key={`${checkin._id}-photo-${index}`}
                 source={{ uri: url }}
-                className={cn('h-[72px] w-[72px] rounded-lg bg-muted', index > 0 && 'ml-2')}
+                className={cn('size-18 rounded-lg bg-muted', index > 0 && 'ml-2')}
               />
             ))}
           </View>
