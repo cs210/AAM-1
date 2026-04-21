@@ -21,8 +21,11 @@ import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
 import {
+  RN_API_BACKGROUND_LIGHT,
+  RN_API_BORDER_LIGHT,
   RN_API_FOREGROUND_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
+  RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
@@ -258,8 +261,8 @@ export default function CheckInScreen() {
                   onPress={() => setRating(rating === star ? null : star)}>
                   <StarIcon
                     size={32}
-                    color={star <= (rating || 0) ? '#FFB800' : '#E0E0E0'}
-                    fill={star <= (rating || 0) ? '#FFB800' : 'none'}
+                    color={star <= (rating || 0) ? RN_API_PRIMARY_LIGHT : RN_API_BORDER_LIGHT}
+                    fill={star <= (rating || 0) ? RN_API_PRIMARY_LIGHT : 'none'}
                   />
                 </Pressable>
               ))}
@@ -312,7 +315,7 @@ export default function CheckInScreen() {
                       className="absolute right-1.5 top-1.5 size-5 items-center justify-center rounded-full bg-black/60"
                       onPress={() => removeImage(asset.uri)}
                       hitSlop={8}>
-                      <XIcon size={12} color="#FFF" />
+                      <XIcon size={12} color={RN_API_BACKGROUND_LIGHT} />
                     </Pressable>
                   </View>
                 ))}
@@ -412,7 +415,9 @@ export default function CheckInScreen() {
                       )}>
                       {user.name || user.email}
                     </Text>
-                    {selectedFriends.includes(user.userId) && <XIcon size={16} color="#FFF" />}
+                    {selectedFriends.includes(user.userId) && (
+                      <XIcon size={16} color={RN_API_BACKGROUND_LIGHT} />
+                    )}
                   </Pressable>
                 ))}
               </View>
@@ -427,7 +432,7 @@ export default function CheckInScreen() {
             onPress={handleSubmit}
             disabled={isSubmitting}>
             {isSubmitting ? (
-              <BrandActivityIndicator size="small" color="#fff" />
+              <BrandActivityIndicator size="small" color={RN_API_BACKGROUND_LIGHT} />
             ) : (
               <Text className="text-base font-semibold text-primary-foreground">Complete Check-In</Text>
             )}

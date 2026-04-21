@@ -18,7 +18,7 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
-import { RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
+import { RN_API_BACKGROUND_LIGHT, RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
 
 const { width } = Dimensions.get('window');
 /** Slide containers use flex:1 inside SafeAreaView so content does not draw under status bar / home indicator. */
@@ -415,12 +415,12 @@ const ShareSlide = ({
             className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
             onPress={handleShare}
             activeOpacity={0.85}>
-            <Share2 size={24} color="#FFF" strokeWidth={1.5} />
+            <Share2 size={24} color={RN_API_BACKGROUND_LIGHT} strokeWidth={1.5} />
           </TouchableOpacity>
           <TouchableOpacity
             className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
             activeOpacity={0.85}>
-            <Download size={24} color="#FFF" strokeWidth={1.5} />
+            <Download size={24} color={RN_API_BACKGROUND_LIGHT} strokeWidth={1.5} />
           </TouchableOpacity>
         </Animated.View>
         <Text className="mt-8 text-center text-xs tracking-wide text-muted-foreground">
