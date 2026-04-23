@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { authClient } from '@/lib/auth-client';
-import { AUTH_INPUT_CLASSNAME } from '@/lib/auth-ui';
 import { router } from 'expo-router';
 import * as React from 'react';
 import { Pressable, TextInput, View } from 'react-native';
@@ -34,7 +33,7 @@ export default function SignInScreen() {
       setIsLoading(false);
 
       if (signInError) {
-        console.error('Sign in error:', signInError);
+        if (__DEV__) console.error('Sign in error');
         setError(signInError.message ?? 'Sign in failed');
         return;
       }
@@ -43,7 +42,7 @@ export default function SignInScreen() {
         router.replace('/post-auth');
       }
     } catch (err) {
-      console.error('Unexpected error during sign in:', err);
+      if (__DEV__) console.error('Unexpected error during sign in');
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
@@ -69,7 +68,6 @@ export default function SignInScreen() {
           autoCapitalize="none"
           onSubmitEditing={onEmailSubmitEditing}
           returnKeyType="next"
-          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
@@ -93,7 +91,6 @@ export default function SignInScreen() {
           secureTextEntry
           returnKeyType="send"
           onSubmitEditing={onSubmit}
-          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
