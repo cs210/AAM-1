@@ -1,0 +1,23 @@
+name: Publish OTA Update
+
+# Triggered on every push to main.
+# Publishes a JS-only OTA update to the production channel so existing
+# users get the latest code without waiting for a new native build.
+# If the native fingerprint also changed (e.g. a new native module was
+# added), end-users will stay on the previous runtime until they install
+# the new binary produced by fingerprint-build.yml.
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish_update:
+    name: Publish update → production
+    type: update
+    working_directory: apps/mobile
+    params:
+      platform: all
+      channel: production
+      message: ${{ github.event.head_commit.message }}

@@ -1,0 +1,71 @@
+name: Production Release
+
+# SUGGESTED workflow – full production release pipeline triggered manually
+# (e.g. when you're ready to cut a release, not on every push).
+#
+# Pipeline:
+#   1. Build iOS production binary
+#   2. Build Android production binary  (in parallel with iOS)
+#   3. Submit iOS → App Store / TestFlight
+#   4. Submit Android → Play Store     (in parallel with iOS submit)
+#   5. Publish OTA update to production channel  (runs after both submits)
+#
+# Trigger: manually from the EAS dashboard or `eas workflow:run production-release`.
+# You can also add a `tag` trigger (e.g. v*) to fire automatically on releases.
+
+on:
+  # Uncomment to also trigger on semver tags (e.g. git tag v1.2.3 && git push --tags)
+  # push:
+  #   tags:
+  #     - 'v*'
+  manual: {}
+
+jobs:
+  # ── Native builds (parallel) ───────────────────────────────────────────────
+  build_ios:
+    name: Build iOS production
+    type: build
+    working_directory: apps/mobile
+    params:
+      platform: ios
+      profile: production
+
+  build_android:
+    name: Build Android production
+    type: build
+    working_directory: apps/mobile
+    params:
+      platform: android
+      profile: production
+
+  # ── Store submissions (parallel, after their respective builds) ────────────
+  submit_ios:
+    name: Submit iOS → App Store / TestFlight
+    needs: [build_ios]
+    type: submit
+    working_directory: apps/mobile
+    params:
+      platform: ios
+      profile: production
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+
+  submit_android:
+    name: Submit Android → Play Store
+    needs: [build_android]
+    type: submit
+    working_directory: apps/mobile
+    params:
+      platform: android
+      profile: production
+      build_id: ${{ needs.build_android.outputs.build_id }}
+
+  # ── OTA update (after both submissions succeed) ────────────────────────────
+  publish_update:
+    name: Publish OTA update → production
+    needs: [submit_ios, submit_android]
+    type: update
+    working_directory: apps/mobile
+    params:
+      platform: all
+      channel: production
+      message: "Production release"
