@@ -40,7 +40,7 @@ export function ForgotPasswordForm() {
       <Pressable
         onPress={() => router.push('/sign-in')}
         className="items-center py-4 active:opacity-85">
-        <Text className="text-center text-sm font-semibold text-stone-900 underline">
+        <Text className="text-center text-sm font-semibold text-foreground underline">
           Back to sign in
         </Text>
       </Pressable>

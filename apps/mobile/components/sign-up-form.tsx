@@ -110,9 +110,9 @@ export function SignUpForm() {
       <Pressable
         onPress={() => router.push('/sign-in')}
         className="items-center py-4 active:opacity-85">
-        <Text className="text-center text-sm text-stone-600">
+        <Text className="text-center text-sm text-muted-foreground">
           {'Already have an account? '}
-          <Text className="font-semibold text-stone-900 underline">Sign in</Text>
+          <Text className="font-semibold text-foreground underline">Sign in</Text>
         </Text>
       </Pressable>
     </>
