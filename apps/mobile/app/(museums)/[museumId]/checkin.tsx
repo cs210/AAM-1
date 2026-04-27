@@ -13,7 +13,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, StarIcon, XIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, ChevronDownIcon, StarIcon, XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -22,12 +22,22 @@ import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
 import {
+  RN_API_BACKGROUND_LIGHT,
+  RN_API_BORDER_LIGHT,
   RN_API_FOREGROUND_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
+  RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 const MAX_UPLOAD_IMAGE_SIZE = 512;
+const DURATION_OPTIONS = [
+  { label: '1 hour', value: 1 },
+  { label: '2 hours', value: 2 },
+  { label: '3 hours', value: 3 },
+  { label: '4 hours', value: 4 },
+  { label: '5 hours', value: 5 },
+] as const;
 
 export default function CheckInScreen() {
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
@@ -40,6 +50,8 @@ export default function CheckInScreen() {
   const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [visitDate, setVisitDate] = useState(new Date());
+  const [durationHours, setDurationHours] = useState<number>(1);
+  const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -185,6 +197,7 @@ export default function CheckInScreen() {
         review: review.trim() || undefined,
         imageStorageIds: imageStorageIds.length > 0 ? imageStorageIds : undefined,
         friendUserIds: selectedFriends,
+        durationHours,
         visitDate: visitDate.getTime(),
       });
 
@@ -266,8 +279,8 @@ export default function CheckInScreen() {
                   onPress={() => setRating(rating === star ? null : star)}>
                   <StarIcon
                     size={32}
-                    color={star <= (rating || 0) ? '#FFB800' : '#E0E0E0'}
-                    fill={star <= (rating || 0) ? '#FFB800' : 'none'}
+                    color={star <= (rating || 0) ? RN_API_PRIMARY_LIGHT : RN_API_BORDER_LIGHT}
+                    fill={star <= (rating || 0) ? RN_API_PRIMARY_LIGHT : 'none'}
                   />
                 </Pressable>
               ))}
@@ -320,7 +333,7 @@ export default function CheckInScreen() {
                       className="absolute right-1.5 top-1.5 size-5 items-center justify-center rounded-full bg-black/60"
                       onPress={() => removeImage(asset.uri)}
                       hitSlop={8}>
-                      <XIcon size={12} color="#FFF" />
+                      <XIcon size={12} color={RN_API_BACKGROUND_LIGHT} />
                     </Pressable>
                   </View>
                 ))}
@@ -328,6 +341,50 @@ export default function CheckInScreen() {
             ) : (
               <Text className="text-sm text-muted-foreground">Add up to 5 photos to your check-in.</Text>
             )}
+          </View>
+
+          <View className="mb-6">
+            <Text className="mb-3 text-base font-semibold text-foreground">How long were you there?</Text>
+            <View>
+              <Pressable
+                className="flex-row items-center justify-between rounded-[10px] border border-border bg-card px-3 py-3.5"
+                onPress={() => setIsDurationDropdownOpen((prev) => !prev)}>
+                <Text className="text-[15px] font-medium text-foreground">
+                  {DURATION_OPTIONS.find((option) => option.value === durationHours)?.label ?? '1 hour'}
+                </Text>
+                <ChevronDownIcon
+                  size={18}
+                  color={RN_API_MUTED_FOREGROUND_LIGHT}
+                  style={{ transform: [{ rotate: isDurationDropdownOpen ? '180deg' : '0deg' }] }}
+                />
+              </Pressable>
+
+              {isDurationDropdownOpen ? (
+                <View className="mt-2 rounded-[10px] border border-border bg-card">
+                  {DURATION_OPTIONS.map((option, index) => {
+                    const isSelected = durationHours === option.value;
+                    const isLast = index === DURATION_OPTIONS.length - 1;
+                    return (
+                      <Pressable
+                        key={option.value}
+                        className={cn('px-3 py-3', !isLast && 'border-b border-border')}
+                        onPress={() => {
+                          setDurationHours(option.value);
+                          setIsDurationDropdownOpen(false);
+                        }}>
+                        <Text
+                          className={cn(
+                            'text-[15px] font-medium',
+                            isSelected ? 'text-primary' : 'text-foreground'
+                          )}>
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
           </View>
 
           <View className="mb-6">
@@ -376,7 +433,9 @@ export default function CheckInScreen() {
                       )}>
                       {user.name || user.email}
                     </Text>
-                    {selectedFriends.includes(user.userId) && <XIcon size={16} color="#FFF" />}
+                    {selectedFriends.includes(user.userId) && (
+                      <XIcon size={16} color={RN_API_BACKGROUND_LIGHT} />
+                    )}
                   </Pressable>
                 ))}
               </View>
@@ -391,7 +450,7 @@ export default function CheckInScreen() {
             onPress={handleSubmit}
             disabled={isSubmitting}>
             {isSubmitting ? (
-              <BrandActivityIndicator size="small" color="#fff" />
+              <BrandActivityIndicator size="small" color={RN_API_BACKGROUND_LIGHT} />
             ) : (
               <Text className="text-base font-semibold text-primary-foreground">Complete Check-In</Text>
             )}

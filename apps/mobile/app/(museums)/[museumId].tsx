@@ -15,8 +15,11 @@ import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
+import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list';
 import {
   RN_API_FOREGROUND_LIGHT,
+  RN_API_BORDER_LIGHT,
+  RN_API_BACKGROUND_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
@@ -97,16 +100,18 @@ export default function MuseumDetailScreen() {
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
 
-  // Current user and their existing check-in at this museum (if any)
+  // Current user and their check-ins at this museum
   const currentUser = useQuery(api.auth.getCurrentUser);
   const userCheckIns = useQuery(
     api.checkIns.getUserMuseumCheckIns,
     effectiveId && currentUser ? { userId: currentUser._id, museumId: effectiveId as Id<'museums'> } : 'skip'
   );
-  const existingCheckIn = useMemo(() => {
-    if (!userCheckIns || userCheckIns.length === 0) return null;
-    return userCheckIns.reduce((latest, c) =>
-      (c.createdAt > latest.createdAt ? c : latest)
+  
+  // Sort check-ins by visit date (most recent first)
+  const sortedUserCheckIns = useMemo(() => {
+    if (!userCheckIns || userCheckIns.length === 0) return [];
+    return [...userCheckIns].sort((a, b) => 
+      (b.visitDate ?? b.createdAt) - (a.visitDate ?? a.createdAt)
     );
   }, [userCheckIns]);
 
@@ -126,7 +131,7 @@ export default function MuseumDetailScreen() {
     return photoUrls.slice(0, 12);
   }, [museumCheckIns]);
 
-  const [editingCheckIn, setEditingCheckIn] = useState<typeof existingCheckIn>(null);
+  const [editingCheckIn, setEditingCheckIn] = useState<UserCheckIn | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [showMoreDetails, setShowMoreDetails] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
@@ -364,7 +369,7 @@ export default function MuseumDetailScreen() {
                         <StarIcon
                           key={star}
                           size={14}
-                          color={star <= item.rating! ? RN_API_PRIMARY_LIGHT : 'rgba(0,0,0,0.15)'}
+                          color={star <= item.rating! ? RN_API_PRIMARY_LIGHT : RN_API_BORDER_LIGHT}
                           fill={star <= item.rating! ? RN_API_PRIMARY_LIGHT : 'none'}
                         />
                       ))}
@@ -391,7 +396,7 @@ export default function MuseumDetailScreen() {
                 />
                 <View className="absolute inset-0 bg-black/35" />
                 <Text
-                  className="px-4 pb-3.5 text-2xl font-bold text-primary-foreground"
+                  className="px-4 pb-3.5 text-2xl font-bold text-white"
                   numberOfLines={2}>
                   {museum.name}
                 </Text>
@@ -475,26 +480,21 @@ export default function MuseumDetailScreen() {
                 isFollowing ? 'bg-green-600' : 'bg-primary'
               )}
               onPress={handleFollowPress}>
-              <HeartIcon size={20} color="#FFF" fill={isFollowing ? '#FFF' : 'transparent'} />
+              <HeartIcon
+                size={20}
+                color={RN_API_BACKGROUND_LIGHT}
+                fill={isFollowing ? RN_API_BACKGROUND_LIGHT : 'transparent'}
+              />
               <Text className="text-base font-semibold text-primary-foreground">
                 {isFollowing ? 'Following' : 'Follow Museum'}
               </Text>
             </Pressable>
 
             <Pressable
-              className="mb-6 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card py-3.5 active:bg-muted"
+              className="mb-6 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3.5 active:opacity-90"
               onPress={handleCheckInPress}>
-              {existingCheckIn ? (
-                <>
-                  <PencilIcon size={20} color={RN_API_FOREGROUND_LIGHT} />
-                  <Text className="text-base font-semibold text-foreground">Edit your check-in</Text>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2Icon size={20} color={RN_API_FOREGROUND_LIGHT} />
-                  <Text className="text-base font-semibold text-foreground">Check In</Text>
-                </>
-              )}
+              <CheckCircle2Icon size={20} color={RN_API_BACKGROUND_LIGHT} />
+              <Text className="text-base font-semibold text-primary-foreground">Check In</Text>
             </Pressable>
 
             <View className="mb-4">
@@ -569,6 +569,8 @@ export default function MuseumDetailScreen() {
                 </View>
               )}
             </View>
+
+            <UserCheckInList checkIns={sortedUserCheckIns} onCheckInPress={handleUserCheckInPress} />
           </ScrollView>
         )}
 
