@@ -1,17 +1,12 @@
 name: PR Preview Update
 
-# SUGGESTED workflow – publish a scoped OTA update for every PR so
-# reviewers can test the exact JS bundle on a device running the
-# development or preview build without merging first.
+# Publishes a scoped OTA update for every PR so reviewers can test the exact
+# JS bundle on a device running the dev-client or preview build before merging.
 #
 # How to use:
 #   1. Install a dev-client or preview build on your device.
-#   2. Open the Expo Go / dev-client and switch to the branch channel
-#      matching this PR (EAS Update shows it as "pr-<number>").
-#   3. The latest JS is loaded automatically.
-#
-# The update is published to the "preview" channel with a branch name
-# derived from the PR number, keeping it isolated from main.
+#   2. In the Expo dev menu, switch to the update branch "pr-<number>".
+#   3. The PR's JS bundle loads automatically – no rebuild needed.
 
 on:
   pull_request:
@@ -23,14 +18,16 @@ on:
       - reopened
 
 jobs:
-  publish_pr_preview:
-    name: Publish preview update → PR branch
+  publish_ios_preview:
+    name: Publish iOS preview update
     type: update
-    working_directory: apps/mobile
     params:
-      platform: all
-      # Publish to a branch named "pr-<number>" under the preview channel
-      # so it doesn't pollute the production channel.
-      channel: preview
       branch: pr-${{ github.event.pull_request.number }}
-      message: "PR #${{ github.event.pull_request.number }} – ${{ github.event.pull_request.title }}"
+      platform: ios
+
+  publish_android_preview:
+    name: Publish Android preview update
+    type: update
+    params:
+      branch: pr-${{ github.event.pull_request.number }}
+      platform: android

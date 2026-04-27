@@ -1,14 +1,12 @@
 name: Build on Fingerprint Change
 
 # Triggered on every push to main.
-# 1. Computes the current native fingerprint for iOS and Android.
-# 2. If the fingerprint has changed (native code / deps changed), builds:
-#    - iOS dev client  → distributed internally (for the team to install)
-#    - iOS production  → submitted to TestFlight automatically
-#    - Android dev     → distributed internally
-#    - Android preview → uploaded to Play Store internal track (optional, see submit job)
-# 3. If nothing native changed, this workflow is a no-op – the OTA
-#    update published by ota-update.yml is sufficient.
+#
+# Smart deploy pipeline:
+#  - Fingerprint CHANGED → build new iOS production + iOS dev + Android dev,
+#    then auto-submit iOS production to TestFlight.
+#  - Fingerprint UNCHANGED → publish an OTA JS update so existing installs
+#    get the latest code instantly without a new binary.
 
 on:
   push:
@@ -16,54 +14,80 @@ on:
       - main
 
 jobs:
-  # ── Fingerprint check ──────────────────────────────────────────────────────
+  # ── 1. Compute fingerprint hashes for both platforms ──────────────────────
   fingerprint:
-    name: Check native fingerprint
+    name: Fingerprint
     type: fingerprint
-    working_directory: apps/mobile
-    params:
-      platform: all
 
-  # ── iOS dev client ─────────────────────────────────────────────────────────
-  build_ios_dev:
-    name: Build iOS dev client
+  # ── 2. Check whether a production build already exists for each hash ───────
+  get_ios_build:
+    name: Check for existing iOS build
     needs: [fingerprint]
-    # Only run when the iOS native fingerprint differs from the last build.
-    if: ${{ needs.fingerprint.outputs.ios.fingerprint_changed == 'true' }}
-    type: build
-    working_directory: apps/mobile
+    type: get-build
     params:
-      platform: ios
-      profile: development
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      profile: production
 
-  # ── iOS production (→ TestFlight) ──────────────────────────────────────────
+  get_android_build:
+    name: Check for existing Android build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.android_fingerprint_hash }}
+      profile: production
+
+  # ── 3. Fingerprint changed → build new iOS binaries ───────────────────────
   build_ios_production:
     name: Build iOS production
-    needs: [fingerprint]
-    if: ${{ needs.fingerprint.outputs.ios.fingerprint_changed == 'true' }}
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
     type: build
-    working_directory: apps/mobile
     params:
       platform: ios
       profile: production
 
+  build_ios_dev:
+    name: Build iOS dev client
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: development
+
+  # ── 4. Fingerprint changed → build new Android dev client ─────────────────
+  build_android_dev:
+    name: Build Android dev client
+    needs: [get_android_build]
+    if: ${{ !needs.get_android_build.outputs.build_id }}
+    type: build
+    params:
+      platform: android
+      profile: development
+
+  # ── 5. Submit new iOS production build to TestFlight ──────────────────────
   submit_ios_testflight:
     name: Submit iOS → TestFlight
     needs: [build_ios_production]
     type: submit
-    working_directory: apps/mobile
     params:
-      platform: ios
-      profile: production
       build_id: ${{ needs.build_ios_production.outputs.build_id }}
 
-  # ── Android dev client ─────────────────────────────────────────────────────
-  build_android_dev:
-    name: Build Android dev client
-    needs: [fingerprint]
-    if: ${{ needs.fingerprint.outputs.android.fingerprint_changed == 'true' }}
-    type: build
-    working_directory: apps/mobile
+  # ── 6. Fingerprint unchanged → publish OTA update (no new binary needed) ──
+  publish_ios_update:
+    name: Publish iOS OTA update
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: update
     params:
+      branch: production
+      platform: ios
+
+  publish_android_update:
+    name: Publish Android OTA update
+    needs: [get_android_build]
+    if: ${{ needs.get_android_build.outputs.build_id }}
+    type: update
+    params:
+      branch: production
       platform: android
-      profile: development
