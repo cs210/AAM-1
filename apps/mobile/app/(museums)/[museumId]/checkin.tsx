@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
+import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ArrowLeftIcon, ChevronDownIcon, StarIcon, XIcon } from 'lucide-react-native';
@@ -59,7 +60,14 @@ export default function CheckInScreen() {
     }
   }, [isTabSegment]);
 
+  const posthog = usePostHog();
+
   const museum = useQuery(api.museums.getMuseum, id ? { id: id as Id<'museums'> } : 'skip');
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const userCheckIns = useQuery(
+    api.checkIns.getUserMuseumCheckIns,
+    id && currentUser ? { userId: currentUser._id, museumId: id as Id<'museums'> } : 'skip'
+  );
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
 
@@ -180,6 +188,8 @@ export default function CheckInScreen() {
     try {
       const imageStorageIds = await uploadSelectedImages();
 
+      const isRepeatVisit = userCheckIns != null && userCheckIns.length > 0;
+
       await createCheckIn({
         contentType: 'museum',
         contentId: museumId as Id<'museums'>,
@@ -189,6 +199,14 @@ export default function CheckInScreen() {
         friendUserIds: selectedFriends,
         durationHours,
         visitDate: visitDate.getTime(),
+      });
+
+      posthog?.capture('museum_visited', {
+        museumId: id,
+        isRepeatVisit: isRepeatVisit === true,
+        hasRating: rating !== null,
+        hasReview: review.trim().length > 0,
+        photoCount: imageStorageIds.length,
       });
 
       Alert.alert('Success', 'Check-in created!');
