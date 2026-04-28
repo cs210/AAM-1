@@ -6,6 +6,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
+import { BellIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,13 +16,18 @@ import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { useUniwind } from 'uniwind';
+import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
 
 export default function HomeScreen() {
+  const { theme } = useUniwind();
+  const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
   const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
+  const unreadNotifications = useQuery(api.socialNotifications.unreadCount);
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
@@ -95,20 +101,36 @@ export default function HomeScreen() {
             </Text>
             <Separator className="mt-2 max-w-3/5 self-start bg-border" />
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open profile"
-            onPress={() => router.push('/(tabs)/profile')}
-            className="ml-4 mt-1 active:opacity-80">
-            <Avatar className="size-10" alt="Your profile">
-              {currentUserProfile?.imageUrl ? (
-                <AvatarImage source={{ uri: currentUserProfile.imageUrl }} />
+          <View className="ml-4 mt-1 flex-row items-center gap-3">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              onPress={() => router.push('/notifications')}
+              className="relative p-2 active:opacity-80">
+              <BellIcon size={24} color={primaryHex} />
+              {unreadNotifications != null && unreadNotifications > 0 ? (
+                <View className="absolute right-1 top-1 min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-destructive px-1">
+                  <Text className="text-[10px] font-bold text-white">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </Text>
+                </View>
               ) : null}
-              <AvatarFallback className="bg-primary">
-                <Text className="text-base font-bold text-primary-foreground">{initial}</Text>
-              </AvatarFallback>
-            </Avatar>
-          </Pressable>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+              onPress={() => router.push('/(tabs)/profile')}
+              className="active:opacity-80">
+              <Avatar className="size-10" alt="Your profile">
+                {currentUserProfile?.imageUrl ? (
+                  <AvatarImage source={{ uri: currentUserProfile.imageUrl }} />
+                ) : null}
+                <AvatarFallback className="bg-primary">
+                  <Text className="text-base font-bold text-primary-foreground">{initial}</Text>
+                </AvatarFallback>
+              </Avatar>
+            </Pressable>
+          </View>
         </View>
 
         <Text className="mb-4 px-5 text-sm font-normal text-muted-foreground">

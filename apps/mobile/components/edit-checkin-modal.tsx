@@ -98,9 +98,12 @@ export function EditCheckinModal({
             placeholder="What did you think?"
             multiline
             numberOfLines={3}
-            className="mb-6 min-h-24 h-auto py-3 text-base leading-5"
+            className="mb-2 min-h-24 h-auto py-3 text-base leading-5"
             textAlignVertical="top"
           />
+          <Text className="mb-6 text-xs text-muted-foreground">
+            @ExactProfileName or @userId notifies that user when you save.
+          </Text>
 
           <View className="gap-3">
             <Button
