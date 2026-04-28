@@ -226,6 +226,7 @@ export default defineSchema({
     review: v.optional(v.string()),
     imageIds: v.optional(v.array(v.id("_storage"))), // optional for legacy check-ins created before imageIds existed
     friendUserIds: v.array(v.string()),
+    durationHours: v.optional(v.number()), // broad visit-length bucket in hours
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
     createdAt: v.number(), // timestamp of check-in creation
     editedAt: v.optional(v.number()), // set when user edits rating/review

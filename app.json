@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c47b47fb-a796-4c6d-924c-65e1b7de87be"
+      }
+    },
+    "android": {
+      "package": "com.shrishj.yamimonorepo"
+    },
+    "ios": {
+      "bundleIdentifier": "com.shrishj.yamimonorepo",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
