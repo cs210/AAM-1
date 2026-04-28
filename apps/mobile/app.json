@@ -44,7 +44,15 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-appsflyer",
+        {
+          "shouldUseStrictMode": false,
+          "shouldUsePurchaseConnector": false,
+          "preferAppsFlyerBackupRules": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

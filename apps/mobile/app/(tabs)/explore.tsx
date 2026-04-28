@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, FlatList, Pressable } from 'react-native';
+import { View, FlatList, Pressable, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from 'convex/react';
@@ -11,7 +11,32 @@ import { PaginationPill } from '../../components/pagination-pill';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import appsFlyer from 'react-native-appsflyer';
+
+const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
+
+if (!appsFlyerKey) {
+  throw new Error("Missing EXPO_PUBLIC_APPSFLYER_DEV_KEY")
+}
+
+appsFlyer.initSdk(
+  {
+    devKey: appsFlyerKey,
+    isDebug: true,
+    appId: '6760368719',
+  },
+  (result) => {
+    console.log(result);
+  },
+  (error) => {
+    console.error(error);
+  }
+);
+
+// set the template ID before you generate a link. Without it UserInvite won't work.
+appsFlyer.setAppInviteOneLinkID('Rz7b');
 
 const MUSEUMS_PER_PAGE = 10;
 
@@ -106,14 +131,61 @@ function TasteAlignedRoute({
   currUserId: string | null;
 }) {
   const isSearching = peopleSearch.trim().length > 0;
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+
+  const handleShareInviteLink = async () => {
+    setIsGeneratingLink(true);
+    try {
+      appsFlyer.generateInviteLink(
+        {
+          channel: 'in-app',
+          campaign: 'taste-aligned-invite',
+          customerID: currUserId || 'unknown',
+          userParams: {
+            deep_link_value: 'explore',
+            deep_link_sub1: 'taste-aligned',
+            brandDomain: 'https://yami-stanford.vercel.app',
+          },
+        },
+        (link) => {
+          Share.share({
+            message: `Join me on Yami and let's share our museum taste! 🎨\n\n${link}`,
+            title: 'Share My Yami Profile',
+            url: link as string,
+          }).catch((err) => console.error('Share error:', err));
+          setIsGeneratingLink(false);
+        },
+        (err) => {
+          console.error('Failed to generate invite link:', err);
+          setIsGeneratingLink(false);
+        }
+      );
+    } catch (error) {
+      console.error('Error initiating share:', error);
+      setIsGeneratingLink(false);
+    }
+  };
 
   return (
     <View className="flex-1" style={{ flex: 1 }}>
-      <SearchFieldRow
-        value={peopleSearch}
-        onChangeText={setPeopleSearch}
-        placeholder="Search for a person..."
-      />
+      <View className="flex-row items-center gap-2 px-5 py-3">
+        <View className="flex-1">
+          <SearchFieldRow
+            value={peopleSearch}
+            onChangeText={setPeopleSearch}
+            placeholder="Search for a person..."
+          />
+        </View>
+        <Button
+          variant="secondary"
+          size="icon"
+          onPress={handleShareInviteLink}
+          disabled={isGeneratingLink}>
+          <Text className="text-sm font-medium">
+            {isGeneratingLink ? '...' : '📤'}
+          </Text>
+        </Button>
+      </View>
       {isSearching ? (
         users === undefined ? (
           <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>

@@ -220,6 +220,9 @@ importers:
       react-native:
         specifier: 0.81.5
         version: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)
+      react-native-appsflyer:
+        specifier: ^6.17.9
+        version: 6.17.9
       react-native-device-info:
         specifier: ^15.0.2
         version: 15.0.2(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
@@ -7672,6 +7675,9 @@ packages:
 
   react-is@19.2.4:
     resolution: {integrity: sha512-W+EWGn2v0ApPKgKKCy/7s7WHXkboGcsrXE+2joLyVxkbyVQfO3MUEaUQDHoSmb8TFFrSKYa9mw64WZHNHSDzYA==}
+
+  react-native-appsflyer@6.17.9:
+    resolution: {integrity: sha512-oEddwSsVL8D3ki8ayWZV34GyORAxvL1BXq3mL1xB8Hdfg+xxLyjAXSvWbj0t3E3NJ2KrgLRf/hbTlsPltfo/Uw==}
 
   react-native-device-info@15.0.2:
     resolution: {integrity: sha512-dd71eXG2l3Cwp66IvKNadMTB8fhU3PEjyVddI97sYan+D4bgIAUmgGDhbSOFvHcGavksb2U17kiQYaDiK2WK2g==}
@@ -16803,6 +16809,8 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.4: {}
+
+  react-native-appsflyer@6.17.9: {}
 
   react-native-device-info@15.0.2(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)):
     dependencies:
