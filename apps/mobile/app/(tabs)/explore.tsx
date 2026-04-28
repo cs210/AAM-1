@@ -149,8 +149,8 @@ function TasteAlignedRoute({
         },
         (link) => {
           Share.share({
-            message: `Join me on Yami and let's share our museum taste! 🎨\n\n${link}`,
-            title: 'Share My Yami Profile',
+            message: `Join me on Museum& and let's share our museum taste! 🎨\n\n${link}`,
+            title: 'Share My Museum& Profile',
             url: link as string,
           }).catch((err) => console.error('Share error:', err));
           setIsGeneratingLink(false);
