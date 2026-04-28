@@ -172,4 +172,17 @@ Firecrawl setup notes:
 - Create a Firecrawl API key from your Firecrawl dashboard.
 - `FIRECRAWL_API_URL` is optional unless you are using a custom/self-hosted endpoint.
 
+For museum visual search (RunPod), set:
+
+```bash
+npx convex env set RUNPOD_API_KEY your_runpod_api_key
+```
+
+RunPod set up notes:
+- Create an API key in your settings.
+- Set a serverless/pod template with a working version of tsekai/museum-search on DockerHub.
+  - Set start command as ```bash -lc "rm -rf /app/museum-search && git clone https://github.com/t-sekai/museum-search.git && cd /app/museum-search && uvicorn app:app --host 0.0.0.0 --port 8000"```
+  - Expose HTTP port 8000 and set env var ```PORT=8000```.
+- Start your serverless/pod. You can then obtain the endpoint URL, updatable in the web admin panel.
+
 This secret does not live on your machine, it is managed by Convex.

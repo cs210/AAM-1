@@ -143,6 +143,7 @@
       "analytics": "分析",
       "orgRequests": "組織リクエスト",
       "adminMuseums": "ミュージアム",
+      "visualSearch": "ビジュアル検索",
       "users": "ユーザー",
       "invitations": "招待"
     },
@@ -669,6 +670,69 @@
       "createFailed": "ミュージアムの作成に失敗しました",
       "deleteFailed": "ミュージアムの削除に失敗しました",
       "museumRequired": "ミュージアム名は必須です。"
+    },
+    "adminVisualSearch": {
+      "config": {
+        "title": "エンドポイント設定",
+        "description": "Convex のビジュアル検索アクションで使う Runpod のロードバランス済みエンドポイントを設定します。",
+        "endpointLabel": "エンドポイントURL",
+        "endpointPlaceholder": "https://zlqakxsqmz2ckm.api.runpod.ai",
+        "secretHint": "RUNPOD_API_KEY は Convex のシークレットまたは環境変数として設定します。",
+        "saved": "エンドポイントURLを保存しました。",
+        "saveFailed": "エンドポイントURLを保存できませんでした。",
+        "refreshed": "現在の設定をフォームに読み込みました。",
+        "saving": "保存中...",
+        "save": "エンドポイントURLを保存",
+        "refresh": "現在の設定を更新",
+        "currentEndpoint": "現在のエンドポイント",
+        "loading": "読み込み中...",
+        "notConfigured": "未設定",
+        "updatedAt": "更新日時",
+        "never": "未更新",
+        "updatedBy": "更新者",
+        "unknown": "不明"
+      },
+      "debug": {
+        "title": "デバッグツール",
+        "description": "Convex 経由で Runpod を呼び出し、worker の状態とキャッシュ動作を確認します。",
+        "reloadWarning": "Reload は開発/デバッグ用です。Runpod ボリューム上のファイルは変更しません。",
+        "ping": "Ping",
+        "pingDescription": "GET /ping を呼び出します。",
+        "health": "Health",
+        "healthDescription": "GET /health を呼び出します。",
+        "museums": "Museums",
+        "museumsDescription": "GET /museums を呼び出します。",
+        "volume": "Debug Volume",
+        "volumeDescription": "GET /debug/volume を呼び出します。",
+        "reload": "Reload",
+        "reloadDescription": "POST /reload を呼び出し、worker のメモリ内インデックスキャッシュをクリアします。",
+        "running": "実行中..."
+      },
+      "search": {
+        "title": "検索テスト",
+        "description": "サンプル画像URLを Convex 経由で Runpod に送り、正規化された結果を確認します。",
+        "museumSlug": "ミュージアム slug",
+        "imageUrl": "画像URL",
+        "topK": "Top K",
+        "testing": "テスト中...",
+        "test": "検索をテスト",
+        "rawResponse": "未加工のJSONレスポンス",
+        "resultCount": "{count} 件の結果",
+        "thumbnailAlt": "作品サムネイル",
+        "untitled": "無題",
+        "unknownArtist": "アーティスト不明",
+        "objectId": "Object ID",
+        "artworkKey": "作品キー",
+        "notAvailable": "利用不可",
+        "sourceUrl": "ソースURL",
+        "noResults": "ビジュアル検索の結果はありませんでした。"
+      },
+      "errors": {
+        "status": "ステータス {status}",
+        "code": "コード {code}",
+        "path": "パス {path}",
+        "requestFailed": "ビジュアル検索リクエストに失敗しました。"
+      }
     },
     "analytics": {
       "dateRange": "日付と範囲",

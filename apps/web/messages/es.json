@@ -143,6 +143,7 @@
       "analytics": "Analíticas",
       "orgRequests": "Solicitudes de org.",
       "adminMuseums": "Museos",
+      "visualSearch": "Búsqueda visual",
       "users": "Usuarios",
       "invitations": "Invitaciones"
     },
@@ -669,6 +670,69 @@
       "createFailed": "No se pudo crear el museo",
       "deleteFailed": "No se pudo eliminar el museo",
       "museumRequired": "El nombre del museo es obligatorio."
+    },
+    "adminVisualSearch": {
+      "config": {
+        "title": "Configuración del endpoint",
+        "description": "Configura el endpoint balanceado de Runpod usado por las acciones de búsqueda visual de Convex.",
+        "endpointLabel": "URL del endpoint",
+        "endpointPlaceholder": "https://zlqakxsqmz2ckm.api.runpod.ai",
+        "secretHint": "RUNPOD_API_KEY se configura como secreto o variable de entorno de Convex.",
+        "saved": "URL del endpoint guardada.",
+        "saveFailed": "No se pudo guardar la URL del endpoint.",
+        "refreshed": "La configuración actual se cargó en el formulario.",
+        "saving": "Guardando...",
+        "save": "Guardar URL del endpoint",
+        "refresh": "Actualizar configuración actual",
+        "currentEndpoint": "Endpoint actual",
+        "loading": "Cargando...",
+        "notConfigured": "No configurado",
+        "updatedAt": "Actualizado",
+        "never": "Nunca",
+        "updatedBy": "Actualizado por",
+        "unknown": "Desconocido"
+      },
+      "debug": {
+        "title": "Herramientas de depuración",
+        "description": "Llama a Runpod a través de Convex para inspeccionar estado del worker y caché.",
+        "reloadWarning": "Reload es para desarrollo/depuración. No modifica archivos en el volumen de Runpod.",
+        "ping": "Ping",
+        "pingDescription": "Llama a GET /ping.",
+        "health": "Health",
+        "healthDescription": "Llama a GET /health.",
+        "museums": "Museums",
+        "museumsDescription": "Llama a GET /museums.",
+        "volume": "Debug Volume",
+        "volumeDescription": "Llama a GET /debug/volume.",
+        "reload": "Reload",
+        "reloadDescription": "Llama a POST /reload y limpia la caché de índices en memoria del worker.",
+        "running": "Ejecutando..."
+      },
+      "search": {
+        "title": "Prueba de búsqueda",
+        "description": "Envía una URL de imagen de muestra a Runpod a través de Convex e inspecciona resultados normalizados.",
+        "museumSlug": "Slug del museo",
+        "imageUrl": "URL de imagen",
+        "topK": "Top K",
+        "testing": "Probando...",
+        "test": "Probar búsqueda",
+        "rawResponse": "Respuesta JSON sin procesar",
+        "resultCount": "{count} resultados",
+        "thumbnailAlt": "Miniatura de obra",
+        "untitled": "Sin título",
+        "unknownArtist": "Artista desconocido",
+        "objectId": "Object ID",
+        "artworkKey": "Clave de obra",
+        "notAvailable": "No disponible",
+        "sourceUrl": "URL fuente",
+        "noResults": "La búsqueda visual no devolvió resultados."
+      },
+      "errors": {
+        "status": "Estado {status}",
+        "code": "Código {code}",
+        "path": "Ruta {path}",
+        "requestFailed": "Falló la solicitud de búsqueda visual."
+      }
     },
     "analytics": {
       "dateRange": "Fecha y rango",

@@ -24,6 +24,7 @@ import type * as organizationRequests from "../organizationRequests.js";
 import type * as recsys from "../recsys.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as visualSearch from "../visualSearch.js";
 import type * as wrapped from "../wrapped.js";
 
 import type {
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   recsys: typeof recsys;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
+  visualSearch: typeof visualSearch;
   wrapped: typeof wrapped;
 }>;
 

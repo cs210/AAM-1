@@ -143,6 +143,7 @@
       "analytics": "Analytics",
       "orgRequests": "Org requests",
       "adminMuseums": "Museums",
+      "visualSearch": "Visual Search",
       "users": "Users",
       "invitations": "Invitations"
     },
@@ -669,6 +670,69 @@
       "createFailed": "Failed to create museum",
       "deleteFailed": "Failed to delete museum",
       "museumRequired": "Museum name is required."
+    },
+    "adminVisualSearch": {
+      "config": {
+        "title": "Endpoint configuration",
+        "description": "Configure the Runpod load-balanced endpoint used by Convex visual search actions.",
+        "endpointLabel": "Endpoint URL",
+        "endpointPlaceholder": "https://zlqakxsqmz2ckm.api.runpod.ai",
+        "secretHint": "RUNPOD_API_KEY is configured as a Convex secret/environment variable.",
+        "saved": "Endpoint URL saved.",
+        "saveFailed": "Failed to save endpoint URL.",
+        "refreshed": "Current config loaded into the form.",
+        "saving": "Saving...",
+        "save": "Save endpoint URL",
+        "refresh": "Refresh current config",
+        "currentEndpoint": "Current endpoint",
+        "loading": "Loading...",
+        "notConfigured": "Not configured",
+        "updatedAt": "Updated at",
+        "never": "Never",
+        "updatedBy": "Updated by",
+        "unknown": "Unknown"
+      },
+      "debug": {
+        "title": "Debug tools",
+        "description": "Call Runpod through Convex to inspect worker status and cache behavior.",
+        "reloadWarning": "Reload is for development/debugging. It does not modify files on the Runpod volume.",
+        "ping": "Ping",
+        "pingDescription": "Calls GET /ping.",
+        "health": "Health",
+        "healthDescription": "Calls GET /health.",
+        "museums": "Museums",
+        "museumsDescription": "Calls GET /museums.",
+        "volume": "Debug Volume",
+        "volumeDescription": "Calls GET /debug/volume.",
+        "reload": "Reload",
+        "reloadDescription": "Calls POST /reload and clears the worker in-memory index cache.",
+        "running": "Running..."
+      },
+      "search": {
+        "title": "Search test",
+        "description": "Send a sample image URL to Runpod through Convex and inspect normalized results.",
+        "museumSlug": "Museum slug",
+        "imageUrl": "Image URL",
+        "topK": "Top K",
+        "testing": "Testing...",
+        "test": "Test Search",
+        "rawResponse": "Raw JSON response",
+        "resultCount": "{count} results",
+        "thumbnailAlt": "Artwork thumbnail",
+        "untitled": "Untitled",
+        "unknownArtist": "Unknown artist",
+        "objectId": "Object ID",
+        "artworkKey": "Artwork key",
+        "notAvailable": "Not available",
+        "sourceUrl": "Source URL",
+        "noResults": "No visual search results returned."
+      },
+      "errors": {
+        "status": "Status {status}",
+        "code": "Code {code}",
+        "path": "Path {path}",
+        "requestFailed": "Visual search request failed."
+      }
     },
     "analytics": {
       "dateRange": "Date & range",

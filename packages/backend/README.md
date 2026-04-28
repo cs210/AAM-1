@@ -88,3 +88,12 @@ function handleButtonPress() {
 Use the Convex CLI to push your functions to a deployment. See everything
 the Convex CLI can do by running `npx convex -h` in your project root
 directory. To learn more, launch the docs with `npx convex docs`.
+
+## Visual Search Runpod Secret
+
+The Runpod visual search API key is read only by Convex backend actions and is
+not configured in the admin dashboard. Set it on the Convex deployment with:
+
+```sh
+npx convex env set RUNPOD_API_KEY "rp_..."
+```
