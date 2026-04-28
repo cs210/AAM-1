@@ -156,7 +156,7 @@ export default function IntakeScreen() {
 
   const handleDone = React.useCallback(() => {
     if (redirect) {
-      router.replace(redirect as Href);
+      router.replace(redirect as Parameters<typeof router.replace>[0]);
     } else {
       router.back();
     }
