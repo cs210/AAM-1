@@ -2,7 +2,7 @@
 
 Welcome to the main repository for Museum&. For more information, visit our [wiki](https://github.com/cs210/AAM-1/wiki).
 
-## Basics 
+## Basics
 
 Our main application is built with Next.js, Expo, and Convex. We use Turbo to manage the monorepo and pnpm to manage the dependencies.
 
