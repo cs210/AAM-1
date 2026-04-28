@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
+import { PostHogProvider } from 'posthog-react-native'
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -29,15 +30,28 @@ function RootLayout() {
     }
   }, [navigationRef]);
 
+  const posthogProjectKey = process.env.EXPO_PUBLIC_POSTHOG_PROJECT_KEY
+
+  if (!posthogProjectKey) {
+    throw new Error("Missing EXPO_PUBLIC_POSTHOG_PROJECT_KEY");
+  }
+
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <ConvexClientProvider>
+        <PostHogProvider
+            apiKey={posthogProjectKey}
+            options={{
+                host: "https://us.i.posthog.com",
+            }}
+        >
         <SentryUserSync />
         <ThemeProvider value={NAV_THEME[colorScheme]}>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           <Stack screenOptions={{ headerShown: false }} />
           <PortalHost />
         </ThemeProvider>
+        </PostHogProvider>
       </ConvexClientProvider>
     </SafeAreaProvider>
   );

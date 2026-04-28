@@ -1,0 +1,93 @@
+name: Build on Fingerprint Change
+
+# Triggered on every push to main.
+#
+# Smart deploy pipeline:
+#  - Fingerprint CHANGED → build new iOS production + iOS dev + Android dev,
+#    then auto-submit iOS production to TestFlight.
+#  - Fingerprint UNCHANGED → publish an OTA JS update so existing installs
+#    get the latest code instantly without a new binary.
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ── 1. Compute fingerprint hashes for both platforms ──────────────────────
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+
+  # ── 2. Check whether a production build already exists for each hash ───────
+  get_ios_build:
+    name: Check for existing iOS build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      profile: production
+
+  get_android_build:
+    name: Check for existing Android build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.android_fingerprint_hash }}
+      profile: production
+
+  # ── 3. Fingerprint changed → build new iOS binaries ───────────────────────
+  build_ios_production:
+    name: Build iOS production
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  build_ios_dev:
+    name: Build iOS dev client
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: development
+
+  # ── 4. Fingerprint changed → build new Android dev client ─────────────────
+  build_android_dev:
+    name: Build Android dev client
+    needs: [get_android_build]
+    if: ${{ !needs.get_android_build.outputs.build_id }}
+    type: build
+    params:
+      platform: android
+      profile: development
+
+  # ── 5. Submit new iOS production build to TestFlight ──────────────────────
+  submit_ios_testflight:
+    name: Submit iOS → TestFlight
+    needs: [build_ios_production]
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios_production.outputs.build_id }}
+
+  # ── 6. Fingerprint unchanged → publish OTA update (no new binary needed) ──
+  publish_ios_update:
+    name: Publish iOS OTA update
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: update
+    params:
+      branch: production
+      platform: ios
+
+  publish_android_update:
+    name: Publish Android OTA update
+    needs: [get_android_build]
+    if: ${{ needs.get_android_build.outputs.build_id }}
+    type: update
+    params:
+      branch: production
+      platform: android
