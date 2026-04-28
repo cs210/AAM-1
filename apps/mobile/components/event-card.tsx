@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Image } from 'react-native';
+import { View, Pressable, Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { CalendarIcon, MapPinIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -99,7 +99,10 @@ export function EventCard({
     }
 
     if (event.museumId) {
-      router.push(`/${event.museumId}`);
+      router.push({
+        pathname: '/(museums)/[museumId]',
+        params: { museumId: event.museumId },
+      });
     }
   };
 
@@ -114,7 +117,7 @@ export function EventCard({
           <>
             <Image
               source={{ uri: event.imageUrl }}
-              className="absolute inset-0 h-full w-full"
+              style={StyleSheet.absoluteFillObject}
               resizeMode="cover"
             />
             <View className="absolute inset-0 bg-black/45" />
