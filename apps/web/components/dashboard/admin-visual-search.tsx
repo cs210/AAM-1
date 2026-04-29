@@ -7,15 +7,21 @@ import { useTranslations } from "next-intl"
 import { api } from "@packages/backend/convex/_generated/api"
 import {
   ActivityIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   DatabaseIcon,
   ExternalLinkIcon,
   HardDriveIcon,
   HeartPulseIcon,
   ImageIcon,
+  PencilIcon,
+  PlusIcon,
   RefreshCcwIcon,
   RotateCcwIcon,
   SaveIcon,
   SearchIcon,
+  Trash2Icon,
+  XIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +29,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import type { Id } from "@packages/backend/convex/_generated/dataModel"
 
 type Config = {
   endpointUrl: string
@@ -67,6 +75,37 @@ type SearchResponse = {
   results: SearchResult[]
 }
 
+type MuseumOption = {
+  _id: Id<"museums">
+  name: string
+  location?: {
+    city?: string
+    state?: string
+  }
+}
+
+type AssignmentRow = {
+  _id: Id<"visualSearchMuseumAssignments">
+  museumId: Id<"museums">
+  museumName: string
+  museumSlug: string
+  isActive: boolean
+  createdAt: number
+  updatedAt: number
+  createdBy: string | null
+  updatedBy: string | null
+  hasMissingMuseum: boolean
+}
+
+type ActiveAssignment = {
+  museumId: Id<"museums">
+  museumName: string
+  museumSlug: string
+}
+
+const MUSEUM_SLUG_PATTERN = /^[a-z0-9_-]+$/
+const MANUAL_SEARCH_SLUG_VALUE = "__manual__"
+
 function formatJson(value: unknown) {
   if (typeof value === "string") return value
   return JSON.stringify(value, null, 2)
@@ -101,6 +140,14 @@ function getErrorDetails(error: unknown, fallback: string): ErrorDetails {
   return {
     message: error instanceof Error ? error.message : fallback,
   }
+}
+
+function normalizeMuseumSlug(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function isValidMuseumSlug(value: string) {
+  return MUSEUM_SLUG_PATTERN.test(normalizeMuseumSlug(value))
 }
 
 function JsonBlock({ value }: { value: unknown }) {
@@ -147,7 +194,13 @@ function ResultJson({ state }: { state: RequestState | undefined }) {
 export function AdminVisualSearch() {
   const t = useTranslations("dashboard.adminVisualSearch")
   const config = useQuery(api.visualSearch.getVisualSearchConfig) as Config | undefined
+  const museums = useQuery(api.museums.listMuseums) as MuseumOption[] | undefined
+  const assignments = useQuery(api.visualSearch.listVisualSearchMuseumAssignments) as AssignmentRow[] | undefined
+  const activeAssignments = useQuery(api.visualSearch.listVisualSearchActiveMuseums) as ActiveAssignment[] | undefined
   const setEndpoint = useMutation(api.visualSearch.setVisualSearchEndpoint)
+  const createAssignment = useMutation(api.visualSearch.createVisualSearchMuseumAssignment)
+  const updateAssignment = useMutation(api.visualSearch.updateVisualSearchMuseumAssignment)
+  const deleteAssignment = useMutation(api.visualSearch.deleteVisualSearchMuseumAssignment)
   const pingVisualSearch = useAction(api.visualSearch.pingVisualSearch)
   const healthVisualSearch = useAction(api.visualSearch.healthVisualSearch)
   const listVisualSearchMuseums = useAction(api.visualSearch.listVisualSearchMuseums)
@@ -160,6 +213,18 @@ export function AdminVisualSearch() {
   const [savingEndpoint, setSavingEndpoint] = React.useState(false)
   const [configMessage, setConfigMessage] = React.useState<string | null>(null)
   const [configError, setConfigError] = React.useState<ErrorDetails | null>(null)
+  const [assignmentsExpanded, setAssignmentsExpanded] = React.useState(true)
+  const [showAssignmentForm, setShowAssignmentForm] = React.useState(false)
+  const [assignmentMuseumId, setAssignmentMuseumId] = React.useState("")
+  const [assignmentSlug, setAssignmentSlug] = React.useState("")
+  const [assignmentActive, setAssignmentActive] = React.useState(false)
+  const [editingAssignmentId, setEditingAssignmentId] = React.useState<Id<"visualSearchMuseumAssignments"> | null>(null)
+  const [editAssignmentSlug, setEditAssignmentSlug] = React.useState("")
+  const [editAssignmentActive, setEditAssignmentActive] = React.useState(false)
+  const [assignmentMessage, setAssignmentMessage] = React.useState<string | null>(null)
+  const [assignmentError, setAssignmentError] = React.useState<ErrorDetails | null>(null)
+  const [pendingAssignmentAction, setPendingAssignmentAction] = React.useState<string | null>(null)
+  const [selectedActiveAssignment, setSelectedActiveAssignment] = React.useState(MANUAL_SEARCH_SLUG_VALUE)
   const [debugState, setDebugState] = React.useState<Partial<Record<DebugKey, RequestState>>>({})
   const [museumSlug, setMuseumSlug] = React.useState("met")
   const [imageUrl, setImageUrl] = React.useState("https://i.ebayimg.com/images/g/snwAAeSwQthpA~dm/s-l1200.jpg")
@@ -170,6 +235,30 @@ export function AdminVisualSearch() {
     if (config === undefined || hasEditedEndpoint) return
     setEndpointUrl(config?.endpointUrl ?? "")
   }, [config, hasEditedEndpoint])
+
+  const assignmentRows = React.useMemo(() => assignments ?? [], [assignments])
+  const assignedMuseumIds = React.useMemo(
+    () => new Set(assignmentRows.map((assignment) => assignment.museumId)),
+    [assignmentRows]
+  )
+  const availableMuseums = React.useMemo(
+    () =>
+      (museums ?? [])
+        .filter((museum) => !assignedMuseumIds.has(museum._id))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [assignedMuseumIds, museums]
+  )
+  const activeAssignmentRows = React.useMemo(
+    () => (activeAssignments ?? []).slice().sort((a, b) => a.museumName.localeCompare(b.museumName)),
+    [activeAssignments]
+  )
+
+  const resetAssignmentForm = React.useCallback(() => {
+    setAssignmentMuseumId("")
+    setAssignmentSlug("")
+    setAssignmentActive(false)
+  }, [])
 
   const debugTools = React.useMemo(
     () => [
@@ -238,6 +327,115 @@ export function AdminVisualSearch() {
     setHasEditedEndpoint(false)
     setConfigError(null)
     setConfigMessage(t("config.refreshed"))
+  }
+
+  const handleCreateAssignment = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setAssignmentError(null)
+    setAssignmentMessage(null)
+
+    if (!assignmentMuseumId) {
+      setAssignmentError({ message: t("assignments.errors.museumRequired") })
+      return
+    }
+
+    const normalizedSlug = normalizeMuseumSlug(assignmentSlug)
+    if (!isValidMuseumSlug(normalizedSlug)) {
+      setAssignmentError({ message: t("assignments.errors.invalidSlug") })
+      return
+    }
+
+    setPendingAssignmentAction("create")
+    try {
+      await createAssignment({
+        museumId: assignmentMuseumId as Id<"museums">,
+        museumSlug: normalizedSlug,
+        isActive: assignmentActive,
+      })
+      resetAssignmentForm()
+      setShowAssignmentForm(false)
+      setAssignmentMessage(t("assignments.created"))
+    } catch (error) {
+      setAssignmentError(getErrorDetails(error, t("assignments.errors.createFailed")))
+    } finally {
+      setPendingAssignmentAction(null)
+    }
+  }
+
+  const startEditingAssignment = (assignment: AssignmentRow) => {
+    setEditingAssignmentId(assignment._id)
+    setEditAssignmentSlug(assignment.museumSlug)
+    setEditAssignmentActive(assignment.isActive)
+    setAssignmentError(null)
+    setAssignmentMessage(null)
+  }
+
+  const cancelEditingAssignment = () => {
+    setEditingAssignmentId(null)
+    setEditAssignmentSlug("")
+    setEditAssignmentActive(false)
+  }
+
+  const handleUpdateAssignment = async (assignmentId: Id<"visualSearchMuseumAssignments">) => {
+    setAssignmentError(null)
+    setAssignmentMessage(null)
+
+    const normalizedSlug = normalizeMuseumSlug(editAssignmentSlug)
+    if (!isValidMuseumSlug(normalizedSlug)) {
+      setAssignmentError({ message: t("assignments.errors.invalidSlug") })
+      return
+    }
+
+    setPendingAssignmentAction(`update:${assignmentId}`)
+    try {
+      await updateAssignment({
+        assignmentId,
+        museumSlug: normalizedSlug,
+        isActive: editAssignmentActive,
+      })
+      cancelEditingAssignment()
+      setAssignmentMessage(t("assignments.updated"))
+    } catch (error) {
+      setAssignmentError(getErrorDetails(error, t("assignments.errors.updateFailed")))
+    } finally {
+      setPendingAssignmentAction(null)
+    }
+  }
+
+  const handleToggleAssignment = async (assignment: AssignmentRow) => {
+    setAssignmentError(null)
+    setAssignmentMessage(null)
+    setPendingAssignmentAction(`toggle:${assignment._id}`)
+
+    try {
+      await updateAssignment({
+        assignmentId: assignment._id,
+        isActive: !assignment.isActive,
+      })
+      setAssignmentMessage(assignment.isActive ? t("assignments.deactivated") : t("assignments.activated"))
+    } catch (error) {
+      setAssignmentError(getErrorDetails(error, t("assignments.errors.updateFailed")))
+    } finally {
+      setPendingAssignmentAction(null)
+    }
+  }
+
+  const handleDeleteAssignment = async (assignmentId: Id<"visualSearchMuseumAssignments">) => {
+    setAssignmentError(null)
+    setAssignmentMessage(null)
+    setPendingAssignmentAction(`delete:${assignmentId}`)
+
+    try {
+      await deleteAssignment({ assignmentId })
+      if (editingAssignmentId === assignmentId) {
+        cancelEditingAssignment()
+      }
+      setAssignmentMessage(t("assignments.deleted"))
+    } catch (error) {
+      setAssignmentError(getErrorDetails(error, t("assignments.errors.deleteFailed")))
+    } finally {
+      setPendingAssignmentAction(null)
+    }
   }
 
   const runDebugTool = async (key: DebugKey, actionFn: () => Promise<unknown>) => {
@@ -355,6 +553,243 @@ export function AdminVisualSearch() {
       </Card>
 
       <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>{t("assignments.title")}</CardTitle>
+            <CardDescription>{t("assignments.description")}</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setAssignmentsExpanded((value) => !value)}>
+              {assignmentsExpanded ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
+              {assignmentsExpanded ? t("assignments.collapse") : t("assignments.expand")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowAssignmentForm((value) => !value)
+                setAssignmentError(null)
+                setAssignmentMessage(null)
+                if (showAssignmentForm) resetAssignmentForm()
+              }}
+              disabled={museums === undefined}
+            >
+              {showAssignmentForm ? <XIcon className="size-4" /> : <PlusIcon className="size-4" />}
+              {showAssignmentForm ? t("assignments.cancelAssign") : t("assignments.assignMuseum")}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {assignmentError ? <ErrorBlock error={assignmentError} /> : null}
+          {assignmentMessage ? (
+            <div className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+              {assignmentMessage}
+            </div>
+          ) : null}
+
+          {showAssignmentForm ? (
+            <form onSubmit={handleCreateAssignment} className="space-y-4 rounded-lg border bg-muted/20 p-3">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto]">
+                <div className="grid gap-2">
+                  <Label htmlFor="visual-search-assignment-museum">{t("assignments.museum")}</Label>
+                  <Select
+                    value={assignmentMuseumId || null}
+                    onValueChange={(value) => setAssignmentMuseumId(value ?? "")}
+                  >
+                    <SelectTrigger id="visual-search-assignment-museum" className="w-full">
+                      <SelectValue placeholder={t("assignments.selectMuseum")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMuseums.length > 0 ? (
+                        availableMuseums.map((museum) => (
+                          <SelectItem key={museum._id} value={museum._id}>
+                            {museum.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="__none__" disabled>
+                          {t("assignments.noAssignableMuseums")}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="visual-search-assignment-slug">{t("assignments.museumSlug")}</Label>
+                  <Input
+                    id="visual-search-assignment-slug"
+                    value={assignmentSlug}
+                    placeholder={t("assignments.slugPlaceholder")}
+                    onChange={(event) => setAssignmentSlug(event.target.value)}
+                    aria-invalid={assignmentSlug.length > 0 && !isValidMuseumSlug(assignmentSlug)}
+                    required
+                  />
+                  <p className="text-muted-foreground text-xs">{t("assignments.slugHint")}</p>
+                </div>
+                <label className="flex items-center gap-2 self-end rounded-lg border bg-background px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={assignmentActive}
+                    onChange={(event) => setAssignmentActive(event.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  {t("assignments.active")}
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  disabled={pendingAssignmentAction === "create" || availableMuseums.length === 0}
+                >
+                  {pendingAssignmentAction === "create" ? t("assignments.saving") : t("assignments.saveAssignment")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowAssignmentForm(false)
+                    resetAssignmentForm()
+                  }}
+                >
+                  {t("assignments.cancel")}
+                </Button>
+              </div>
+            </form>
+          ) : null}
+
+          {assignmentsExpanded ? (
+            assignments === undefined ? (
+              <div className="rounded-lg border bg-muted/20 px-3 py-8 text-center text-sm text-muted-foreground">
+                {t("assignments.loading")}
+              </div>
+            ) : assignmentRows.length === 0 ? (
+              <div className="rounded-lg border bg-muted/20 px-3 py-8 text-center text-sm text-muted-foreground">
+                {t("assignments.empty")}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {assignmentRows.map((assignment) => {
+                  const isEditing = editingAssignmentId === assignment._id
+                  const togglePending = pendingAssignmentAction === `toggle:${assignment._id}`
+                  const updatePending = pendingAssignmentAction === `update:${assignment._id}`
+                  const deletePending = pendingAssignmentAction === `delete:${assignment._id}`
+
+                  return (
+                    <article key={assignment._id} className="rounded-lg border bg-background p-3">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-sm font-medium">{assignment.museumName}</h3>
+                            <Badge variant={assignment.isActive ? "secondary" : "outline"}>
+                              {assignment.isActive ? t("assignments.statusActive") : t("assignments.statusInactive")}
+                            </Badge>
+                            {assignment.hasMissingMuseum ? (
+                              <Badge variant="destructive">{t("assignments.deletedMuseum")}</Badge>
+                            ) : null}
+                          </div>
+                          {isEditing ? (
+                            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                              <div className="grid gap-2">
+                                <Label htmlFor={`visual-search-edit-slug-${assignment._id}`}>
+                                  {t("assignments.museumSlug")}
+                                </Label>
+                                <Input
+                                  id={`visual-search-edit-slug-${assignment._id}`}
+                                  value={editAssignmentSlug}
+                                  onChange={(event) => setEditAssignmentSlug(event.target.value)}
+                                  aria-invalid={editAssignmentSlug.length > 0 && !isValidMuseumSlug(editAssignmentSlug)}
+                                />
+                              </div>
+                              <label className="flex items-center gap-2 self-end rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={editAssignmentActive}
+                                  onChange={(event) => setEditAssignmentActive(event.target.checked)}
+                                  className="size-4 accent-primary"
+                                />
+                                {t("assignments.active")}
+                              </label>
+                            </div>
+                          ) : (
+                            <dl className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
+                              <div className="min-w-0">
+                                <dt className="font-medium text-foreground">{t("assignments.museumSlug")}</dt>
+                                <dd className="truncate font-mono">{assignment.museumSlug}</dd>
+                              </div>
+                              <div>
+                                <dt className="font-medium text-foreground">{t("assignments.updatedAt")}</dt>
+                                <dd>{new Date(assignment.updatedAt).toLocaleString()}</dd>
+                              </div>
+                              <div className="min-w-0">
+                                <dt className="font-medium text-foreground">{t("assignments.museumId")}</dt>
+                                <dd className="truncate">{assignment.museumId}</dd>
+                              </div>
+                            </dl>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {isEditing ? (
+                            <>
+                              <Button
+                                type="button"
+                                onClick={() => handleUpdateAssignment(assignment._id)}
+                                disabled={updatePending}
+                              >
+                                <SaveIcon className="size-4" />
+                                {updatePending ? t("assignments.saving") : t("assignments.save")}
+                              </Button>
+                              <Button type="button" variant="outline" onClick={cancelEditingAssignment}>
+                                {t("assignments.cancel")}
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button type="button" variant="outline" onClick={() => startEditingAssignment(assignment)}>
+                                <PencilIcon className="size-4" />
+                                {t("assignments.edit")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={assignment.isActive ? "outline" : "secondary"}
+                                onClick={() => handleToggleAssignment(assignment)}
+                                disabled={togglePending}
+                              >
+                                {togglePending
+                                  ? t("assignments.saving")
+                                  : assignment.isActive
+                                    ? t("assignments.deactivate")
+                                    : t("assignments.activate")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => handleDeleteAssignment(assignment._id)}
+                                disabled={deletePending}
+                              >
+                                <Trash2Icon className="size-4" />
+                                {deletePending ? t("assignments.removing") : t("assignments.remove")}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            )
+          ) : (
+            <div className="rounded-lg border bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+              {t("assignments.collapsedSummary", {
+                total: assignmentRows.length,
+                active: assignmentRows.filter((assignment) => assignment.isActive).length,
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>{t("debug.title")}</CardTitle>
           <CardDescription>{t("debug.description")}</CardDescription>
@@ -403,13 +838,41 @@ export function AdminVisualSearch() {
         </CardHeader>
         <CardContent className="space-y-5">
           <form onSubmit={handleTestSearch} className="space-y-4">
+            <div className="grid gap-2 md:max-w-md">
+              <Label htmlFor="visual-search-active-assignment">{t("search.activeAssignment")}</Label>
+              <Select
+                value={selectedActiveAssignment}
+                onValueChange={(value) => {
+                  const nextValue = value ?? MANUAL_SEARCH_SLUG_VALUE
+                  setSelectedActiveAssignment(nextValue)
+                  if (nextValue !== MANUAL_SEARCH_SLUG_VALUE) {
+                    setMuseumSlug(nextValue)
+                  }
+                }}
+              >
+                <SelectTrigger id="visual-search-active-assignment" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MANUAL_SEARCH_SLUG_VALUE}>{t("search.manualSlug")}</SelectItem>
+                  {activeAssignmentRows.map((assignment) => (
+                    <SelectItem key={`${assignment.museumId}:${assignment.museumSlug}`} value={assignment.museumSlug}>
+                      {assignment.museumName} ({assignment.museumSlug})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_8rem]">
               <div className="grid gap-2">
                 <Label htmlFor="visual-search-museum-slug">{t("search.museumSlug")}</Label>
                 <Input
                   id="visual-search-museum-slug"
                   value={museumSlug}
-                  onChange={(event) => setMuseumSlug(event.target.value)}
+                  onChange={(event) => {
+                    setMuseumSlug(event.target.value)
+                    setSelectedActiveAssignment(MANUAL_SEARCH_SLUG_VALUE)
+                  }}
                   required
                 />
               </div>

@@ -121,7 +121,7 @@ function normalizeEndpointUrl(value: string) {
 }
 
 function validateMuseumSlug(value: string) {
-  const museumSlug = value.trim();
+  const museumSlug = value.trim().toLowerCase();
   if (!museumSlug || !MUSEUM_SLUG_PATTERN.test(museumSlug)) {
     throw new ConvexError({
       code: "INVALID_MUSEUM_SLUG",
@@ -129,6 +129,81 @@ function validateMuseumSlug(value: string) {
     });
   }
   return museumSlug;
+}
+
+async function assertMuseumExists(ctx: QueryCtx | MutationCtx, museumId: Doc<"museums">["_id"]) {
+  const museum = await ctx.db.get(museumId);
+  if (!museum) {
+    throw new ConvexError({
+      code: "MUSEUM_NOT_FOUND",
+      message: "Museum not found.",
+    });
+  }
+  return museum;
+}
+
+async function getAssignmentByMuseumId(ctx: QueryCtx | MutationCtx, museumId: Doc<"museums">["_id"]) {
+  return await ctx.db
+    .query("visualSearchMuseumAssignments")
+    .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+    .first();
+}
+
+async function listAssignmentsBySlug(ctx: QueryCtx | MutationCtx, museumSlug: string) {
+  return await ctx.db
+    .query("visualSearchMuseumAssignments")
+    .withIndex("by_slug", (q) => q.eq("museumSlug", museumSlug))
+    .collect();
+}
+
+async function assertNoMuseumAssignmentConflict(
+  ctx: QueryCtx | MutationCtx,
+  museumId: Doc<"museums">["_id"],
+  currentAssignmentId?: Doc<"visualSearchMuseumAssignments">["_id"]
+) {
+  const existing = await getAssignmentByMuseumId(ctx, museumId);
+  if (existing && existing._id !== currentAssignmentId) {
+    throw new ConvexError({
+      code: "VISUAL_SEARCH_MUSEUM_ALREADY_ASSIGNED",
+      message: "This museum already has a visual search assignment.",
+    });
+  }
+}
+
+async function assertNoActiveSlugConflict(
+  ctx: QueryCtx | MutationCtx,
+  museumSlug: string,
+  currentAssignmentId?: Doc<"visualSearchMuseumAssignments">["_id"]
+) {
+  const assignments = await listAssignmentsBySlug(ctx, museumSlug);
+  const activeConflict = assignments.find(
+    (assignment) => assignment.isActive && assignment._id !== currentAssignmentId
+  );
+  if (activeConflict) {
+    throw new ConvexError({
+      code: "VISUAL_SEARCH_SLUG_ALREADY_ACTIVE",
+      message: "An active visual search assignment already uses this museum slug.",
+    });
+  }
+}
+
+async function joinAssignmentWithMuseum(
+  ctx: QueryCtx | MutationCtx,
+  assignment: Doc<"visualSearchMuseumAssignments">
+) {
+  const museum = await ctx.db.get(assignment.museumId);
+  return {
+    _id: assignment._id,
+    museumId: assignment.museumId,
+    museumName: museum?.name ?? "Deleted museum",
+    museumSlug: assignment.museumSlug,
+    isActive: assignment.isActive,
+    createdAt: assignment.createdAt,
+    updatedAt: assignment.updatedAt,
+    createdBy: assignment.createdBy ?? null,
+    updatedBy: assignment.updatedBy ?? null,
+    hasMissingMuseum: museum === null,
+  };
 }
 
 function validateHttpUrl(value: string, label: string) {
@@ -265,8 +340,8 @@ async function callRunpodVisualSearch(
   const apiKey = process.env.RUNPOD_API_KEY?.trim();
   if (!apiKey) {
     throw new ConvexError({
-      code: "RUNPOD_API_KEY_MISSING",
-      message: "RUNPOD_API_KEY environment variable is not configured.",
+      code: "RUNPOD_SECRET_MISSING",
+      message: "Runpod API key environment variable is not configured.",
     });
   }
 
@@ -419,6 +494,135 @@ export const setVisualSearchEndpoint = mutation({
       updatedAt,
       updatedBy,
     };
+  },
+});
+
+export const listVisualSearchMuseumAssignments = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const assignments = await ctx.db.query("visualSearchMuseumAssignments").collect();
+    const rows = await Promise.all(
+      assignments.map((assignment) => joinAssignmentWithMuseum(ctx, assignment))
+    );
+
+    return rows.sort((a, b) => a.museumName.localeCompare(b.museumName));
+  },
+});
+
+export const listVisualSearchActiveMuseums = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const assignments = await ctx.db
+      .query("visualSearchMuseumAssignments")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+    const rows = await Promise.all(
+      assignments.map(async (assignment) => {
+        const museum = await ctx.db.get(assignment.museumId);
+        if (!museum) return null;
+        return {
+          museumId: assignment.museumId,
+          museumName: museum.name,
+          museumSlug: assignment.museumSlug,
+        };
+      })
+    );
+
+    return rows
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => a.museumName.localeCompare(b.museumName));
+  },
+});
+
+export const createVisualSearchMuseumAssignment = mutation({
+  args: {
+    museumId: v.id("museums"),
+    museumSlug: v.string(),
+    isActive: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAdmin(ctx);
+    await assertMuseumExists(ctx, args.museumId);
+    await assertNoMuseumAssignmentConflict(ctx, args.museumId);
+
+    const museumSlug = validateMuseumSlug(args.museumSlug);
+    const isActive = args.isActive ?? false;
+    if (isActive) {
+      await assertNoActiveSlugConflict(ctx, museumSlug);
+    }
+
+    const now = Date.now();
+    const assignmentId = await ctx.db.insert("visualSearchMuseumAssignments", {
+      museumId: args.museumId,
+      museumSlug,
+      isActive,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: user._id,
+      updatedBy: user._id,
+    });
+
+    const assignment = await ctx.db.get(assignmentId);
+    if (!assignment) throw new Error("Visual search assignment was not created.");
+    return await joinAssignmentWithMuseum(ctx, assignment);
+  },
+});
+
+export const updateVisualSearchMuseumAssignment = mutation({
+  args: {
+    assignmentId: v.id("visualSearchMuseumAssignments"),
+    museumSlug: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAdmin(ctx);
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) {
+      throw new ConvexError({
+        code: "VISUAL_SEARCH_ASSIGNMENT_NOT_FOUND",
+        message: "Visual search assignment not found.",
+      });
+    }
+
+    const nextMuseumSlug =
+      args.museumSlug === undefined ? assignment.museumSlug : validateMuseumSlug(args.museumSlug);
+    const nextIsActive = args.isActive ?? assignment.isActive;
+
+    if (nextIsActive) {
+      await assertNoActiveSlugConflict(ctx, nextMuseumSlug, assignment._id);
+    }
+
+    await ctx.db.patch(args.assignmentId, {
+      ...(args.museumSlug === undefined ? {} : { museumSlug: nextMuseumSlug }),
+      ...(args.isActive === undefined ? {} : { isActive: nextIsActive }),
+      updatedAt: Date.now(),
+      updatedBy: user._id,
+    });
+
+    const updated = await ctx.db.get(args.assignmentId);
+    if (!updated) throw new Error("Visual search assignment was not updated.");
+    return await joinAssignmentWithMuseum(ctx, updated);
+  },
+});
+
+export const deleteVisualSearchMuseumAssignment = mutation({
+  args: {
+    assignmentId: v.id("visualSearchMuseumAssignments"),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) {
+      throw new ConvexError({
+        code: "VISUAL_SEARCH_ASSIGNMENT_NOT_FOUND",
+        message: "Visual search assignment not found.",
+      });
+    }
+
+    await ctx.db.delete(args.assignmentId);
+    return { assignmentId: args.assignmentId };
   },
 });
 
