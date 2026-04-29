@@ -2,8 +2,8 @@ import { ConvexError, v } from "convex/values";
 import { action, internalQuery, mutation, query } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { api, internal } from "./_generated/api";
-import { authComponent } from "./auth";
+import { internal } from "./_generated/api";
+import { requireAdmin, requireAdminAction, requireAuthenticatedAction } from "./permissions";
 
 const DEFAULT_RUNPOD_TIMEOUT_MS = 20_000;
 const SEARCH_RUNPOD_TIMEOUT_MS = 90_000;
@@ -44,28 +44,6 @@ type NormalizedSearchResponse = {
   topK: number;
   results: SearchResult[];
 };
-
-async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.safeGetAuthUser(ctx);
-  if (!user) throw new ConvexError({ code: "NOT_AUTHENTICATED", message: "Not authenticated" });
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new ConvexError({ code: "ADMIN_REQUIRED", message: "Admin access required" });
-  return user as { _id: string; role?: string | null };
-}
-
-async function requireAdminAction(ctx: ActionCtx) {
-  const user = await ctx.runQuery(api.auth.getCurrentUser, {});
-  if (!user) throw new ConvexError({ code: "NOT_AUTHENTICATED", message: "Not authenticated" });
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new ConvexError({ code: "ADMIN_REQUIRED", message: "Admin access required" });
-  return user;
-}
-
-async function requireAuthenticatedAction(ctx: ActionCtx) {
-  const user = await ctx.runQuery(api.auth.getCurrentUser, {});
-  if (!user) throw new ConvexError({ code: "NOT_AUTHENTICATED", message: "Not authenticated" });
-  return user;
-}
 
 async function getVisualSearchConfigRow(ctx: QueryCtx | MutationCtx) {
   return await ctx.db.query("visualSearchConfig").first();
@@ -438,7 +416,6 @@ function normalizeSearchResponse(value: unknown, fallback: ValidatedSearchArgs):
 export const getVisualSearchConfig = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
     const config = await getVisualSearchConfigRow(ctx);
     if (!config) return null;
 
@@ -500,7 +477,6 @@ export const setVisualSearchEndpoint = mutation({
 export const listVisualSearchMuseumAssignments = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
     const assignments = await ctx.db.query("visualSearchMuseumAssignments").collect();
     const rows = await Promise.all(
       assignments.map((assignment) => joinAssignmentWithMuseum(ctx, assignment))
@@ -513,7 +489,6 @@ export const listVisualSearchMuseumAssignments = query({
 export const listVisualSearchActiveMuseums = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
     const assignments = await ctx.db
       .query("visualSearchMuseumAssignments")
       .withIndex("by_active", (q) => q.eq("isActive", true))

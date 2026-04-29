@@ -1,29 +1,13 @@
 import { GeospatialIndex } from "@convex-dev/geospatial";
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
-import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { api, components, internal } from "./_generated/api";
-import { authComponent } from "./auth";
 import { updateRequestStatusHelper } from "./organizationRequests";
+import { requireAdmin, requireAdminAction } from "./permissions";
 
 const geospatial = new GeospatialIndex(components.geospatial);
-
-async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.safeGetAuthUser(ctx);
-  if (!user) throw new Error("Not authenticated");
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new Error("Admin access required");
-  return user;
-}
-
-async function requireAdminAction(ctx: ActionCtx) {
-  const user = await ctx.runQuery(api.auth.getCurrentUser, {});
-  if (!user) throw new Error("Not authenticated");
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new Error("Admin access required");
-  return user;
-}
 
 // Component calls from queries (sparingly; components require runQuery).
 // Cast: getOrganization may be provided by component extension; package types omit it.
