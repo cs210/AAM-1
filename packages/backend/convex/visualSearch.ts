@@ -1,9 +1,14 @@
 import { ConvexError, v } from "convex/values";
 import { action, internalQuery, mutation, query } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { requireAdmin, requireAdminAction, requireAuthenticatedAction } from "./permissions";
+import {
+  requireAdmin,
+  requireAdminAction,
+  requireAuthenticatedAction,
+  requireAuthenticatedUser,
+} from "./permissions";
 
 const DEFAULT_RUNPOD_TIMEOUT_MS = 20_000;
 const SEARCH_RUNPOD_TIMEOUT_MS = 90_000;
@@ -25,11 +30,19 @@ type ValidatedSearchArgs = {
   topK: number;
 };
 
+type ValidatedSearchRequestArgs = {
+  museumSlug: string;
+  imageUrl?: string;
+  storageId?: Id<"_storage">;
+  topK: number;
+};
+
 type SearchResult = {
   artworkKey: string;
   objectId: string;
   title: string | null;
   artistDisplayName: string | null;
+  description: string | null;
   primaryImage: string | null;
   primaryImageSmall: string | null;
   imageUrlUsed: string | null;
@@ -232,6 +245,30 @@ function validateSearchArgs(args: { museumSlug: string; imageUrl: string; topK?:
   };
 }
 
+function validateSearchRequestArgs(args: {
+  museumSlug: string;
+  imageUrl?: string;
+  storageId?: Id<"_storage">;
+  topK?: number;
+}): ValidatedSearchRequestArgs {
+  const imageUrl =
+    args.imageUrl === undefined ? undefined : validateHttpUrl(args.imageUrl, "Image URL");
+
+  if (!imageUrl && !args.storageId) {
+    throw new ConvexError({
+      code: "VISUAL_SEARCH_IMAGE_REQUIRED",
+      message: "Provide either an image URL or an uploaded storageId.",
+    });
+  }
+
+  return {
+    museumSlug: validateMuseumSlug(args.museumSlug),
+    imageUrl,
+    storageId: args.storageId,
+    topK: validateTopK(args.topK),
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -395,6 +432,7 @@ function normalizeSearchResponse(value: unknown, fallback: ValidatedSearchArgs):
         objectId: rawObjectId === undefined || rawObjectId === null ? "" : String(rawObjectId),
         title: asOptionalString(result.title),
         artistDisplayName: pickString(result, "artist_display_name", "artistDisplayName"),
+        description: asOptionalString(result.description),
         primaryImage: pickString(result, "primary_image", "primaryImage"),
         primaryImageSmall: pickString(result, "primary_image_small", "primaryImageSmall"),
         imageUrlUsed: pickString(result, "image_url_used", "imageUrlUsed"),
@@ -471,6 +509,14 @@ export const setVisualSearchEndpoint = mutation({
       updatedAt,
       updatedBy,
     };
+  },
+});
+
+export const generateVisualSearchImageUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAuthenticatedUser(ctx);
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
@@ -683,23 +729,59 @@ export const testVisualSearchSearch = action({
 export const searchArtworkByImage = action({
   args: {
     museumSlug: v.string(),
-    imageUrl: v.string(),
+    imageUrl: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
     topK: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<NormalizedSearchResponse> => {
     await requireAuthenticatedAction(ctx);
-    const input = validateSearchArgs(args);
-    const response = await callRunpodVisualSearch(ctx, {
-      path: "/search",
-      method: "POST",
-      timeoutMs: SEARCH_RUNPOD_TIMEOUT_MS,
-      body: {
-        museum_slug: input.museumSlug,
-        image_url: input.imageUrl,
-        top_k: input.topK,
-      },
-    });
+    const input = validateSearchRequestArgs(args);
+    let imageUrl = input.imageUrl;
 
-    return normalizeSearchResponse(response, input);
+    try {
+      if (!imageUrl && input.storageId) {
+        const storageImageUrl = await ctx.storage.getUrl(input.storageId);
+        if (!storageImageUrl) {
+          throw new ConvexError({
+            code: "VISUAL_SEARCH_IMAGE_URL_UNAVAILABLE",
+            message: "Uploaded image URL is not available.",
+          });
+        }
+        imageUrl = storageImageUrl;
+      }
+
+      if (!imageUrl) {
+        throw new ConvexError({
+          code: "VISUAL_SEARCH_IMAGE_REQUIRED",
+          message: "Provide either an image URL or an uploaded storageId.",
+        });
+      }
+
+      const searchInput = {
+        museumSlug: input.museumSlug,
+        imageUrl,
+        topK: input.topK,
+      };
+      const response = await callRunpodVisualSearch(ctx, {
+        path: "/search",
+        method: "POST",
+        timeoutMs: SEARCH_RUNPOD_TIMEOUT_MS,
+        body: {
+          museum_slug: searchInput.museumSlug,
+          image_url: searchInput.imageUrl,
+          top_k: searchInput.topK,
+        },
+      });
+
+      return normalizeSearchResponse(response, searchInput);
+    } finally {
+      if (input.storageId) {
+        try {
+          await ctx.storage.delete(input.storageId);
+        } catch (error) {
+          console.warn("Failed to delete temporary visual search image.", error);
+        }
+      }
+    }
   },
 });

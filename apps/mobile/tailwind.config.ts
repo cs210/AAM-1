@@ -1,5 +1,4 @@
 import type { Config } from 'tailwindcss';
-import uniwindPreset from 'uniwind/tailwind';
 
 export default {
   darkMode: 'class',
@@ -7,7 +6,6 @@ export default {
     './app/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
   ],
-  presets: [uniwindPreset],
   theme: {
     extend: {
       fontFamily: {

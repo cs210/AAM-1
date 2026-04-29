@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { LucideIcon, LucideProps } from 'lucide-react-native';
-import { withUniwind } from 'uniwind'
+import { withUniwind } from 'uniwind';
 
 type IconProps = LucideProps & {
   as: LucideIcon;
@@ -10,13 +10,14 @@ function IconImpl({ as: IconComponent, ...props }: IconProps) {
   return <IconComponent {...props} />;
 }
 
-withUniwind(IconImpl, {
-  className: {
-    target: 'style',
-    nativeStyleToProp: {
-      height: 'size',
-      width: 'size',
-    },
+const UniwindIconImpl = withUniwind(IconImpl, {
+  color: {
+    fromClassName: 'className',
+    styleProperty: 'color',
+  },
+  size: {
+    fromClassName: 'className',
+    styleProperty: 'height',
   },
 });
 
@@ -42,7 +43,7 @@ withUniwind(IconImpl, {
  */
 function Icon({ as: IconComponent, className, size = 14, ...props }: IconProps) {
   return (
-    <IconImpl
+    <UniwindIconImpl
       as={IconComponent}
       className={cn('text-foreground', className)}
       size={size}

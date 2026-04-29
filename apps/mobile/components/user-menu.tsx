@@ -33,7 +33,11 @@ export function UserMenu() {
 
   return (
     <Popover>
-      <PopoverTrigger ref={popoverTriggerRef} render={<Button variant="ghost" size="icon" className="size-8 rounded-full" />}><UserAvatar /></PopoverTrigger>
+      <PopoverTrigger ref={popoverTriggerRef} asChild>
+        <Button variant="ghost" size="icon" className="size-8 rounded-full">
+          <UserAvatar />
+        </Button>
+      </PopoverTrigger>
       <PopoverContent align="center" side="bottom" className="w-80 p-0">
         <View className="border-border gap-3 border-b p-3">
           <View className="flex-row items-center gap-3">
