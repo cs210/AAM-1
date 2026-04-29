@@ -114,6 +114,7 @@ export default function MuseumDetailScreen() {
       (b.visitDate ?? b.createdAt) - (a.visitDate ?? a.createdAt)
     );
   }, [userCheckIns]);
+  const existingCheckIn = sortedUserCheckIns[0] ?? null;
 
   const museumCheckInPhotoUrls = useMemo(() => {
     if (!museumCheckIns || museumCheckIns.length === 0) return [];
@@ -223,6 +224,10 @@ export default function MuseumDetailScreen() {
         params: { museumId: effectiveId },
       });
     }
+  };
+
+  const handleUserCheckInPress = (checkIn: UserCheckIn) => {
+    setEditingCheckIn(checkIn);
   };
 
   // Loading state
@@ -599,10 +604,10 @@ export default function MuseumDetailScreen() {
         initialReview={editingCheckIn?.review}
         onSave={(rating, review) =>
           editingCheckIn &&
-          saveCheckIn(editingCheckIn._id, rating, review)
+          saveCheckIn(editingCheckIn._id as Id<'checkIns'>, rating, review)
         }
         onDelete={() =>
-          editingCheckIn && deleteCheckIn(editingCheckIn._id)
+          editingCheckIn && deleteCheckIn(editingCheckIn._id as Id<'checkIns'>)
         }
         onClose={() => setEditingCheckIn(null)}
       />
