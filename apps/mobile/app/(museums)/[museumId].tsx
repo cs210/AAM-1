@@ -1,12 +1,20 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, Stack, router } from 'expo-router';
+import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, MapPinIcon, HeartIcon, CheckCircle2Icon, PencilIcon, StarIcon } from 'lucide-react-native';
+import {
+  ArrowLeftIcon,
+  ScanSearchIcon,
+  MapPinIcon,
+  HeartIcon,
+  CheckCircle2Icon,
+  PencilIcon,
+  StarIcon,
+} from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
@@ -94,6 +102,15 @@ export default function MuseumDetailScreen() {
     api.checkIns.getMuseumCheckIns,
     effectiveId ? { museumId: effectiveId as Id<'museums'> } : 'skip'
   );
+  const activeVisualSearchMuseums = useQuery(api.visualSearch.listVisualSearchActiveMuseums);
+  const visualSearchAssignment = useMemo(() => {
+    if (!effectiveId || !activeVisualSearchMuseums) return null;
+    return (
+      activeVisualSearchMuseums.find(
+        (assignment) => String(assignment.museumId) === effectiveId
+      ) ?? null
+    );
+  }, [activeVisualSearchMuseums, effectiveId]);
   
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
@@ -224,6 +241,19 @@ export default function MuseumDetailScreen() {
         params: { museumId: effectiveId },
       });
     }
+  };
+
+  const handleVisualSearchPress = () => {
+    if (!effectiveId || !museum || !visualSearchAssignment) return;
+
+    router.push({
+      pathname: '/visual-search',
+      params: {
+        museumId: effectiveId,
+        museumName: museum.name,
+        museumSlug: visualSearchAssignment.museumSlug,
+      },
+    } as unknown as Href);
   };
 
   const handleUserCheckInPress = (checkIn: UserCheckIn) => {
@@ -496,11 +526,20 @@ export default function MuseumDetailScreen() {
             </Pressable>
 
             <Pressable
-              className="mb-6 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3.5 active:opacity-90"
+              className="mb-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3.5 active:opacity-90"
               onPress={handleCheckInPress}>
               <CheckCircle2Icon size={20} color={RN_API_BACKGROUND_LIGHT} />
               <Text className="text-base font-semibold text-primary-foreground">Check In</Text>
             </Pressable>
+
+            {visualSearchAssignment ? (
+              <Pressable
+                className="mb-6 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card py-3.5 active:opacity-90"
+                onPress={handleVisualSearchPress}>
+                <ScanSearchIcon size={20} color={RN_API_FOREGROUND_LIGHT} />
+                <Text className="text-base font-semibold text-foreground">Visual Search</Text>
+              </Pressable>
+            ) : null}
 
             <View className="mb-4">
               <Text className="mb-4 text-xl font-semibold text-foreground">Ongoing Events</Text>
