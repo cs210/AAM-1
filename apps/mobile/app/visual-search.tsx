@@ -1,9 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Linking, Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList, Image, Linking, Modal, Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useAction, useMutation, useQuery } from 'convex/react';
-import { ArrowLeftIcon, ScanSearchIcon, ExternalLinkIcon, ImageIcon, SearchIcon } from 'lucide-react-native';
+import {
+  ArrowLeftIcon,
+  ScanSearchIcon,
+  ExternalLinkIcon,
+  ImageIcon,
+  SearchIcon,
+  XIcon,
+} from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { api } from '@packages/backend/convex/_generated/api';
@@ -143,7 +150,16 @@ function formatScore(score: number) {
   return Number.isFinite(score) ? score.toFixed(3) : '0.000';
 }
 
+function getResultThumbnailUrl(result: VisualSearchResult) {
+  return result.primaryImageSmall ?? result.primaryImage ?? result.imageUrlUsed ?? null;
+}
+
+function getResultDetailImageUrl(result: VisualSearchResult) {
+  return result.primaryImage ?? result.primaryImageSmall ?? result.imageUrlUsed ?? null;
+}
+
 export default function VisualSearchScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     museumId?: string | string[];
     museumName?: string | string[];
@@ -157,6 +173,7 @@ export default function VisualSearchScreen() {
   const [searchStatus, setSearchStatus] = useState<SearchStatus>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchResponse, setSearchResponse] = useState<VisualSearchResponse | null>(null);
+  const [selectedResultIndex, setSelectedResultIndex] = useState<number | null>(null);
 
   const preselectedMuseum = useMemo<VisualSearchMuseum | null>(() => {
     const museumId = getParamValue(params.museumId);
@@ -197,6 +214,7 @@ export default function VisualSearchScreen() {
     if (searchResponse) {
       setSearchResponse(null);
       setErrorMessage(null);
+      setSelectedResultIndex(null);
       return;
     }
 
@@ -204,6 +222,7 @@ export default function VisualSearchScreen() {
       setSelectedMuseum(null);
       setSelectedImage(null);
       setErrorMessage(null);
+      setSelectedResultIndex(null);
       return;
     }
 
@@ -214,6 +233,7 @@ export default function VisualSearchScreen() {
     setSelectedMuseum(museum);
     setSearchResponse(null);
     setErrorMessage(null);
+    setSelectedResultIndex(null);
   }, []);
 
   const pickImage = async () => {
@@ -243,6 +263,7 @@ export default function VisualSearchScreen() {
 
       setSelectedImage(asset);
       setSearchResponse(null);
+      setSelectedResultIndex(null);
     } catch (error) {
       console.error('Image selection failed:', error);
       setErrorMessage('Could not open your photo library. Please try again.');
@@ -288,6 +309,7 @@ export default function VisualSearchScreen() {
 
     setErrorMessage(null);
     setSearchResponse(null);
+    setSelectedResultIndex(null);
     setSearchStatus('uploading');
 
     try {
@@ -310,6 +332,13 @@ export default function VisualSearchScreen() {
     } finally {
       setSearchStatus(null);
     }
+  };
+
+  const handleTryAnotherImage = async () => {
+    setSearchResponse(null);
+    setErrorMessage(null);
+    setSelectedResultIndex(null);
+    await pickImage();
   };
 
   const renderMuseumItem = useCallback(
@@ -474,111 +503,235 @@ export default function VisualSearchScreen() {
 
   const renderResults = () => {
     if (!selectedMuseum || !searchResponse) return null;
+    const results = searchResponse.results;
+    const backgroundUri =
+      selectedImage?.uri ??
+      (results[0] ? getResultDetailImageUrl(results[0]) : null);
+    const selectedResult =
+      selectedResultIndex == null ? null : results[selectedResultIndex] ?? null;
 
     return (
-      <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}>
-        <View className="gap-5">
-          {selectedImage ? (
-            <Image
-              source={{ uri: selectedImage.uri }}
-              className="h-64 w-full rounded-2xl bg-muted"
-              resizeMode="cover"
-            />
-          ) : null}
+      <View className="flex-1 bg-black">
+        <Stack.Screen options={{ headerShown: false }} />
+        {backgroundUri ? (
+          <Image
+            source={{ uri: backgroundUri }}
+            className="absolute inset-0 size-full"
+            resizeMode="contain"
+          />
+        ) : null}
 
-          <View>
-            <Text className="text-2xl font-semibold leading-8 text-foreground">
-              {selectedMuseum.museumName}
-            </Text>
-            <Text className="mt-1 text-sm text-muted-foreground">
-              {searchResponse.results.length} matches found
-            </Text>
+        <SafeAreaView className="flex-1" edges={['top', 'bottom', 'left', 'right']}>
+          <View className="flex-row items-center justify-between px-4 pt-2">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back to image upload"
+              className="size-11 items-center justify-center rounded-full border border-white/20 bg-black/45 active:opacity-80"
+              onPress={handleBackPress}>
+              <ArrowLeftIcon size={24} color="#ffffff" />
+            </Pressable>
+            <View className="ml-3 min-w-0 flex-1 items-end">
+              <View className="max-w-full rounded-full border border-white/15 bg-black/45 px-3 py-2">
+                <Text className="text-xs font-semibold text-white" numberOfLines={1}>
+                  {selectedMuseum.museumName}
+                </Text>
+              </View>
+            </View>
           </View>
 
-          {errorMessage ? (
-            <View className="rounded-xl border border-border bg-card p-4">
-              <Text className="text-sm leading-5 text-muted-foreground">{errorMessage}</Text>
+          {results.length === 0 ? (
+            <View className="flex-1 items-center justify-center px-6">
+              <Card className="w-full rounded-2xl border-white/20 bg-background/95 py-6">
+                <CardHeader>
+                  <CardTitle className="text-center text-2xl text-foreground">
+                    No matches found
+                  </CardTitle>
+                  <CardDescription className="mt-2 text-center text-base leading-6">
+                    Try a clearer image or another museum.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="gap-3">
+                  <Button onPress={handleTryAnotherImage}>
+                    <Text>Try another image</Text>
+                  </Button>
+                  <Button variant="outline" onPress={handleBackPress}>
+                    <Text>Back</Text>
+                  </Button>
+                </CardContent>
+              </Card>
             </View>
           ) : null}
+        </SafeAreaView>
 
-          <View className="gap-3">
-            {searchResponse.results.map((result, index) => {
-              const thumbnailUrl =
-                result.primaryImageSmall ?? result.primaryImage ?? selectedImage?.uri ?? result.imageUrlUsed;
+        {results.length > 0 ? (
+          <View
+            className="absolute left-0 right-0"
+            style={{ bottom: Math.max(insets.bottom, 12) }}>
+            <View className="mx-4 rounded-3xl border border-white/15 bg-black/50 py-3 shadow-lg shadow-black/40">
+              <View className="mb-2 flex-row items-center justify-between px-4">
+                <Text className="text-xs font-semibold uppercase text-white/80">
+                  Top Matches
+                </Text>
+                <Text className="text-xs text-white/65">
+                  {results.length} found
+                </Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 12, paddingHorizontal: 14 }}>
+                {results.map((result, index) => {
+                  const thumbnailUrl = getResultThumbnailUrl(result);
 
-              return (
-                <Card key={`${result.artworkKey || result.objectId || index}`} className="rounded-2xl py-4">
-                  <CardContent className="flex-row gap-3 px-4">
-                    {thumbnailUrl ? (
-                      <Image
-                        source={{ uri: thumbnailUrl }}
-                        className="size-20 rounded-xl bg-muted"
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View className="size-20 items-center justify-center rounded-xl bg-muted">
-                        <ImageIcon size={22} color={RN_API_MUTED_FOREGROUND_LIGHT} />
-                      </View>
-                    )}
-                    <View className="min-w-0 flex-1 gap-1">
-                      <Text className="text-base font-semibold text-foreground" numberOfLines={2}>
-                        {result.title || 'Untitled artwork'}
-                      </Text>
-                      {result.artistDisplayName ? (
-                        <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                          {result.artistDisplayName}
+                  return (
+                    <Pressable
+                      key={`${result.artworkKey || result.objectId || index}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open match ${index + 1}`}
+                      className="h-24 w-20 overflow-hidden rounded-2xl border border-white/30 bg-black/40 active:opacity-85"
+                      onPress={() => setSelectedResultIndex(index)}>
+                      {thumbnailUrl ? (
+                        <Image
+                          source={{ uri: thumbnailUrl }}
+                          className="absolute inset-0 size-full"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View className="absolute inset-0 items-center justify-center bg-muted">
+                          <ImageIcon size={24} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+                        </View>
+                      )}
+                      <View className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1">
+                        <Text className="text-[10px] font-semibold text-white">
+                          Score {formatScore(result.score)}
                         </Text>
-                      ) : null}
-                      <Text className="text-xs text-muted-foreground">
-                        Score {formatScore(result.score)}
-                      </Text>
-                      {result.sourceUrl ? (
-                        <Pressable
-                          className="mt-1 flex-row items-center gap-1 self-start"
-                          onPress={() => void Linking.openURL(result.sourceUrl!)}>
-                          <Text className="text-xs font-semibold text-primary">Source</Text>
-                          <ExternalLinkIcon size={12} color={RN_API_PRIMARY_LIGHT} />
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      </View>
+                      <View className="absolute left-1.5 top-1.5 size-6 items-center justify-center rounded-full bg-white">
+                        <Text className="text-xs font-bold text-foreground">{index + 1}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        ) : null}
+
+        <Modal
+          visible={selectedResult != null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedResultIndex(null)}>
+          <Pressable
+            className="flex-1 items-center justify-center bg-black/65 p-5"
+            onPress={() => setSelectedResultIndex(null)}>
+            {selectedResult ? (
+              <Pressable
+                className="max-h-[82%] w-full rounded-[28px] border border-white/15 bg-black/50 p-4 shadow-lg shadow-black/40"
+                onPress={(event) => event.stopPropagation()}>
+                <View className="mb-4 flex-row items-center justify-between gap-3">
+                  <Text className="text-sm font-semibold uppercase text-white/70">
+                    Match #{(selectedResultIndex ?? 0) + 1}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Close match details"
+                    className="size-9 items-center justify-center rounded-full bg-white/15 active:opacity-80"
+                    onPress={() => setSelectedResultIndex(null)}>
+                    <XIcon size={18} color="#ffffff" />
+                  </Pressable>
+                </View>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {getResultDetailImageUrl(selectedResult) ? (
+                    <Image
+                      source={{ uri: getResultDetailImageUrl(selectedResult)! }}
+                      className="mb-5 h-56 w-full rounded-2xl bg-black/40"
+                      resizeMode="contain"
+                    />
+                  ) : null}
+
+                  <View className="gap-3">
+                    <View>
+                      <Text className="text-2xl font-semibold leading-8 text-white">
+                        {selectedResult.title || 'Untitled'}
+                      </Text>
+                      <Text className="mt-1 text-base text-white/70">
+                        {selectedResult.artistDisplayName || 'Unknown artist'}
+                      </Text>
+                    </View>
+
+                    <View className="self-start rounded-full bg-white/15 px-3 py-1.5">
+                      <Text className="text-xs font-semibold text-white">
+                        Score {formatScore(selectedResult.score)}
+                      </Text>
+                    </View>
+
+                    {selectedResult.description ? (
+                      <Text className="text-sm leading-6 text-white/90">
+                        {selectedResult.description}
+                      </Text>
+                    ) : null}
+
+                    {(selectedResult.objectId || selectedResult.artworkKey) ? (
+                      <View className="gap-1 rounded-2xl bg-white/10 p-3">
+                        {selectedResult.objectId ? (
+                          <Text className="text-xs text-white/65">
+                            Object ID: {selectedResult.objectId}
+                          </Text>
+                        ) : null}
+                        {selectedResult.artworkKey ? (
+                          <Text className="text-xs text-white/65">
+                            Artwork key: {selectedResult.artworkKey}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {selectedResult.sourceUrl ? (
+                      <Pressable
+                        className="mt-1"
+                        onPress={() => void Linking.openURL(selectedResult.sourceUrl!)}>
+                        <View className="flex-row items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 active:opacity-80">
+                          <ExternalLinkIcon size={16} color="#ffffff" />
+                          <Text className="font-semibold text-white">Open source</Text>
+                        </View>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </ScrollView>
+              </Pressable>
+            ) : null}
+          </Pressable>
+        </Modal>
+      </View>
     );
   };
 
   return (
     <AuthGuard>
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
-        <Stack.Screen options={{ headerShown: false }} />
+      {searchResponse ? (
+        renderResults()
+      ) : (
+        <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+          <Stack.Screen options={{ headerShown: false }} />
 
-        <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            className="size-10 items-center justify-center"
-            onPress={handleBackPress}>
-            <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
-          </Pressable>
-          <Text className="flex-1 text-center text-base font-semibold text-foreground" numberOfLines={1}>
-            Visual Search
-          </Text>
-          <View className="w-10" />
-        </View>
+          <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              className="size-10 items-center justify-center"
+              onPress={handleBackPress}>
+              <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
+            </Pressable>
+            <Text className="flex-1 text-center text-base font-semibold text-foreground" numberOfLines={1}>
+              Visual Search
+            </Text>
+            <View className="w-10" />
+          </View>
 
-        {searchResponse
-          ? renderResults()
-          : selectedMuseum
-            ? renderUploadStep()
-            : renderMuseumSelector()}
-      </SafeAreaView>
+          {selectedMuseum ? renderUploadStep() : renderMuseumSelector()}
+        </SafeAreaView>
+      )}
     </AuthGuard>
   );
 }
