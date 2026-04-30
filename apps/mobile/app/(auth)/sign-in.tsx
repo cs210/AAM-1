@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { authClient } from '@/lib/auth-client';
-import { AUTH_INPUT_CLASSNAME } from '@/lib/auth-ui';
 import { router } from 'expo-router';
 import * as React from 'react';
 import { Pressable, TextInput, View } from 'react-native';
@@ -34,7 +33,7 @@ export default function SignInScreen() {
       setIsLoading(false);
 
       if (signInError) {
-        console.error('Sign in error:', signInError);
+        if (__DEV__) console.error('Sign in error');
         setError(signInError.message ?? 'Sign in failed');
         return;
       }
@@ -43,14 +42,16 @@ export default function SignInScreen() {
         router.replace('/post-auth');
       }
     } catch (err) {
-      console.error('Unexpected error during sign in:', err);
+      if (__DEV__) console.error('Unexpected error during sign in');
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   }
 
   return (
-    <AuthScreenLayout subtitle="Your Cultural Passport">
+    <AuthScreenLayout
+      subtitle="Welcome back."
+      description="Sign in to pick up where you left off.">
       {error ? (
         <View className="rounded-xl border border-destructive/25 bg-destructive/10 p-3">
           <Text className="text-center text-sm text-destructive">{error}</Text>
@@ -69,7 +70,6 @@ export default function SignInScreen() {
           autoCapitalize="none"
           onSubmitEditing={onEmailSubmitEditing}
           returnKeyType="next"
-          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
@@ -93,7 +93,6 @@ export default function SignInScreen() {
           secureTextEntry
           returnKeyType="send"
           onSubmitEditing={onSubmit}
-          className={AUTH_INPUT_CLASSNAME}
         />
       </View>
 
@@ -110,9 +109,9 @@ export default function SignInScreen() {
       <Pressable
         onPress={() => router.push('/sign-up')}
         className="items-center py-4 active:opacity-85">
-        <Text className="text-center text-sm text-stone-600">
+        <Text className="text-center text-sm text-muted-foreground">
           {"Don't have an account? "}
-          <Text className="font-semibold text-stone-900 underline">Sign up</Text>
+          <Text className="font-semibold text-foreground underline">Sign up</Text>
         </Text>
       </Pressable>
     </AuthScreenLayout>

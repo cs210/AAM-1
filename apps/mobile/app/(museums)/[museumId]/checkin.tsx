@@ -7,13 +7,13 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ArrowLeftIcon, ChevronDownIcon, StarIcon, XIcon } from 'lucide-react-native';
+import { ChevronDownIcon, StarIcon, XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -21,10 +21,10 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
+import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import {
   RN_API_BACKGROUND_LIGHT,
   RN_API_BORDER_LIGHT,
-  RN_API_FOREGROUND_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
@@ -40,6 +40,7 @@ const DURATION_OPTIONS = [
 ] as const;
 
 export default function CheckInScreen() {
+  const insets = useSafeAreaInsets();
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
   const rawId = typeof museumId === 'string' ? museumId : Array.isArray(museumId) ? museumId[0] : undefined;
   const isTabSegment = rawId != null && TAB_ROUTE_SEGMENTS.has(rawId);
@@ -221,7 +222,7 @@ export default function CheckInScreen() {
 
   if (museum === undefined) {
     return (
-      <SafeAreaView className="flex-1 bg-muted" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View className="flex-1 items-center justify-center">
           <BrandActivityIndicator size="large" />
@@ -232,15 +233,9 @@ export default function CheckInScreen() {
 
   if (museum === null) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="flex-row items-center justify-between border-b border-border bg-card px-4 py-3">
-          <Pressable className="size-10 items-center justify-center" onPress={() => router.back()}>
-            <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
-          </Pressable>
-          <Text className="flex-1 text-center text-base font-semibold text-foreground">Check In</Text>
-          <View className="w-10" />
-        </View>
+        <ScreenTitleBar title="Check In" onBackPress={() => router.back()} />
         <View className="flex-1 items-center justify-center">
           <Text className="text-base text-foreground">Museum not found</Text>
         </View>
@@ -250,19 +245,13 @@ export default function CheckInScreen() {
 
   return (
     <AuthGuard>
-      <SafeAreaView className="flex-1 bg-muted" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        <View className="flex-row items-center justify-between border-b border-border bg-card px-4 py-3">
-          <Pressable className="size-10 items-center justify-center" onPress={() => router.back()}>
-            <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
-          </Pressable>
-          <Text className="flex-1 text-center text-base font-semibold text-foreground">Check In</Text>
-          <View className="w-10" />
-        </View>
+        <ScreenTitleBar title="Check In" onBackPress={() => router.back()} />
 
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 + insets.bottom }}
           showsVerticalScrollIndicator={false}>
           <View className="mb-6 rounded-xl border border-border bg-card p-4">
             <Text className="mb-1 text-xl font-bold text-foreground">{museum.name}</Text>

@@ -121,7 +121,7 @@ export function DashboardExhibitions() {
               <div className="rounded-[14px] bg-[linear-gradient(120deg,#f97316,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899)] p-[1.5px]">
                 <Button
                   variant="secondary"
-                  className="gap-1.5 rounded-[12.5px] border-0 bg-background hover:bg-background/90"
+                  className="gap-1.5 rounded-[12.5px] border-0 bg-background/95 hover:bg-background dark:bg-background dark:hover:bg-background/90"
                   onClick={() => {
                     setAutoFillError(null)
                     setAutoFillMessage(null)
@@ -140,7 +140,7 @@ export function DashboardExhibitions() {
             <p className="text-sm text-destructive">{autoFillError}</p>
           )}
           {autoFillMessage && (
-            <p className="text-sm text-green-700 dark:text-green-400">{autoFillMessage}</p>
+            <p className="text-sm text-emerald-700 dark:text-emerald-400">{autoFillMessage}</p>
           )}
           {exhibitions === undefined ? (
             <p className="text-muted-foreground text-sm">{t("loadingExhibitions")}</p>

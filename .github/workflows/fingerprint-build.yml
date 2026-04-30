@@ -1,0 +1,152 @@
+name: Build on Fingerprint Change
+
+# On every push to main:
+#   - Computes the native fingerprint with @expo/fingerprint
+#   - Uses a GitHub Actions cache keyed by that hash to detect changes
+#   - Fingerprint CHANGED → build iOS production + dev client + Android dev client,
+#                            then auto-submit iOS to TestFlight
+#   - Fingerprint UNCHANGED → publish an OTA JS update so users get the latest
+#                              code instantly without a new binary
+#
+# Required secret: EXPO_TOKEN  (expo.dev → Account Settings → Access Tokens)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  fingerprint-and-deploy:
+    name: Fingerprint & deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      # ── Setup ──────────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4  # reads version from root package.json packageManager
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .   # install from repo root so workspace links resolve
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # ── Compute fingerprints ───────────────────────────────────────────────
+      - name: Compute iOS fingerprint
+        id: ios-fp
+        run: |
+          HASH=$(npx --yes @expo/fingerprint@latest . --platform ios | jq -r '.hash')
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "iOS fingerprint: $HASH"
+
+      - name: Compute Android fingerprint
+        id: android-fp
+        run: |
+          HASH=$(npx --yes @expo/fingerprint@latest . --platform android | jq -r '.hash')
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "Android fingerprint: $HASH"
+
+      # ── Check cache (cache hit = fingerprint unchanged, no build needed) ───
+      - name: Check iOS fingerprint cache
+        id: ios-cache
+        uses: actions/cache@v4
+        with:
+          path: .fingerprint-ios
+          key: fingerprint-ios-${{ steps.ios-fp.outputs.hash }}
+          lookup-only: true
+
+      - name: Check Android fingerprint cache
+        id: android-cache
+        uses: actions/cache@v4
+        with:
+          path: .fingerprint-android
+          key: fingerprint-android-${{ steps.android-fp.outputs.hash }}
+          lookup-only: true
+
+      # ── Log what we're about to do ─────────────────────────────────────────
+      - name: Summarise
+        run: |
+          echo "iOS fingerprint changed: ${{ steps.ios-cache.outputs.cache-hit != 'true' }}"
+          echo "Android fingerprint changed: ${{ steps.android-cache.outputs.cache-hit != 'true' }}"
+
+      # ── Build if fingerprint changed ───────────────────────────────────────
+      - name: Build iOS production + auto-submit to TestFlight
+        if: steps.ios-cache.outputs.cache-hit != 'true'
+        run: |
+          eas build \
+            --platform ios \
+            --profile production \
+            --non-interactive \
+            --auto-submit \
+            --no-wait   # submit is handled by EAS after the build completes
+
+      - name: Build iOS dev client
+        if: steps.ios-cache.outputs.cache-hit != 'true'
+        run: |
+          eas build \
+            --platform ios \
+            --profile development \
+            --non-interactive \
+            --no-wait
+
+      - name: Build Android dev client
+        if: steps.android-cache.outputs.cache-hit != 'true'
+        run: |
+          eas build \
+            --platform android \
+            --profile development \
+            --non-interactive \
+            --no-wait
+
+      # ── Save caches after successful builds ────────────────────────────────
+      - name: Save iOS fingerprint cache
+        if: success() && steps.ios-cache.outputs.cache-hit != 'true'
+        run: echo "${{ steps.ios-fp.outputs.hash }}" > .fingerprint-ios
+
+      - name: Store iOS fingerprint cache
+        if: success() && steps.ios-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .fingerprint-ios
+          key: fingerprint-ios-${{ steps.ios-fp.outputs.hash }}
+
+      - name: Save Android fingerprint cache
+        if: success() && steps.android-cache.outputs.cache-hit != 'true'
+        run: echo "${{ steps.android-fp.outputs.hash }}" > .fingerprint-android
+
+      - name: Store Android fingerprint cache
+        if: success() && steps.android-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .fingerprint-android
+          key: fingerprint-android-${{ steps.android-fp.outputs.hash }}
+
+      # ── Publish OTA if fingerprint unchanged ───────────────────────────────
+      - name: Publish iOS OTA update
+        if: steps.ios-cache.outputs.cache-hit == 'true'
+        run: |
+          eas update \
+            --channel production \
+            --platform ios \
+            --message "${{ github.event.head_commit.message }}" \
+            --non-interactive
+
+      - name: Publish Android OTA update
+        if: steps.android-cache.outputs.cache-hit == 'true'
+        run: |
+          eas update \
+            --channel production \
+            --platform android \
+            --message "${{ github.event.head_commit.message }}" \
+            --non-interactive

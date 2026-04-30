@@ -9,6 +9,7 @@ import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
+import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 const MUSEUMS_PER_PAGE = 10;
 const LIST_PADDING_BOTTOM = { paddingBottom: 80 } as const;
+const FEED_LIST_PADDING = { paddingBottom: 80, paddingHorizontal: 20 } as const;
 
 async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
   const lastKnown = await Location.getLastKnownPositionAsync({
@@ -263,7 +265,7 @@ function TasteAlignedRoute({
               openOnReviewsTab
             />
           )}
-          contentContainerStyle={LIST_PADDING_BOTTOM}
+          contentContainerStyle={FEED_LIST_PADDING}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -397,29 +399,9 @@ export default function SearchScreen() {
       className="relative flex-1 bg-background"
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
-      <View
-        className="absolute -right-38 -top-50 z-0 h-100 w-137.5 overflow-hidden rounded-full"
-        pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
-          style={{ width: '100%', height: '100%' }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
+      <DecorativeGradientShapes />
 
-      <View
-        className="absolute -bottom-50 -left-38 z-0 h-100 w-137.5 overflow-hidden rounded-full"
-        pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
-          style={{ width: '100%', height: '100%' }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
-
-      <View className="z-10 flex-row border-b border-border bg-background">
+      <View className="z-10 flex-row border-b border-border">
         {tabs.map((tab, tabIndex) => {
           const isActive = tabIndex === index;
           return (
