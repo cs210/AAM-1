@@ -9,6 +9,10 @@
         "deploy": "convex deploy",
         "deploy:dev": "convex dev --once --typecheck disable",
         "seed:museums": "convex run fakeData:populateFakeMuseums",
+        "focus-group:seed": "convex run focusGroup:seedProfiles",
+        "focus-group:save": "convex run focusGroup:saveSessionSnapshot",
+        "focus-group:list": "convex run focusGroup:listProfiles",
+        "focus-group:snapshots": "convex run focusGroup:listSnapshots",
         "typecheck": "tsc --noEmit -p tsconfig.json"
     },
     "author": "",
