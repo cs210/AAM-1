@@ -1,0 +1,61 @@
+name: Publish OTA Update
+
+# Manual trigger – force-publish the latest JS bundle to production users.
+# Use for hotfixes, copy changes, or config tweaks when you know the
+# native fingerprint has NOT changed.
+#
+# EAS Update only delivers the update to devices whose native fingerprint
+# matches the current production build, so it is always safe to run.
+#
+# Required secret: EXPO_TOKEN
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Update message shown in EAS dashboard
+        required: false
+        default: Manual OTA update
+
+jobs:
+  publish-update:
+    name: Publish OTA update → production
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish iOS OTA update
+        run: |
+          eas update \
+            --channel production \
+            --platform ios \
+            --message "${{ inputs.message }}" \
+            --non-interactive
+
+      - name: Publish Android OTA update
+        run: |
+          eas update \
+            --channel production \
+            --platform android \
+            --message "${{ inputs.message }}" \
+            --non-interactive

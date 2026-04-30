@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as bookmarks from "../bookmarks.js";
 import type * as checkIns from "../checkIns.js";
 import type * as email from "../email.js";
 import type * as events from "../events.js";
@@ -21,9 +22,12 @@ import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as museumsAutoFill from "../museumsAutoFill.js";
 import type * as organizationRequests from "../organizationRequests.js";
+import type * as permissions from "../permissions.js";
 import type * as recsys from "../recsys.js";
+import type * as socialNotifications from "../socialNotifications.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as visualSearch from "../visualSearch.js";
 import type * as wrapped from "../wrapped.js";
 
 import type {
@@ -35,6 +39,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
+  bookmarks: typeof bookmarks;
   checkIns: typeof checkIns;
   email: typeof email;
   events: typeof events;
@@ -46,9 +51,12 @@ declare const fullApi: ApiFromModules<{
   museums: typeof museums;
   museumsAutoFill: typeof museumsAutoFill;
   organizationRequests: typeof organizationRequests;
+  permissions: typeof permissions;
   recsys: typeof recsys;
+  socialNotifications: typeof socialNotifications;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
+  visualSearch: typeof visualSearch;
   wrapped: typeof wrapped;
 }>;
 

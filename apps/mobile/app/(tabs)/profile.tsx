@@ -23,11 +23,13 @@ import {
   CameraIcon,
   Grid3x3Icon,
   ListIcon,
+  BookmarkIcon,
 } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
+import { MuseumCard } from '@/components/museum-card';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -49,7 +51,7 @@ const { width } = Dimensions.get('window');
 /** Matches `h-30` banner (30 × 4px). */
 const PROFILE_BANNER_HEIGHT = 120;
 
-type TabType = 'visits' | 'gallery';
+type TabType = 'visits' | 'gallery' | 'bookmarks';
 
 type ProfileVisit = {
   checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
@@ -342,6 +344,12 @@ export default function ProfileScreen() {
   const tasteProfile = useQuery(
     api.wrapped.getTasteProfileForUser,
     viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+
+  // Bookmarks (only for current user's own profile)
+  const bookmarks = useQuery(
+    api.bookmarks.getBookmarks,
+    viewedUserId === currentUserId ? {} : 'skip'
   );
 
   const followUser = useMutation(api.follows.followUser);
@@ -667,6 +675,17 @@ export default function ProfileScreen() {
               activeOpacity={0.7}>
               <Grid3x3Icon size={22} color={activeTab === 'gallery' ? primaryHex : mutedHex} />
             </TouchableOpacity>
+            {viewedUserId === currentUserId && (
+              <TouchableOpacity
+                className={cn(
+                  'flex-1 items-center justify-center border-b-2 py-3.5',
+                  activeTab === 'bookmarks' ? 'border-primary' : 'border-transparent'
+                )}
+                onPress={() => setActiveTab('bookmarks')}
+                activeOpacity={0.7}>
+                <BookmarkIcon size={22} color={activeTab === 'bookmarks' ? primaryHex : mutedHex} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -716,12 +735,44 @@ export default function ProfileScreen() {
                 </View>
               }
             />
-          ) : (
+          ) : activeTab === 'gallery' ? (
             <MosaicGallery
               visits={profileVisits}
               onImagePress={(visit) => router.push(`/(museums)/${visit.museum._id}` as any)}
             />
-          )
+          ) : activeTab === 'bookmarks' ? (
+            bookmarks === undefined ? (
+              <BrandActivityIndicator size="large" className="flex-1" />
+            ) : bookmarks && bookmarks.length > 0 ? (
+              <FlatList
+                className="flex-1 bg-background"
+                data={bookmarks}
+                keyExtractor={(item) => item.museumId}
+                renderItem={({ item }) => (
+                  <MuseumCard museum={item.museum} />
+                )}
+                contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 32 }}
+                showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                  <View className="bg-background px-5 pb-2 pt-4">
+                    <Text variant="muted" className="mt-0.5 text-sm">
+                      {bookmarks.length} bookmark{bookmarks.length !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                }
+              />
+            ) : (
+              <View className="flex-1 items-center justify-center bg-background p-8">
+                <Text className="mb-2 text-lg font-bold text-foreground">No bookmarks yet</Text>
+                <Text className="mb-5 text-center text-base text-muted-foreground">
+                  Bookmark museums you want to visit later.
+                </Text>
+                <Button variant="secondary" onPress={() => router.push('/(tabs)/explore')}>
+                  <Text>Explore museums</Text>
+                </Button>
+              </View>
+            )
+          ) : null
         ) : null}
 
         <EditCheckinModal

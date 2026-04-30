@@ -1,0 +1,59 @@
+name: PR Preview Update
+
+# Publishes a scoped OTA update for every PR so reviewers can load the
+# exact JS bundle on a device without merging first.
+#
+# How to use:
+#   1. Make sure you have a dev-client or preview build installed.
+#   2. In the Expo dev menu → switch update branch to "pr-<number>".
+#   3. The PR's JS bundle loads automatically – no rebuild needed.
+#
+# Required secret: EXPO_TOKEN
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  publish-preview:
+    name: Publish preview update → pr-${{ github.event.pull_request.number }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish iOS preview update
+        run: |
+          eas update \
+            --branch pr-${{ github.event.pull_request.number }} \
+            --platform ios \
+            --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" \
+            --non-interactive
+
+      - name: Publish Android preview update
+        run: |
+          eas update \
+            --branch pr-${{ github.event.pull_request.number }} \
+            --platform android \
+            --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" \
+            --non-interactive

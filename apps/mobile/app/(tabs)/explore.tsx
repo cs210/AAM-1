@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
-import { View, FlatList, Pressable, Share } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, FlatList, Pressable, Linking, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { MuseumCard, MuseumCardData } from '../../components/museum-card';
-import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
+import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
+import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
+import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
@@ -39,8 +41,60 @@ appsFlyer.initSdk(
 appsFlyer.setAppInviteOneLinkID('Rz7b');
 
 const MUSEUMS_PER_PAGE = 10;
-
 const LIST_PADDING_BOTTOM = { paddingBottom: 80 } as const;
+const FEED_LIST_PADDING = { paddingBottom: 80, paddingHorizontal: 20 } as const;
+
+async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
+  const lastKnown = await Location.getLastKnownPositionAsync({
+    maxAge: 1000 * 60 * 60 * 24,
+    requiredAccuracy: 100_000,
+  });
+  if (lastKnown?.coords) {
+    return { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude };
+  }
+
+  try {
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  } catch {
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message = 'LOCATION_TIMEOUT'): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      }
+    );
+  });
+}
+
+function formatLocationFailure(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lower = raw.toLowerCase();
+  if (raw === 'LOCATION_TIMEOUT' || lower.includes('location_timeout')) {
+    return 'Location is taking too long. Try again, or move near a window.';
+  }
+  if (lower.includes('timeout') || lower.includes('timed out')) {
+    return 'Location timed out. Try again, or move outdoors for a better GPS signal.';
+  }
+  if (lower.includes('locationunknown') || lower.includes('location unknown')) {
+    return 'No position yet. On the iOS Simulator, set Features -> Location to a real place (not "None"). On a device, try again in a few seconds.';
+  }
+  if (lower.includes('denied') || lower.includes('permission')) {
+    return 'Location access is off. Enable it in Settings to see miles away and sort by distance.';
+  }
+  return 'Could not read your location. Try again, open Settings, or on Simulator set Features -> Location.';
+}
 
 function MuseumsRoute({
   museumSearch,
@@ -52,6 +106,10 @@ function MuseumsRoute({
   totalMuseumPages,
   onPrevPage,
   onNextPage,
+  sortedByDistance,
+  expectDistanceOnCards,
+  locationNote,
+  onRetryLocation,
 }: {
   museumSearch: string;
   setMuseumSearch: (v: string) => void;
@@ -62,6 +120,10 @@ function MuseumsRoute({
   totalMuseumPages: number;
   onPrevPage: () => void;
   onNextPage: () => void;
+  sortedByDistance: boolean;
+  expectDistanceOnCards: boolean;
+  locationNote: string | null;
+  onRetryLocation: () => void;
 }) {
   return (
     <View className="flex-1" style={{ flex: 1 }}>
@@ -70,6 +132,27 @@ function MuseumsRoute({
         onChangeText={setMuseumSearch}
         placeholder="Search museums..."
       />
+      {sortedByDistance ? (
+        <Text className="mx-5 mb-2 mt-[-2px] text-xs text-muted-foreground" accessibilityLiveRegion="polite">
+          Nearest first - distances in miles from you
+        </Text>
+      ) : locationNote ? (
+        <View className="mx-5 mb-3 mt-[-2px] rounded-xl border border-border bg-muted/30 p-3">
+          <Text className="text-sm leading-5 text-muted-foreground">{locationNote}</Text>
+          <View className="mt-2.5 flex-row flex-wrap gap-2.5">
+            <Pressable
+              onPress={onRetryLocation}
+              className="rounded-lg bg-primary px-3 py-1.5 active:opacity-90">
+              <Text className="text-xs font-semibold text-primary-foreground">Try again</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => Linking.openSettings()}
+              className="rounded-lg border border-border bg-card px-3 py-1.5 active:opacity-90">
+              <Text className="text-xs font-semibold text-foreground">Open Settings</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {museums === undefined ? (
         <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
@@ -80,7 +163,7 @@ function MuseumsRoute({
       ) : (
         <FlatList
           data={pagedMuseums}
-          renderItem={({ item }) => <MuseumCard museum={item as MuseumCardData} />}
+          renderItem={({ item }) => <MuseumCard museum={item} expectDistance={expectDistanceOnCards} />}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={LIST_PADDING_BOTTOM}
@@ -254,7 +337,7 @@ function TasteAlignedRoute({
               openOnReviewsTab
             />
           )}
-          contentContainerStyle={LIST_PADDING_BOTTOM}
+          contentContainerStyle={FEED_LIST_PADDING}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -274,7 +357,7 @@ export default function SearchScreen() {
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
-  React.useEffect(() => {
+  useEffect(() => {
     const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
     const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
     if (typeof searchParam === 'string' && searchParam !== '') {
@@ -289,7 +372,55 @@ export default function SearchScreen() {
 
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumPage, setMuseumPage] = useState(1);
-  const museums = useQuery(api.museums.listMuseumsWithStats);
+
+  type LocState =
+    | { status: 'pending' }
+    | { status: 'ok'; viewer: { latitude: number; longitude: number } }
+    | { status: 'unavailable'; message: string };
+  const [locState, setLocState] = useState<LocState>({ status: 'pending' });
+  const [locationRetryKey, setLocationRetryKey] = useState(0);
+
+  const resolveLocation = useCallback(async () => {
+    try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        setLocState({
+          status: 'unavailable',
+          message: 'Location Services are off. Turn them on to see distance and sort museums nearest first.',
+        });
+        return;
+      }
+
+      let perm = await Location.getForegroundPermissionsAsync();
+      if (perm.status !== 'granted') {
+        perm = await Location.requestForegroundPermissionsAsync();
+      }
+      if (perm.status !== 'granted') {
+        setLocState({
+          status: 'unavailable',
+          message: 'Location access is off. Enable it to see miles away and sort by distance.',
+        });
+        return;
+      }
+
+      const viewer = await withTimeout(fetchViewerCoordinates(), 25_000);
+      setLocState({ status: 'ok', viewer });
+    } catch (err) {
+      setLocState({
+        status: 'unavailable',
+        message: formatLocationFailure(err),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    void resolveLocation();
+  }, [locationRetryKey, resolveLocation]);
+
+  const museums = useQuery(
+    api.museums.listMuseumsWithStats,
+    locState.status === 'ok' ? { viewer: locState.viewer } : {}
+  );
   const filteredMuseums = useMemo(() => {
     if (!museums) return [];
     if (!museumSearch.trim()) return museums;
@@ -310,10 +441,10 @@ export default function SearchScreen() {
     const startIndex = (currentMuseumPage - 1) * MUSEUMS_PER_PAGE;
     return filteredMuseums.slice(startIndex, startIndex + MUSEUMS_PER_PAGE);
   }, [filteredMuseums, currentMuseumPage]);
-  React.useEffect(() => {
+  useEffect(() => {
     setMuseumPage(1);
   }, [museumSearch]);
-  React.useEffect(() => {
+  useEffect(() => {
     if (museumPage > totalMuseumPages) {
       setMuseumPage(totalMuseumPages);
     }
@@ -340,29 +471,9 @@ export default function SearchScreen() {
       className="relative flex-1 bg-background"
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
-      <View
-        className="absolute -right-38 -top-50 z-0 h-100 w-137.5 overflow-hidden rounded-full"
-        pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
-          style={{ width: '100%', height: '100%' }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
+      <DecorativeGradientShapes />
 
-      <View
-        className="absolute -bottom-50 -left-38 z-0 h-100 w-137.5 overflow-hidden rounded-full"
-        pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
-          style={{ width: '100%', height: '100%' }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
-
-      <View className="z-10 flex-row border-b border-border bg-background">
+      <View className="z-10 flex-row border-b border-border">
         {tabs.map((tab, tabIndex) => {
           const isActive = tabIndex === index;
           return (
@@ -411,6 +522,10 @@ export default function SearchScreen() {
           totalMuseumPages={totalMuseumPages}
           onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
           onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+          sortedByDistance={locState.status === 'ok'}
+          expectDistanceOnCards={locState.status === 'ok'}
+          locationNote={locState.status === 'unavailable' ? locState.message : null}
+          onRetryLocation={() => setLocationRetryKey((k) => k + 1)}
         />
       )}
     </SafeAreaView>

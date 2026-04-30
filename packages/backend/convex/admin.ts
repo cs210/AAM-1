@@ -1,29 +1,13 @@
 import { GeospatialIndex } from "@convex-dev/geospatial";
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
-import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { api, components, internal } from "./_generated/api";
-import { authComponent } from "./auth";
 import { updateRequestStatusHelper } from "./organizationRequests";
+import { requireAdmin, requireAdminAction } from "./permissions";
 
 const geospatial = new GeospatialIndex(components.geospatial);
-
-async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.safeGetAuthUser(ctx);
-  if (!user) throw new Error("Not authenticated");
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new Error("Admin access required");
-  return user;
-}
-
-async function requireAdminAction(ctx: ActionCtx) {
-  const user = await ctx.runQuery(api.auth.getCurrentUser, {});
-  if (!user) throw new Error("Not authenticated");
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new Error("Admin access required");
-  return user;
-}
 
 // Component calls from queries (sparingly; components require runQuery).
 // Cast: getOrganization may be provided by component extension; package types omit it.
@@ -452,9 +436,14 @@ export const listMuseumsForAdmin = action({
         const geospatialDoc = await ctx.runQuery(components.geospatial.document.get, {
           key: museum._id,
         });
+        const fromIndex = geospatialDoc?.coordinates ?? null;
+        const fromDoc =
+          typeof museum.latitude === "number" && typeof museum.longitude === "number"
+            ? { latitude: museum.latitude, longitude: museum.longitude }
+            : null;
         return {
           ...museum,
-          point: geospatialDoc?.coordinates ?? null,
+          point: fromIndex ?? fromDoc,
         };
       })
     );
@@ -506,7 +495,11 @@ export const updateMuseumForAdmin = mutation({
     const existingMuseum = await ctx.db.get(museumId);
     if (!existingMuseum) throw new Error("Museum not found");
 
-    await ctx.db.patch(museumId, museum);
+    await ctx.db.patch(museumId, {
+      ...museum,
+      latitude: point.latitude,
+      longitude: point.longitude,
+    });
     await geospatial.insert(ctx, museumId, point, { category: museum.category });
     return museumId;
   },

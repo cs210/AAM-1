@@ -51,6 +51,10 @@
           "shouldUseStrictMode": false,
           "shouldUsePurchaseConnector": false,
           "preferAppsFlyerBackupRules": false
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance.",
+          "locationAlwaysAndWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance."
         }
       ]
     ],

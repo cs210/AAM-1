@@ -3,6 +3,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { notifyTaggedFriendsForCheckIn } from "./socialNotifications";
 
 // Helper to convert storage IDs to URLs
 async function getImageUrlsFromStorageIds(
@@ -156,6 +157,10 @@ export const createCheckIn = mutation({
       imageStorageIds.length > 0
         ? await getImageUrlsFromStorageIds(ctx, imageStorageIds)
         : [];
+
+    if (args.contentType === "museum") {
+      await notifyTaggedFriendsForCheckIn(ctx, checkInId);
+    }
 
     return {
       _id: checkInId,
@@ -363,6 +368,10 @@ export const updateCheckIn = mutation({
 
     await ctx.db.patch(args.checkInId, updateData);
 
+    if (checkIn.contentType === "museum") {
+      await notifyTaggedFriendsForCheckIn(ctx, args.checkInId);
+    }
+
     const imageIds = args.imageStorageIds ?? checkIn.imageIds ?? [];
     const imageUrls =
       imageIds.length > 0 ? await getImageUrlsFromStorageIds(ctx, imageIds) : [];
@@ -382,6 +391,14 @@ export const deleteCheckIn = mutation({
     if (!checkIn) throw new ConvexError("Error thrown in deleteCheckIn(): Check-in not found");
     if (checkIn.userId !== user._id)
       throw new ConvexError("Error thrown in deleteCheckIn(): Unauthorized to delete this check-in");
+
+    const notifs = await ctx.db
+      .query("socialNotifications")
+      .withIndex("by_checkIn", (q) => q.eq("checkInId", args.checkInId))
+      .collect();
+    for (const n of notifs) {
+      await ctx.db.delete(n._id);
+    }
 
     await ctx.db.delete(args.checkInId);
 
@@ -494,6 +511,8 @@ export const createMuseumCheckIn = mutation({
       museumData,
       updatedAt: Date.now(),
     });
+
+    await notifyTaggedFriendsForCheckIn(ctx, checkInId);
 
     const imageUrls =
       imageStorageIds.length > 0

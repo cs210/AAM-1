@@ -31,6 +31,10 @@ export default defineSchema({
     // Category for recommendation
     category: v.string(), // e.g., "art", "history", "science", "contemporary"
 
+    /** WGS84 — duplicate of geospatial pin; shown in dashboard and used as distance fallback in Search. */
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+
     // Optional metadata
     imageUrl: v.optional(v.string()),
     website: v.optional(v.string()),
@@ -125,11 +129,40 @@ export default defineSchema({
     .index("by_org", ["betterAuthOrgId"])
     .index("by_museum", ["museumId"]),
 
+  visualSearchConfig: defineTable({
+    endpointUrl: v.string(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }),
+
+  visualSearchMuseumAssignments: defineTable({
+    museumId: v.id("museums"),
+    museumSlug: v.string(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.string()),
+    updatedBy: v.optional(v.string()),
+  })
+    .index("by_museum", ["museumId"])
+    .index("by_slug", ["museumSlug"])
+    .index("by_active", ["isActive"]),
+
   // User Following (tracks which museums a user follows)
   userFollows: defineTable({
     userId: v.string(), // Better Auth user ID
     museumId: v.id("museums"),
     followedAt: v.number(), // Timestamp
+  })
+    .index("by_user", ["userId"])
+    .index("by_museum", ["museumId"])
+    .index("by_user_and_museum", ["userId", "museumId"]),
+
+  // User Bookmarks (tracks which museums a user has bookmarked)
+  bookmarks: defineTable({
+    userId: v.string(), // Better Auth user ID
+    museumId: v.id("museums"),
+    bookmarkedAt: v.number(), // Timestamp
   })
     .index("by_user", ["userId"])
     .index("by_museum", ["museumId"])
@@ -191,6 +224,27 @@ export default defineSchema({
   })
     .index("by_hall", ["hallId"])
     .index("by_hall_sortOrder", ["hallId", "sortOrder"]),
+
+  // In-app social notifications (mentions in check-ins, etc.)
+  socialNotifications: defineTable({
+    recipientUserId: v.string(),
+    actorUserId: v.string(),
+    checkInId: v.id("checkIns"),
+    museumId: v.optional(v.id("museums")),
+    museumName: v.optional(v.string()),
+    type: v.union(v.literal("mention_in_checkin")),
+    bodyPreview: v.string(),
+    createdAt: v.number(),
+    readAt: v.optional(v.number()),
+  })
+    .index("by_recipient_created", ["recipientUserId", "createdAt"])
+    .index("by_checkIn", ["checkInId"]),
+
+  socialNotificationPrefs: defineTable({
+    userId: v.string(),
+    mutedSocial: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 
   // Check-ins (museum or event)
   checkIns: defineTable({
