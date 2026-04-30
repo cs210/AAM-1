@@ -1,20 +1,23 @@
 import React from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  Pressable,
   Image,
   ScrollView,
-  ActivityIndicator,
+  Pressable
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from 'convex/react';
-import { ArrowLeftIcon, CalendarIcon, Building2Icon, MapPinIcon } from 'lucide-react-native';
+import { CalendarIcon, Building2Icon, MapPinIcon } from 'lucide-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { AuthGuard } from '@/components/AuthGuard';
+import { Text } from '@/components/ui/text';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
+import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
+import {
+  RN_API_MUTED_FOREGROUND_LIGHT,
+} from '@/constants/rn-api-colors';
 
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('en-US', {
@@ -40,6 +43,7 @@ function getFirstParam(value: string | string[] | undefined): string | undefined
 }
 
 export default function ExhibitionDetailScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ exhibitionId?: string | string[]; museumId?: string | string[] }>();
 
   const rawExhibitionId = getFirstParam(params.exhibitionId);
@@ -60,11 +64,13 @@ export default function ExhibitionDetailScreen() {
   if (exhibition === undefined) {
     return (
       <AuthGuard>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
           <Stack.Screen options={{ headerShown: false }} />
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#D4915A" />
-            <Text style={styles.loadingText}>Loading exhibition...</Text>
+          <View className="flex-1 items-center justify-center gap-3">
+            <BrandActivityIndicator size="large" />
+            <Text variant="muted" className="text-base">
+              Loading exhibition...
+            </Text>
           </View>
         </SafeAreaView>
       </AuthGuard>
@@ -74,12 +80,12 @@ export default function ExhibitionDetailScreen() {
   if (exhibition == null) {
     return (
       <AuthGuard>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
           <Stack.Screen options={{ headerShown: false }} />
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>Exhibition not found</Text>
-            <Pressable style={styles.primaryButton} onPress={() => router.back()}>
-              <Text style={styles.primaryButtonText}>Go Back</Text>
+          <View className="flex-1 items-center justify-center gap-4 p-6">
+            <Text className="text-lg font-semibold text-foreground">Exhibition not found</Text>
+            <Pressable className="rounded-xl bg-primary px-6 py-3 active:opacity-90" onPress={() => router.back()}>
+              <Text className="text-base font-semibold text-primary-foreground">Go Back</Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -101,67 +107,64 @@ export default function ExhibitionDetailScreen() {
 
   return (
     <AuthGuard>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        <View style={styles.header}>
-          <Pressable style={styles.backIcon} onPress={() => router.back()}>
-            <ArrowLeftIcon size={24} color="#1A1A1A" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Exhibition</Text>
-          <View style={styles.backIcon} />
-        </View>
+        <ScreenTitleBar title="Exhibition" onBackPress={() => router.back()} />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.heroContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 20, paddingBottom: 36 + insets.bottom }}
+        >
+          <View className="mb-4 h-[220px] overflow-hidden rounded-2xl bg-muted">
             {exhibition.imageUrl ? (
-              <Image source={{ uri: exhibition.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+              <Image source={{ uri: exhibition.imageUrl }} className="size-full" resizeMode="cover" />
             ) : (
-              <View style={styles.heroPlaceholder}>
-                <Building2Icon size={28} color="#B3B3B3" />
-                <Text style={styles.heroPlaceholderText}>No image available</Text>
+              <View className="flex-1 items-center justify-center gap-2">
+                <Building2Icon size={28} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+                <Text variant="muted" className="text-sm">
+                  No image available
+                </Text>
               </View>
             )}
           </View>
 
-          <View style={styles.detailCard}>
-            <Text style={styles.exhibitionTitle}>{exhibition.name}</Text>
+          <View className="mb-4 gap-3 rounded-2xl border border-border bg-card p-5">
+            <Text className="text-2xl font-bold text-foreground">{exhibition.name}</Text>
 
-            <View style={styles.metaRow}>
-              <CalendarIcon size={16} color="#8E8E93" />
-              <Text style={styles.metaText}>{dateLabel}</Text>
+            <View className="flex-row items-center gap-2">
+              <CalendarIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+              <Text className="flex-1 text-sm text-muted-foreground">{dateLabel}</Text>
             </View>
 
             {exhibition.description ? (
-              <Text style={styles.description}>{exhibition.description}</Text>
+              <Text className="text-[15px] leading-[22px] text-foreground">{exhibition.description}</Text>
             ) : (
-              <Text style={styles.descriptionMuted}>No description available.</Text>
+              <Text className="text-[15px] leading-[22px] text-muted-foreground">No description available.</Text>
             )}
           </View>
 
-          <View style={styles.hostCard}>
-            <Text style={styles.hostTitle}>Hosted By</Text>
-            <Text style={styles.hostMuseumName}>{hostMuseum?.name ?? 'Unknown museum'}</Text>
+          <View className="gap-2.5 rounded-2xl border border-border bg-card p-5">
+            <Text className="text-xs font-bold uppercase tracking-[0.4px] text-muted-foreground">Hosted By</Text>
+            <Text className="text-xl font-bold text-foreground">{hostMuseum?.name ?? 'Unknown museum'}</Text>
             {hostMuseum?.category ? (
-              <Text style={styles.hostMuseumCategory}>{hostMuseum.category}</Text>
+              <Text className="self-start rounded-lg bg-primary/15 px-2.5 py-1 text-xs font-semibold capitalize text-primary">
+                {hostMuseum.category}
+              </Text>
             ) : null}
             {hostLocation ? (
-              <View style={styles.metaRow}>
-                <MapPinIcon size={16} color="#8E8E93" />
-                <Text style={styles.metaText}>{hostLocation}</Text>
+              <View className="flex-row items-center gap-2">
+                <MapPinIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+                <Text className="flex-1 text-sm text-muted-foreground">{hostLocation}</Text>
               </View>
             ) : null}
 
             <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                !hostMuseumId && styles.primaryButtonDisabled,
-                pressed && hostMuseumId && styles.primaryButtonPressed,
-              ]}
+              className="mt-1 items-center rounded-xl bg-primary py-3 active:opacity-90 disabled:bg-muted"
               onPress={handleOpenMuseum}
               disabled={!hostMuseumId}
             >
-              <Text style={styles.primaryButtonText}>View Museum</Text>
+              <Text className="text-base font-semibold text-primary-foreground">View Museum</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -169,161 +172,3 @@ export default function ExhibitionDetailScreen() {
     </AuthGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: '#FFFFFF',
-  },
-  backIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 36,
-  },
-  heroContainer: {
-    height: 220,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#F5F5F5',
-    marginBottom: 16,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  heroPlaceholderText: {
-    fontSize: 14,
-    color: '#8E8E93',
-  },
-  detailCard: {
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    gap: 12,
-  },
-  exhibitionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  metaText: {
-    fontSize: 14,
-    color: '#6B7280',
-    flex: 1,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#333',
-  },
-  descriptionMuted: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#8E8E93',
-  },
-  hostCard: {
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-    borderRadius: 16,
-    padding: 18,
-    backgroundColor: '#FFFFFF',
-    gap: 10,
-  },
-  hostTitle: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    color: '#8E8E93',
-    fontWeight: '700',
-  },
-  hostMuseumName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  hostMuseumCategory: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(212, 145, 90, 0.15)',
-    color: '#D4915A',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  primaryButton: {
-    marginTop: 4,
-    backgroundColor: '#D4915A',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  primaryButtonPressed: {
-    opacity: 0.85,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: '#DDD',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#8E8E93',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-});

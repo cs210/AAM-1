@@ -26,6 +26,12 @@ const formatRange = (start: number, end: number, locale: string) => {
   return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
 };
 
+const panelClass =
+  "rounded-[28px] border border-border/60 bg-background/85 p-6 shadow-[0_20px_45px_-35px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-42px_rgba(2,6,23,0.9)]";
+const emptyStateClass =
+  "rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground";
+const labelClass = "block text-muted-foreground mb-1";
+
 export default function MuseumDetailPage() {
   const t = useTranslations("museums");
   const locale = useLocale();
@@ -49,7 +55,7 @@ export default function MuseumDetailPage() {
 
   return (
     <div
-      className={`${display.variable} ${body.variable} min-h-[calc(100vh-5rem)] bg-[radial-gradient(45%_65%_at_0%_0%,rgba(56,189,248,0.2),transparent_70%),radial-gradient(50%_70%_at_100%_5%,rgba(251,191,36,0.2),transparent_70%),radial-gradient(70%_75%_at_50%_100%,rgba(45,212,191,0.2),transparent_70%)] px-4 pb-20 pt-12`}
+      className={`${display.variable} ${body.variable} min-h-[calc(100vh-5rem)] bg-[radial-gradient(45%_65%_at_0%_0%,rgba(56,189,248,0.18),transparent_70%),radial-gradient(50%_70%_at_100%_5%,rgba(251,191,36,0.16),transparent_70%),radial-gradient(70%_75%_at_50%_100%,rgba(45,212,191,0.14),transparent_70%)] px-4 pb-20 pt-12 dark:bg-[radial-gradient(45%_65%_at_0%_0%,rgba(14,116,144,0.36),transparent_70%),radial-gradient(50%_70%_at_100%_5%,rgba(180,83,9,0.3),transparent_70%),radial-gradient(70%_75%_at_50%_100%,rgba(13,148,136,0.28),transparent_70%)]`}
     >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
         <div className="flex items-center justify-between gap-3">
@@ -68,16 +74,16 @@ export default function MuseumDetailPage() {
         </div>
 
         {museum === undefined ? (
-          <div className="rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground">
+          <div className={emptyStateClass}>
             {t("loadingDetails")}
           </div>
         ) : museum === null ? (
-          <div className="rounded-3xl border border-dashed border-border/70 bg-background/70 p-8 text-sm text-muted-foreground">
+          <div className={emptyStateClass}>
             {t("notFound")}
           </div>
         ) : (
           <>
-            <section className="relative overflow-hidden rounded-[32px] border border-border/60 bg-background/75 p-7 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.55)] backdrop-blur">
+            <section className="relative overflow-hidden rounded-[32px] border border-border/60 bg-background/80 p-7 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.5)] backdrop-blur dark:shadow-[0_32px_80px_-45px_rgba(2,6,23,0.95)]">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-30"
                 style={{
@@ -112,7 +118,7 @@ export default function MuseumDetailPage() {
               </div>
             </section>
 
-            <section className="grid gap-4 rounded-[28px] border border-border/60 bg-background/80 p-6">
+            <section className={`grid gap-4 ${panelClass}`}>
               <div className="flex items-center justify-between">
                 <h2 className={`${display.className} text-2xl`}>{t("museumDetails")}</h2>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
@@ -123,19 +129,19 @@ export default function MuseumDetailPage() {
                 <div className="space-y-2 text-sm">
                   {museum.tagline && (
                     <p>
-                      <span className="text-muted-foreground">{t("taglineLabel")}</span>
+                      <span className={labelClass}>{t("taglineLabel")}</span>
                       {museum.tagline}
                     </p>
                   )}
                   {museum.publicEmail && (
                     <p>
-                      <span className="text-muted-foreground">{t("emailLabel")}</span>
+                      <span className={labelClass}>{t("emailLabel")}</span>
                       {museum.publicEmail}
                     </p>
                   )}
                   {museum.phone && (
                     <p>
-                      <span className="text-muted-foreground">{t("phoneLabel")}</span>
+                      <span className={labelClass}>{t("phoneLabel")}</span>
                       {museum.phone}
                     </p>
                   )}
@@ -143,7 +149,7 @@ export default function MuseumDetailPage() {
                 <div className="space-y-2 text-sm">
                   {(museum.location.address || museum.location.city || museum.location.state || museum.location.postalCode) && (
                     <p>
-                      <span className="text-muted-foreground">{t("addressLabel")}</span>
+                      <span className={labelClass}>{t("addressLabel")}</span>
                       {[museum.location.address, museum.location.city, museum.location.state, museum.location.postalCode]
                         .filter(Boolean)
                         .join(", ")}
@@ -151,7 +157,7 @@ export default function MuseumDetailPage() {
                   )}
                   {museum.operatingHours && museum.operatingHours.length > 0 && (
                     <div>
-                      <p className="text-muted-foreground">{t("operatingHours")}</p>
+                      <p className={labelClass}>{t("operatingHours")}</p>
                       <ul className="mt-1 space-y-1">
                         {museum.operatingHours.map((entry) => (
                           <li key={entry.day}>
@@ -163,13 +169,13 @@ export default function MuseumDetailPage() {
                   )}
                   {museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0 && (
                     <p>
-                      <span className="text-muted-foreground">{t("accessibilityLabel")}</span>
+                      <span className={labelClass}>{t("accessibilityLabel")}</span>
                       {museum.accessibilityFeatures.join(", ")}
                     </p>
                   )}
                   {museum.accessibilityNotes && (
                     <p>
-                      <span className="text-muted-foreground">{t("accessibilityNotesLabel")}</span>
+                      <span className={labelClass}>{t("accessibilityNotesLabel")}</span>
                       {museum.accessibilityNotes}
                     </p>
                   )}
@@ -177,7 +183,7 @@ export default function MuseumDetailPage() {
               </div>
             </section>
 
-            <section className="grid gap-4 rounded-[28px] border border-border/60 bg-background/80 p-6">
+            <section className={`grid gap-4 ${panelClass}`}>
               <div className="flex items-center justify-between">
                 <h2 className={`${display.className} text-2xl`}>{t("exhibits")}</h2>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
@@ -193,7 +199,10 @@ export default function MuseumDetailPage() {
               ) : (
                 <div className="grid gap-3">
                   {exhibitList.map((exhibition) => (
-                    <article key={exhibition._id} className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                    <article
+                      key={exhibition._id}
+                      className="rounded-2xl border border-border/60 bg-background/75 p-4 shadow-[0_16px_34px_-32px_rgba(15,23,42,0.65)] dark:shadow-[0_22px_40px_-34px_rgba(2,6,23,0.95)]"
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <h3 className="text-sm font-semibold">{exhibition.name}</h3>
                         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
