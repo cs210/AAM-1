@@ -7,6 +7,7 @@ import {
   UsersIcon,
   MailIcon,
   LayersIcon,
+  SearchIcon,
 } from "lucide-react"
 
 export const dashboardTabs = [
@@ -54,6 +55,7 @@ export const workspaceDashboardTabs = [
 export const adminDashboardTabs = [
   { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
   { id: "admin-museums", path: "museums", label: "Museums", icon: Building2Icon },
+  { id: "visual-search", path: "visual-search", label: "Visual Search", icon: SearchIcon },
   { id: "users", path: "users", label: "Users", icon: UsersIcon },
   { id: "invitations", path: "invitations", label: "Invitations", icon: MailIcon },
 ] as const
@@ -75,6 +77,7 @@ export type DashboardTabMessageKey =
   | "analytics"
   | "orgRequests"
   | "adminMuseums"
+  | "visualSearch"
   | "users"
   | "invitations"
 
@@ -86,6 +89,7 @@ export const dashboardTabMessageKeys: Record<AllDashboardTabId, DashboardTabMess
   analytics: "analytics",
   "org-requests": "orgRequests",
   "admin-museums": "adminMuseums",
+  "visual-search": "visualSearch",
   users: "users",
   invitations: "invitations",
 }

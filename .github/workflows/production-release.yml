@@ -1,0 +1,201 @@
+name: Production Release
+
+# Manual full-release pipeline. Run from GitHub Actions → "Run workflow".
+# Optionally, uncomment the tag trigger to fire automatically on semver tags.
+#
+# Pipeline (iOS and Android build in parallel):
+#   build iOS ─────┬─→ submit iOS → TestFlight
+#   build Android ─┘─→ submit Android → Play Store
+#   (both submits done) → publish OTA update
+#
+# Required secret: EXPO_TOKEN
+# Required EAS secrets: App Store Connect API key, Google Service Account JSON
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: OTA update message
+        required: false
+        default: Production release
+  # Uncomment to also trigger on semver tags (git tag v1.2.3 && git push --tags):
+  # push:
+  #   tags:
+  #     - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  # ── iOS production build ──────────────────────────────────────────────────
+  build-ios:
+    name: Build iOS production
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    outputs:
+      build-id: ${{ steps.build.outputs.build-id }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS production
+        id: build
+        run: |
+          OUTPUT=$(eas build \
+            --platform ios \
+            --profile production \
+            --non-interactive \
+            --json \
+            --wait)
+          BUILD_ID=$(echo "$OUTPUT" | jq -r '.[0].id // .id')
+          echo "build-id=$BUILD_ID" >> $GITHUB_OUTPUT
+
+  # ── Android production build (parallel with iOS) ──────────────────────────
+  build-android:
+    name: Build Android production
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    outputs:
+      build-id: ${{ steps.build.outputs.build-id }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android production
+        id: build
+        run: |
+          OUTPUT=$(eas build \
+            --platform android \
+            --profile production \
+            --non-interactive \
+            --json \
+            --wait)
+          BUILD_ID=$(echo "$OUTPUT" | jq -r '.[0].id // .id')
+          echo "build-id=$BUILD_ID" >> $GITHUB_OUTPUT
+
+  # ── Submit iOS to TestFlight ──────────────────────────────────────────────
+  submit-ios:
+    name: Submit iOS → TestFlight
+    needs: build-ios
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit iOS to TestFlight
+        run: |
+          eas submit \
+            --platform ios \
+            --id ${{ needs.build-ios.outputs.build-id }} \
+            --non-interactive
+
+  # ── Submit Android to Play Store ──────────────────────────────────────────
+  submit-android:
+    name: Submit Android → Play Store
+    needs: build-android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit Android to Play Store
+        run: |
+          eas submit \
+            --platform android \
+            --id ${{ needs.build-android.outputs.build-id }} \
+            --non-interactive
+
+  # ── Publish OTA update (after both submissions) ───────────────────────────
+  publish-update:
+    name: Publish OTA update → production
+    needs: [submit-ios, submit-android]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish iOS OTA update
+        run: |
+          eas update \
+            --channel production \
+            --platform ios \
+            --message "${{ inputs.message || 'Production release' }}" \
+            --non-interactive
+
+      - name: Publish Android OTA update
+        run: |
+          eas update \
+            --channel production \
+            --platform android \
+            --message "${{ inputs.message || 'Production release' }}" \
+            --non-interactive
