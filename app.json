@@ -6,10 +6,10 @@
       }
     },
     "android": {
-      "package": "com.shrishj.yamimonorepo"
+      "package": "sh.edm.museum"
     },
     "ios": {
-      "bundleIdentifier": "com.shrishj.yamimonorepo",
+      "bundleIdentifier": "sh.edm.museum",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
