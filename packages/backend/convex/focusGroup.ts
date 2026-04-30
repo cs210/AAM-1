@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { makeFunctionReference } from "convex/server";
 import { components } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { action, mutation, query } from "./_generated/server";
 import { createAuth } from "./auth";
@@ -88,6 +88,13 @@ function getAuthUserId(user: AuthUser) {
   return user.id ?? user._id;
 }
 
+function omitSystemFields<T extends Record<string, any>>(doc: T) {
+  const { _id, _creationTime, ...rest } = doc;
+  return rest;
+}
+
+type Insertable<TableName extends TableNames> = Omit<Doc<TableName>, "_id" | "_creationTime">;
+
 async function findAuthUserByEmail(ctx: ActionCtx, email: string) {
   return (await ctx.runQuery(components.betterAuth.adapter.findOne, {
     model: "user",
@@ -171,12 +178,30 @@ async function clearProfileState(ctx: MutationCtx, userId: string) {
     await ctx.db.delete(notification._id);
   }
 
+  const socialPrefs = await ctx.db
+    .query("socialNotificationPrefs")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .collect();
+  for (const pref of socialPrefs) {
+    await ctx.db.delete(pref._id);
+  }
+
   const interests = await ctx.db
     .query("userInterests")
     .withIndex("by_accountId", (q) => q.eq("accountId", userId))
     .collect();
   for (const interest of interests) {
     await ctx.db.delete(interest._id);
+  }
+}
+
+async function clearIncomingUserFollows(ctx: MutationCtx, userId: string) {
+  const followers = await ctx.db
+    .query("userUserFollows")
+    .withIndex("by_following", (q) => q.eq("followingId", userId))
+    .collect();
+  for (const follow of followers) {
+    await ctx.db.delete(follow._id);
   }
 }
 
@@ -516,5 +541,99 @@ export const listSnapshots = query({
         0,
       ),
     }));
+  },
+});
+
+export const restoreSnapshot = mutation({
+  args: {
+    snapshotId: v.id("focusGroupSnapshots"),
+  },
+  handler: async (ctx, args) => {
+    const snapshot = await ctx.db.get(args.snapshotId);
+    if (!snapshot) {
+      throw new Error("Snapshot not found");
+    }
+
+    for (const profile of snapshot.profiles) {
+      await clearProfileState(ctx, profile.userId);
+      await clearIncomingUserFollows(ctx, profile.userId);
+    }
+
+    const restoredUserFollowEdges = new Set<string>();
+    let restoredCheckIns = 0;
+    let restoredMuseumFollows = 0;
+    let restoredUserFollows = 0;
+
+    for (const profile of snapshot.profiles) {
+      const existingProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+        .first();
+
+      if (profile.profile) {
+        const profileData = {
+          ...omitSystemFields(profile.profile),
+          userId: profile.userId,
+          updatedAt: Date.now(),
+        };
+        if (existingProfile) {
+          await ctx.db.patch(existingProfile._id, profileData);
+        } else {
+          await ctx.db.insert("userProfiles", profileData);
+        }
+      }
+
+      for (const museumFollow of profile.museumFollows) {
+        await ctx.db.insert(
+          "userFollows",
+          omitSystemFields(museumFollow) as Insertable<"userFollows">,
+        );
+        restoredMuseumFollows += 1;
+      }
+
+      for (const userFollow of [...profile.userFollows, ...profile.followers]) {
+        const clean = omitSystemFields(userFollow);
+        const key = `${clean.followerId}->${clean.followingId}`;
+        if (restoredUserFollowEdges.has(key)) continue;
+        restoredUserFollowEdges.add(key);
+        await ctx.db.insert("userUserFollows", clean as Insertable<"userUserFollows">);
+        restoredUserFollows += 1;
+      }
+
+      for (const checkIn of profile.checkIns) {
+        await ctx.db.insert("checkIns", omitSystemFields(checkIn) as Insertable<"checkIns">);
+        restoredCheckIns += 1;
+      }
+
+      for (const notification of profile.socialNotifications) {
+        await ctx.db.insert(
+          "socialNotifications",
+          omitSystemFields(notification) as Insertable<"socialNotifications">,
+        );
+      }
+
+      if (profile.socialNotificationPrefs) {
+        await ctx.db.insert(
+          "socialNotificationPrefs",
+          omitSystemFields(profile.socialNotificationPrefs) as Insertable<"socialNotificationPrefs">,
+        );
+      }
+
+      if (profile.userInterests) {
+        await ctx.db.insert(
+          "userInterests",
+          omitSystemFields(profile.userInterests) as Insertable<"userInterests">,
+        );
+      }
+    }
+
+    return {
+      snapshotId: args.snapshotId,
+      restoredProfiles: snapshot.profiles.length,
+      restoredMuseumFollows,
+      restoredUserFollows,
+      restoredCheckIns,
+      restoredAt: Date.now(),
+    };
   },
 });
