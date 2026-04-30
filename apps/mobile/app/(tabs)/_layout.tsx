@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Tabs, router } from 'expo-router';
+import { Tabs, router, useGlobalSearchParams } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon } from 'lucide-react-native';
 import { useConvexAuth } from 'convex/react';
 import { RN_STYLE } from '@/constants/rn-api-colors';
@@ -11,6 +11,9 @@ export default function TabLayout() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { theme: colorScheme } = useUniwind();
   const t = colorScheme === 'dark' ? RN_STYLE.dark : RN_STYLE.light;
+  const { userId } = useGlobalSearchParams<{ userId?: string | string[] }>();
+  const profileUserId = Array.isArray(userId) ? userId[0] : userId;
+  const isViewingSearchProfile = typeof profileUserId === 'string' && profileUserId.length > 0;
 
   React.useEffect(() => {
     if (isLoading) return;
@@ -63,7 +66,7 @@ export default function TabLayout() {
         options={{
           title: 'Explore',
           tabBarIcon: ({ color, size }) => (
-            <CompassIcon size={28} color={color} />
+            <CompassIcon size={28} color={isViewingSearchProfile ? t.primary : color} />
           ),
         }}
       />
@@ -78,7 +81,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <UserIcon size={28} color={color} />
+            <UserIcon size={28} color={isViewingSearchProfile ? t.mutedForeground : color} />
           ),
         }}
       />
