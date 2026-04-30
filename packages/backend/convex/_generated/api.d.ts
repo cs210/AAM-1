@@ -10,12 +10,14 @@
 
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as bookmarks from "../bookmarks.js";
 import type * as checkIns from "../checkIns.js";
 import type * as email from "../email.js";
 import type * as events from "../events.js";
 import type * as exhibitions from "../exhibitions.js";
 import type * as exhibitionsAutoFill from "../exhibitionsAutoFill.js";
 import type * as fakeData from "../fakeData.js";
+import type * as focusGroup from "../focusGroup.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
@@ -38,12 +40,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
+  bookmarks: typeof bookmarks;
   checkIns: typeof checkIns;
   email: typeof email;
   events: typeof events;
   exhibitions: typeof exhibitions;
   exhibitionsAutoFill: typeof exhibitionsAutoFill;
   fakeData: typeof fakeData;
+  focusGroup: typeof focusGroup;
   follows: typeof follows;
   http: typeof http;
   museums: typeof museums;

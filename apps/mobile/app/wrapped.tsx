@@ -19,6 +19,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { RN_API_BACKGROUND_LIGHT, RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
+import appsFlyer from 'react-native-appsflyer';
 
 const { width } = Dimensions.get('window');
 /** Slide containers use flex:1 inside SafeAreaView so content does not draw under status bar / home indicator. */
@@ -370,10 +371,12 @@ const ShareSlide = ({
   museumsVisited,
   totalHours,
   topMuseumName,
+  onShare,
 }: {
   museumsVisited: number;
   totalHours: number;
   topMuseumName: string | null;
+  onShare: () => Promise<void>;
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
@@ -384,12 +387,6 @@ const ShareSlide = ({
       Animated.spring(buttonScale, { toValue: 1, friction: 6, tension: 40, delay: 400, useNativeDriver: true }),
     ]).start();
   }, []);
-
-  const handleShare = async () => {
-    await Share.share({
-      message: `I explored ${museumsVisited} museums and spent ${totalHours} hours lost in art in ${DATA.year}. My top spot was ${topMuseumName ?? 'museum hopping'}. #MuseumWrapped`,
-    });
-  };
 
   return (
     <View className="items-center justify-center bg-transparent" style={SLIDE_FLEX}>
@@ -413,7 +410,7 @@ const ShareSlide = ({
           style={{ transform: [{ scale: buttonScale }] }}>
           <TouchableOpacity
             className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
-            onPress={handleShare}
+            onPress={onShare}
             activeOpacity={0.85}>
             <Share2 size={24} color={RN_API_BACKGROUND_LIGHT} strokeWidth={1.5} />
           </TouchableOpacity>
@@ -462,6 +459,7 @@ export default function WrappedScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const user = useQuery(api.auth.getCurrentUser);
   const tasteProfile = useQuery(api.wrapped.getTasteProfile);
   const wrappedStats = useQuery(api.wrapped.getWrappedStats);
   const totalHours = wrappedStats?.totalHours ?? 0;
@@ -471,6 +469,74 @@ export default function WrappedScreen() {
   const eventsAttended = wrappedStats?.eventsAttended ?? 0;
   const artStyles = wrappedStats?.artStyles ?? [];
   const hasEnoughData = wrappedStats?.hasEnoughData ?? false;
+
+  // Initialize AppsFlyer on mount
+  useEffect(() => {
+    const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
+    if (appsFlyerKey) {
+      try {
+        appsFlyer.initSdk(
+          {
+            devKey: appsFlyerKey,
+            isDebug: true,
+            appId: '6760368719',
+          },
+          (result) => {
+            console.log('AppsFlyer init result:', result);
+          },
+          (error) => {
+            console.error('AppsFlyer init error:', error);
+          }
+        );
+        appsFlyer.setAppInviteOneLinkID('Rz7b');
+      } catch (error) {
+        console.error('Error initializing AppsFlyer:', error);
+      }
+    }
+  }, []);
+
+  const handleShareWrapped = async () => {
+    return new Promise<void>((resolve) => {
+      try {
+        appsFlyer.generateInviteLink(
+          {
+            channel: 'in-app',
+            campaign: 'wrapped-share',
+            customerID: user?._id,
+            userParams: {
+              deep_link_value: 'wrapped',
+              brandDomain: 'https://yami-stanford.vercel.app',
+              statistics: `museums:${museumsVisited}|hours:${totalHours}`,            },
+          },
+          (link) => {
+            const shareMessage = `I explored ${museumsVisited} museums and spent ${totalHours} hours lost in art in ${DATA.year}. My top spot was ${wrappedStats?.topMuseum?.name ?? 'museum hopping'}. Check out my Museum Wrapped! 🎨\n\n${link}`;
+            Share.share({
+              message: shareMessage,
+              title: 'My Museum Wrapped',
+              url: link as string,
+            })
+              .then(() => resolve())
+              .catch((err) => {
+                console.error('Share error:', err);
+                resolve();
+              });
+          },
+          (err) => {
+            console.error('Failed to generate invite link:', err);
+            // Fallback to basic share if AppsFly fails
+            Share.share({
+              message: `I explored ${museumsVisited} museums and spent ${totalHours} hours lost in art in ${DATA.year}. My top spot was ${wrappedStats?.topMuseum?.name ?? 'museum hopping'}. #MuseumWrapped`,
+            })
+              .then(() => resolve())
+              .catch(() => resolve());
+          }
+        );
+      } catch (error) {
+        console.error('Error initiating share:', error);
+        resolve();
+      }
+    });
+  };
   const topMuseum = wrappedStats?.topMuseum
     ? {
         name: wrappedStats.topMuseum.name,
@@ -556,6 +622,7 @@ export default function WrappedScreen() {
               museumsVisited={museumsVisited}
               totalHours={totalHours}
               topMuseumName={topMuseum?.name ?? null}
+              onShare={handleShareWrapped}
             />
           </Animated.View>
         );

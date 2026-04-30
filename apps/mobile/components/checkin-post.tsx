@@ -1,12 +1,19 @@
 import React from 'react';
 import { View, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
-import { StarIcon, PencilIcon } from 'lucide-react-native';
+import { StarIcon, PencilIcon, Bookmark } from 'lucide-react-native';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
+import { useBookmark } from '@/hooks/useBookmark';
+import { useUniwind } from 'uniwind';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
+import {
+  RN_API_MUTED_FOREGROUND_DARK,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+} from '@/constants/rn-api-colors';
 
 export interface CheckinPostData {
   _id: string;
@@ -57,7 +64,10 @@ export const CheckinPost = ({
   openOnReviewsTab,
 }: CheckinPostProps) => {
   const brandPrimary = useBrandPrimaryHex();
+  const { theme } = useUniwind();
+  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
+  const { isBookmarked, toggleBookmark } = useBookmark(checkin.contentId as Id<'museums'>);
 
   const handlePress = () => {
     if (openOnReviewsTab) {
@@ -141,17 +151,31 @@ export const CheckinPost = ({
           </Text>
         ) : null}
 
-        {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
-          <View className="mt-0.5 flex-row">
-            {checkin.imageUrls.slice(0, 3).map((url, index) => (
-              <Image
-                key={`${checkin._id}-photo-${index}`}
-                source={{ uri: url }}
-                className={cn('size-18 rounded-lg bg-muted', index > 0 && 'ml-2')}
-              />
-            ))}
-          </View>
-        ) : null}
+        <View className="relative">
+          {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
+            <View className="mt-0.5 flex-row">
+              {checkin.imageUrls.slice(0, 3).map((url, index) => (
+                <Image
+                  key={`${checkin._id}-photo-${index}`}
+                  source={{ uri: url }}
+                  className={cn('size-18 rounded-lg bg-muted', index > 0 && 'ml-2')}
+                />
+              ))}
+            </View>
+          ) : null}
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+            onPress={toggleBookmark}
+            className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
+            <Bookmark
+              size={20}
+              color={isBookmarked ? brandPrimary : mutedHex}
+              fill={isBookmarked ? brandPrimary : 'none'}
+            />
+          </Pressable>
+        </View>
       </Card>
     </Pressable>
   );

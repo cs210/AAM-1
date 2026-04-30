@@ -13,10 +13,12 @@ import {
   CheckCircle2Icon,
   PencilIcon,
   StarIcon,
+  BookmarkIcon,
 } from 'lucide-react-native';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { useBookmark } from '../../hooks/useBookmark';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar';
 import { Text } from '@/components/ui/text';
@@ -116,6 +118,11 @@ export default function MuseumDetailScreen() {
   // Check if user follows this museum
   const isFollowing = useQuery(api.follows.isFollowing, 
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
+  );
+
+  // Check if user has bookmarked this museum
+  const { isBookmarked, toggleBookmark } = useBookmark(
+    effectiveId ? (effectiveId as Id<"museums">) : ("" as Id<"museums">)
   );
 
   // Current user and their check-ins at this museum
@@ -515,6 +522,22 @@ export default function MuseumDetailScreen() {
               />
               <Text className="text-base font-semibold text-primary-foreground">
                 {isFollowing ? 'Following' : 'Follow Museum'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              className={cn(
+                'mb-3 flex-row items-center justify-center gap-2 rounded-xl py-3.5 active:opacity-90',
+                isBookmarked ? 'bg-amber-600' : 'border border-border bg-card'
+              )}
+              onPress={toggleBookmark}>
+              <BookmarkIcon
+                size={20}
+                color={isBookmarked ? RN_API_BACKGROUND_LIGHT : RN_API_FOREGROUND_LIGHT}
+                fill={isBookmarked ? RN_API_BACKGROUND_LIGHT : 'none'}
+              />
+              <Text className={cn('text-base font-semibold', isBookmarked ? 'text-white' : 'text-foreground')}>
+                {isBookmarked ? 'Bookmarked' : 'Bookmark'}
               </Text>
             </Pressable>
 

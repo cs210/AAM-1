@@ -158,6 +158,16 @@ export default defineSchema({
     .index("by_museum", ["museumId"])
     .index("by_user_and_museum", ["userId", "museumId"]),
 
+  // User Bookmarks (tracks which museums a user has bookmarked)
+  bookmarks: defineTable({
+    userId: v.string(), // Better Auth user ID
+    museumId: v.id("museums"),
+    bookmarkedAt: v.number(), // Timestamp
+  })
+    .index("by_user", ["userId"])
+    .index("by_museum", ["museumId"])
+    .index("by_user_and_museum", ["userId", "museumId"]),
+
   // Public user profiles for search/following
   userProfiles: defineTable({
     userId: v.string(), // Better Auth user ID
@@ -265,6 +275,26 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_accountId", ["accountId"]),
+
+  // Archived state for reusable focus-group accounts after a testing session.
+  focusGroupSnapshots: defineTable({
+    label: v.string(),
+    createdAt: v.number(),
+    profiles: v.array(v.object({
+      profileKey: v.string(),
+      userId: v.string(),
+      name: v.string(),
+      email: v.string(),
+      profile: v.optional(v.any()),
+      museumFollows: v.array(v.any()),
+      userFollows: v.array(v.any()),
+      followers: v.array(v.any()),
+      checkIns: v.array(v.any()),
+      socialNotifications: v.array(v.any()),
+      socialNotificationPrefs: v.optional(v.any()),
+      userInterests: v.optional(v.any()),
+    })),
+  }).index("by_createdAt", ["createdAt"]),
 
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
