@@ -5,112 +5,103 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 const MENTION_TYPE = "mention_in_checkin" as const;
-const MAX_MENTIONS_PER_CHECKIN = 20;
 
-/** @"Full Name" or @token — token is matched to userId (exact) or profile name (exact index). */
-const MENTION_RE = /@"([^"]+)"|@([A-Za-z0-9_.-]+)/g;
-
-function collectMentionTokens(review: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const m of review.matchAll(MENTION_RE)) {
-    const raw = (m[1] ?? m[2] ?? "").trim();
-    if (!raw || seen.has(raw)) continue;
-    seen.add(raw);
-    out.push(raw);
-    if (out.length >= MAX_MENTIONS_PER_CHECKIN) break;
-  }
-  return out;
-}
-
-async function resolveMentionToUserId(
+/**
+ * Sync notifications for a check-in based on its current `friendUserIds` (people
+ * the poster tagged via the "Who visited with you?" picker). Replaces existing
+ * mention rows for the check-in so updates are idempotent. Safe to call from
+ * both create and update flows.
+ */
+export async function notifyTaggedFriendsForCheckIn(
   ctx: MutationCtx,
-  token: string
-): Promise<string | null> {
-  const t = token.trim();
-  if (!t) return null;
+  checkInId: Id<"checkIns">
+): Promise<{ inserted: number; skippedSelf: number; skippedMuted: number }> {
+  const checkIn = await ctx.db.get(checkInId);
+  if (!checkIn) {
+    return { inserted: 0, skippedSelf: 0, skippedMuted: 0 };
+  }
 
-  const byId = await ctx.db
+  const existing = await ctx.db
+    .query("socialNotifications")
+    .withIndex("by_checkIn", (q) => q.eq("checkInId", checkInId))
+    .collect();
+  for (const row of existing) {
+    if (row.type === MENTION_TYPE) {
+      await ctx.db.delete(row._id);
+    }
+  }
+
+  if (checkIn.contentType !== "museum") {
+    return { inserted: 0, skippedSelf: 0, skippedMuted: 0 };
+  }
+
+  const museumDoc = await ctx.db.get(checkIn.contentId);
+  if (!museumDoc || !("name" in museumDoc)) {
+    return { inserted: 0, skippedSelf: 0, skippedMuted: 0 };
+  }
+  const museumName = museumDoc.name;
+  const museumId = checkIn.contentId as Id<"museums">;
+
+  const posterId = checkIn.userId;
+  const actorProfile = await ctx.db
     .query("userProfiles")
-    .withIndex("by_userId", (q) => q.eq("userId", t))
+    .withIndex("by_userId", (q) => q.eq("userId", posterId))
     .first();
-  if (byId) return byId.userId;
+  const firstName =
+    actorProfile?.name?.trim().split(/\s+/)[0] ||
+    actorProfile?.email?.split("@")[0] ||
+    "Someone";
 
-  const byName = await ctx.db
-    .query("userProfiles")
-    .withIndex("by_name", (q) => q.eq("name", t))
-    .first();
-  if (byName) return byName.userId;
+  const recipientIds = new Set<string>();
+  let skippedSelf = 0;
+  for (const taggedUserId of checkIn.friendUserIds ?? []) {
+    if (!taggedUserId) continue;
+    if (taggedUserId === posterId) {
+      skippedSelf += 1;
+      continue;
+    }
+    recipientIds.add(taggedUserId);
+  }
 
-  return null;
+  let inserted = 0;
+  let skippedMuted = 0;
+  const now = Date.now();
+  for (const recipientUserId of recipientIds) {
+    const prefs = await ctx.db
+      .query("socialNotificationPrefs")
+      .withIndex("by_userId", (q) => q.eq("userId", recipientUserId))
+      .first();
+    if (prefs?.mutedSocial) {
+      skippedMuted += 1;
+      continue;
+    }
+
+    const bodyPreview = `${firstName} tagged you in a check-in at ${museumName}.`;
+
+    await ctx.db.insert("socialNotifications", {
+      recipientUserId,
+      actorUserId: posterId,
+      checkInId,
+      museumId,
+      museumName,
+      type: MENTION_TYPE,
+      bodyPreview,
+      createdAt: now,
+    });
+    inserted += 1;
+  }
+
+  console.log(
+    `[socialNotifications] checkIn=${checkInId} tags=${(checkIn.friendUserIds ?? []).length} inserted=${inserted} skippedSelf=${skippedSelf} skippedMuted=${skippedMuted}`
+  );
+
+  return { inserted, skippedSelf, skippedMuted };
 }
 
 export const enqueueMentionsForCheckIn = internalMutation({
   args: { checkInId: v.id("checkIns") },
   handler: async (ctx, args) => {
-    const checkIn = await ctx.db.get(args.checkInId);
-    if (!checkIn) return;
-
-    const existing = await ctx.db
-      .query("socialNotifications")
-      .withIndex("by_checkIn", (q) => q.eq("checkInId", args.checkInId))
-      .collect();
-    for (const row of existing) {
-      if (row.type === MENTION_TYPE) {
-        await ctx.db.delete(row._id);
-      }
-    }
-
-    const review = checkIn.review?.trim();
-    if (!review) return;
-
-    if (checkIn.contentType !== "museum") return;
-
-    const museumDoc = await ctx.db.get(checkIn.contentId);
-    if (!museumDoc || !("name" in museumDoc)) return;
-    const museumName = museumDoc.name;
-    const museumId = checkIn.contentId as Id<"museums">;
-
-    const posterId = checkIn.userId;
-    const actorProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_userId", (q) => q.eq("userId", posterId))
-      .first();
-    const firstName =
-      actorProfile?.name?.trim().split(/\s+/)[0] ||
-      actorProfile?.email?.split("@")[0] ||
-      "Someone";
-
-    const tokens = collectMentionTokens(review);
-    const recipientIds = new Set<string>();
-
-    for (const token of tokens) {
-      const uid = await resolveMentionToUserId(ctx, token);
-      if (!uid || uid === posterId) continue;
-      recipientIds.add(uid);
-    }
-
-    const now = Date.now();
-    for (const recipientUserId of recipientIds) {
-      const prefs = await ctx.db
-        .query("socialNotificationPrefs")
-        .withIndex("by_userId", (q) => q.eq("userId", recipientUserId))
-        .first();
-      if (prefs?.mutedSocial) continue;
-
-      const bodyPreview = `${firstName} mentioned you in a check-in at ${museumName}.`;
-
-      await ctx.db.insert("socialNotifications", {
-        recipientUserId,
-        actorUserId: posterId,
-        checkInId: args.checkInId,
-        museumId,
-        museumName,
-        type: MENTION_TYPE,
-        bodyPreview,
-        createdAt: now,
-      });
-    }
+    return await notifyTaggedFriendsForCheckIn(ctx, args.checkInId);
   },
 });
 
@@ -141,6 +132,21 @@ export const unreadCount = query({
       .order("desc")
       .take(200);
     return recent.filter((n) => n.readAt == null).length;
+  },
+});
+
+export const totalCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return 0;
+
+    const recent = await ctx.db
+      .query("socialNotifications")
+      .withIndex("by_recipient_created", (q) => q.eq("recipientUserId", user._id))
+      .order("desc")
+      .take(200);
+    return recent.length;
   },
 });
 
