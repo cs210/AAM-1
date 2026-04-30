@@ -2,8 +2,8 @@ import { ConvexError, v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { authComponent } from "./auth";
+import { notifyTaggedFriendsForCheckIn } from "./socialNotifications";
 
 // Helper to convert storage IDs to URLs
 async function getImageUrlsFromStorageIds(
@@ -159,9 +159,7 @@ export const createCheckIn = mutation({
         : [];
 
     if (args.contentType === "museum") {
-      await ctx.scheduler.runAfter(0, internal.socialNotifications.enqueueMentionsForCheckIn, {
-        checkInId,
-      });
+      await notifyTaggedFriendsForCheckIn(ctx, checkInId);
     }
 
     return {
@@ -370,10 +368,8 @@ export const updateCheckIn = mutation({
 
     await ctx.db.patch(args.checkInId, updateData);
 
-    if (checkIn.contentType === "museum" && args.review !== undefined) {
-      await ctx.scheduler.runAfter(0, internal.socialNotifications.enqueueMentionsForCheckIn, {
-        checkInId: args.checkInId,
-      });
+    if (checkIn.contentType === "museum") {
+      await notifyTaggedFriendsForCheckIn(ctx, args.checkInId);
     }
 
     const imageIds = args.imageStorageIds ?? checkIn.imageIds ?? [];
@@ -516,9 +512,7 @@ export const createMuseumCheckIn = mutation({
       updatedAt: Date.now(),
     });
 
-    await ctx.scheduler.runAfter(0, internal.socialNotifications.enqueueMentionsForCheckIn, {
-      checkInId,
-    });
+    await notifyTaggedFriendsForCheckIn(ctx, checkInId);
 
     const imageUrls =
       imageStorageIds.length > 0

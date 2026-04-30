@@ -28,6 +28,7 @@ export default function NotificationsScreen() {
   const { theme } = useUniwind();
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
   const items = useQuery(api.socialNotifications.listForCurrentUser, { limit: 80 });
+  const totalCount = useQuery(api.socialNotifications.totalCount);
   const markRead = useMutation(api.socialNotifications.markRead);
   const markAllRead = useMutation(api.socialNotifications.markAllRead);
 
@@ -58,6 +59,7 @@ export default function NotificationsScreen() {
   }
 
   const unread = items.filter((n) => n.readAt == null).length;
+  const total = totalCount ?? items.length;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
@@ -73,6 +75,11 @@ export default function NotificationsScreen() {
               <ArrowLeftIcon size={22} color={primaryHex} />
             </Pressable>
             <Text className="text-xl font-semibold text-foreground">Notifications</Text>
+            {total > 0 ? (
+              <View className="ml-1 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5">
+                <Text className="text-xs font-semibold text-primary">{total}</Text>
+              </View>
+            ) : null}
           </View>
           {unread > 0 ? (
             <Button variant="ghost" size="sm" onPress={() => markAllRead({})} className="px-2">
@@ -90,8 +97,7 @@ export default function NotificationsScreen() {
           <View className="items-center px-2 pt-12">
             <Text className="mb-2 text-center text-lg font-semibold text-foreground">No notifications yet</Text>
             <Text variant="muted" className="max-w-sm text-center text-sm leading-relaxed">
-              When someone @mentions you in a museum check-in review, or when other social alerts
-              arrive, they will show up here.
+              When someone tags you in a museum check-in, you'll see it here.
             </Text>
           </View>
         }

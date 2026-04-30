@@ -295,9 +295,6 @@ export default function CheckInScreen() {
               textAlignVertical="top"
             />
             <Text className="mt-2 text-right text-xs text-muted-foreground">{review.length}/500</Text>
-            <Text className="mt-1.5 text-xs text-muted-foreground">
-              Mention someone with @ExactProfileName or @userId — they get a notification.
-            </Text>
           </View>
 
           <View className="mb-6">
