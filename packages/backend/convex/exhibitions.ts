@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { authComponent } from "./auth";
+import { requireAuthenticatedUser } from "./permissions";
 
 const interactionTypeValidator = v.union(
   v.literal("quiz"),
@@ -11,12 +11,6 @@ const interactionTypeValidator = v.union(
   v.literal("badge"),
   v.literal("info_audio")
 );
-
-async function requireAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.safeGetAuthUser(ctx);
-  if (!user) throw new Error("Not authenticated");
-  return user;
-}
 
 type OrganizationRow = { _id?: string; id?: string };
 

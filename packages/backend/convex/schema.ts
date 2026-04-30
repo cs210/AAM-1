@@ -125,6 +125,25 @@ export default defineSchema({
     .index("by_org", ["betterAuthOrgId"])
     .index("by_museum", ["museumId"]),
 
+  visualSearchConfig: defineTable({
+    endpointUrl: v.string(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }),
+
+  visualSearchMuseumAssignments: defineTable({
+    museumId: v.id("museums"),
+    museumSlug: v.string(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.string()),
+    updatedBy: v.optional(v.string()),
+  })
+    .index("by_museum", ["museumId"])
+    .index("by_slug", ["museumSlug"])
+    .index("by_active", ["isActive"]),
+
   // User Following (tracks which museums a user follows)
   userFollows: defineTable({
     userId: v.string(), // Better Auth user ID
