@@ -8,7 +8,12 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
 import { useBookmark } from '@/hooks/useBookmark';
+import { useUniwind } from 'uniwind';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
+import {
+  RN_API_MUTED_FOREGROUND_DARK,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+} from '@/constants/rn-api-colors';
 
 export interface CheckinPostData {
   _id: string;
@@ -59,6 +64,8 @@ export const CheckinPost = ({
   openOnReviewsTab,
 }: CheckinPostProps) => {
   const brandPrimary = useBrandPrimaryHex();
+  const { theme } = useUniwind();
+  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
   const { isBookmarked, toggleBookmark } = useBookmark(checkin.contentId as Id<'museums'>);
 
@@ -164,7 +171,7 @@ export const CheckinPost = ({
             className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
             <Bookmark
               size={20}
-              color={isBookmarked ? brandPrimary : 'rgba(0,0,0,0.3)'}
+              color={isBookmarked ? brandPrimary : mutedHex}
               fill={isBookmarked ? brandPrimary : 'none'}
             />
           </Pressable>
