@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { BellIcon } from 'lucide-react-native';
+import { BellIcon, ScanSearchIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -73,81 +73,88 @@ export default function HomeScreen() {
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}>
         <View className="pb-3">
-        <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
-          <View className="min-w-0 flex-1">
-            <Text className="mb-0.5 text-sm font-normal text-muted-foreground">Welcome</Text>
-            <Text className="mb-2 text-5xl font-semibold leading-none tracking-tight text-foreground">
-              {firstName}
-            </Text>
-            <Separator className="mt-2 max-w-3/5 self-start bg-border" />
-          </View>
-          <View className="ml-4 mt-1 flex-row items-center gap-3">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Notifications"
-              onPress={() => router.push('/notifications')}
-              className="relative p-2 active:opacity-80">
-              <BellIcon size={24} color={primaryHex} />
-              {unreadNotifications != null && unreadNotifications > 0 ? (
-                <View className="absolute right-1 top-1 min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-destructive px-1">
-                  <Text className="text-[10px] font-bold text-white">
-                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
-                  </Text>
-                </View>
-              ) : null}
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open profile"
-              onPress={() => router.push('/(tabs)/profile')}
-              className="active:opacity-80">
-              <Avatar className="size-10" alt="Your profile">
-                {currentUserProfile?.imageUrl ? (
-                  <AvatarImage source={{ uri: currentUserProfile.imageUrl }} />
-                ) : null}
-                <AvatarFallback className="bg-primary">
-                  <Text className="text-base font-bold text-primary-foreground">{initial}</Text>
-                </AvatarFallback>
-              </Avatar>
-            </Pressable>
-          </View>
-        </View>
-
-        <Text className="mb-4 px-5 text-sm font-normal text-muted-foreground">
-          see what your friends are up to
-        </Text>
-
-        <View className="px-5 pb-2">
-          {feedItems.length === 0 ? (
-            <FeedEmptyState />
-          ) : (
-            <View>
-              {feedItems.map((item, index) =>
-                item.type === 'event' ? (
-                  <EventCard
-                    key={`event-${item.data._id}`}
-                    event={item.data as EventCardData}
-                    cardIndex={index}
-                  />
-                ) : (
-                  <CheckinPost
-                    key={`checkin-${item.data._id}`}
-                    checkin={item.data as CheckinPostData}
-                    cardIndex={index}
-                    isOwnCheckin={
-                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                    }
-                    onEditPress={
-                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                        ? () => setEditingCheckin(item.data as CheckinPostData)
-                        : undefined
-                    }
-                  />
-                )
-              )}
+          <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
+            <View className="min-w-0 flex-1">
+              <Text className="mb-0.5 text-sm font-normal text-muted-foreground">Welcome</Text>
+              <Text className="mb-2 text-5xl font-semibold leading-none tracking-tight text-foreground">
+                {firstName}
+              </Text>
+              <Separator className="mt-2 max-w-3/5 self-start bg-border" />
             </View>
-          )}
-        </View>
+            <View className="ml-4 mt-1 flex-row items-center gap-3">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+                onPress={() => router.push('/notifications')}
+                className="relative p-2 active:opacity-80">
+                <BellIcon size={24} color={primaryHex} />
+                {unreadNotifications != null && unreadNotifications > 0 ? (
+                  <View className="absolute right-1 top-1 min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-destructive px-1">
+                    <Text className="text-[10px] font-bold text-white">
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open visual search"
+                onPress={() => router.push('/visual-search')}
+                className="size-10 items-center justify-center rounded-full border border-border bg-card active:opacity-80">
+                <ScanSearchIcon size={20} color={primaryHex} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open profile"
+                onPress={() => router.push('/(tabs)/profile')}
+                className="active:opacity-80">
+                <Avatar className="size-10" alt="Your profile">
+                  {currentUserProfile?.imageUrl ? (
+                    <AvatarImage source={{ uri: currentUserProfile.imageUrl }} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary">
+                    <Text className="text-base font-bold text-primary-foreground">{initial}</Text>
+                  </AvatarFallback>
+                </Avatar>
+              </Pressable>
+            </View>
+          </View>
+
+          <Text className="mb-4 px-5 text-sm font-normal text-muted-foreground">
+            see what your friends are up to
+          </Text>
+
+          <View className="px-5 pb-2">
+            {feedItems.length === 0 ? (
+              <FeedEmptyState />
+            ) : (
+              <View>
+                {feedItems.map((item, index) =>
+                  item.type === 'event' ? (
+                    <EventCard
+                      key={`event-${item.data._id}`}
+                      event={item.data as EventCardData}
+                      cardIndex={index}
+                    />
+                  ) : (
+                    <CheckinPost
+                      key={`checkin-${item.data._id}`}
+                      checkin={item.data as CheckinPostData}
+                      cardIndex={index}
+                      isOwnCheckin={
+                        currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                      }
+                      onEditPress={
+                        currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                          ? () => setEditingCheckin(item.data as CheckinPostData)
+                          : undefined
+                      }
+                    />
+                  )
+                )}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 

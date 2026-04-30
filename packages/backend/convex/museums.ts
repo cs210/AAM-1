@@ -4,23 +4,9 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { authComponent } from "./auth";
+import { requireAdmin, requireAuthenticatedUser } from "./permissions";
 
 const geospatial = new GeospatialIndex(components.geospatial);
-
-async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.safeGetAuthUser(ctx);
-  if (!user) throw new Error("Not authenticated");
-  const role = (user as { role?: string | null }).role;
-  if (role !== "admin") throw new Error("Admin access required");
-  return user;
-}
-
-async function requireAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.safeGetAuthUser(ctx);
-  if (!user) throw new Error("Not authenticated");
-  return user;
-}
 
 type OrganizationRow = { _id?: string; id?: string };
 
