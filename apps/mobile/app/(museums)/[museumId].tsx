@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import {
-  ArrowLeftIcon,
   ScanSearchIcon,
   MapPinIcon,
   HeartIcon,
@@ -24,12 +23,13 @@ import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
 import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list';
+import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import {
-  RN_API_FOREGROUND_LIGHT,
   RN_API_BORDER_LIGHT,
-  RN_API_BACKGROUND_LIGHT,
+  RN_API_FOREGROUND_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_LIGHT,
+  RN_API_BACKGROUND_LIGHT
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
@@ -41,6 +41,7 @@ function normalizeExternalUrl(url: string): string {
 }
 
 export default function MuseumDetailScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ museumId: string; tab?: string; highlight?: string }>();
   const museumIdParam = params.museumId;
   const id = typeof museumIdParam === 'string' ? museumIdParam : Array.isArray(museumIdParam) ? museumIdParam[0] : undefined;
@@ -263,7 +264,7 @@ export default function MuseumDetailScreen() {
   // Loading state
   if (museum === undefined) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View className="flex-1 items-center justify-center gap-3">
           <BrandActivityIndicator size="large" />
@@ -277,7 +278,7 @@ export default function MuseumDetailScreen() {
 
   if (museum === null) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View className="flex-1 items-center justify-center p-4">
           <Text className="mb-4 text-lg text-foreground">Museum not found</Text>
@@ -304,18 +305,10 @@ export default function MuseumDetailScreen() {
 
   return (
     <AuthGuard>
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
-          <Pressable className="size-10 items-center justify-center" onPress={() => router.back()}>
-            <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
-          </Pressable>
-          <Text className="flex-1 text-center text-base font-semibold text-foreground" numberOfLines={1}>
-            Museum Details
-          </Text>
-          <View className="w-10" />
-        </View>
+        <ScreenTitleBar title="Museum Details" onBackPress={() => router.back()} />
 
         <View className="flex-row border-b border-border bg-muted/40 px-2">
           <Pressable
@@ -353,7 +346,7 @@ export default function MuseumDetailScreen() {
             ref={reviewsListRef}
             data={reviews ?? []}
             keyExtractor={(item) => item._id}
-            contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 32 + insets.bottom }}
             ListEmptyComponent={
               reviews === undefined ? (
                 <View className="flex-1 items-center justify-center gap-3 py-12">
@@ -420,7 +413,7 @@ export default function MuseumDetailScreen() {
           <ScrollView
             className="flex-1"
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
+            contentContainerStyle={{ padding: 20, paddingBottom: 32 + insets.bottom }}
             showsVerticalScrollIndicator={false}>
             {museum.imageUrl && (
               <View className="mb-2.5 h-[150px] justify-end overflow-hidden rounded-[18px] bg-muted">

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
@@ -12,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { FeedEmptyState } from '@/components/feed-empty-state';
+import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
@@ -62,27 +62,7 @@ export default function HomeScreen() {
       className="relative flex-1 bg-background"
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
-      <View
-        className="absolute -right-38 -top-50 z-0 h-100 w-137.5 overflow-hidden rounded-full"
-        pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(230, 210, 255, 0.4)', 'rgba(230, 210, 255, 0.1)', 'rgba(255, 255, 255, 0)']}
-          style={{ width: '100%', height: '100%' }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
-
-      <View
-        className="absolute -bottom-50 -left-38 z-0 h-100 w-137.5 overflow-hidden rounded-full"
-        pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(255, 255, 255, 0)', 'rgba(230, 210, 255, 0.1)', 'rgba(230, 210, 255, 0.4)']}
-          style={{ width: '100%', height: '100%' }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
+      <DecorativeGradientShapes />
 
       <ScrollView
         className="z-10 flex-1"
