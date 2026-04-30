@@ -84,6 +84,7 @@ export const createCheckIn = mutation({
     review: v.optional(v.string()),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
+    durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()), // If not provided, use current time
   },
   handler: async (ctx, args) => {
@@ -99,6 +100,7 @@ export const createCheckIn = mutation({
     const visitDate = args.visitDate ?? createdAt;
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
+    const durationHours = args.durationHours;
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -109,6 +111,7 @@ export const createCheckIn = mutation({
       review: args.review,
       imageIds: imageStorageIds,
       friendUserIds,
+      durationHours,
       visitDate,
       createdAt,
     });
@@ -163,6 +166,7 @@ export const createCheckIn = mutation({
       review: args.review,
       imageUrls,
       friendUserIds,
+      durationHours,
       visitDate,
       createdAt,
     };
@@ -208,8 +212,10 @@ export const getProfileVisits = query({
 
     const checkIns = await getCheckInsRaw(ctx, { userId: targetUserId });
 
+    const museumCheckIns = checkIns.filter((ci) => ci.contentType === "museum");
+
     const visits = await Promise.all(
-      checkIns.map(async (ci) => {
+      museumCheckIns.map(async (ci) => {
         const museum = await ctx.db.get(ci.contentId);
         const city = museum && "location" in museum ? museum.location?.city : undefined;
         const imageIds = ci.imageIds ?? [];
@@ -220,12 +226,13 @@ export const getProfileVisits = query({
         return {
           checkIn: {
             _id: ci._id,
-            museumId: ci.contentId,
+            museumId: ci.contentId as Id<"museums">,
             rating: ci.rating,
-            visitDate: ci.visitDate,
+            visitDate: ci.visitDate ?? ci.createdAt,
             createdAt: ci.createdAt,
             review: ci.review,
             editedAt: ci.editedAt,
+            durationHours: ci.durationHours,
             imageUrls: imageUrls,
           },
           museum: museum && "name" in museum
@@ -241,12 +248,12 @@ export const getProfileVisits = query({
       })
     );
 
-    const valid = visits.filter((entry) => entry.museum != null) as {
-      checkIn: { _id: Id<"checkIns">; museumId: Id<"museums">; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number; imageIds: Id<"_storage">[]; imageUrls: string[] };
-      museum: { _id: Id<"museums">; name: string; imageUrl?: string; category: string; city?: string };
-    }[];
+    const valid = visits.filter(
+      (entry): entry is typeof entry & { museum: NonNullable<typeof entry.museum> } =>
+        entry.museum != null
+    );
 
-    valid.sort((a, b) => b.checkIn.visitDate - a.checkIn.visitDate);
+    valid.sort((a, b) => (b.checkIn.visitDate ?? 0) - (a.checkIn.visitDate ?? 0));
     return valid;
   },
 });
@@ -326,6 +333,7 @@ export const updateCheckIn = mutation({
     review: v.optional(v.string()),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
+    durationHours: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -347,6 +355,7 @@ export const updateCheckIn = mutation({
     if (args.imageStorageIds !== undefined) updateData.imageIds = args.imageStorageIds;
     if (args.friendUserIds !== undefined)
       updateData.friendUserIds = args.friendUserIds;
+    if (args.durationHours !== undefined) updateData.durationHours = args.durationHours;
     // Only mark as edited when something actually changed
     if (Object.keys(updateData).length > 0) {
       updateData.editedAt = Date.now();
@@ -420,6 +429,7 @@ export const createMuseumCheckIn = mutation({
     review: v.optional(v.string()),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
+    durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -435,6 +445,7 @@ export const createMuseumCheckIn = mutation({
     const visitDate = args.visitDate ?? createdAt;
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
+    const durationHours = args.durationHours;
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -445,6 +456,7 @@ export const createMuseumCheckIn = mutation({
       review: args.review,
       imageIds: imageStorageIds,
       friendUserIds,
+      durationHours,
       visitDate,
       createdAt,
     });
@@ -497,6 +509,7 @@ export const createMuseumCheckIn = mutation({
       review: args.review,
       imageUrls: imageUrls,
       friendUserIds,
+      durationHours,
       visitDate,
       createdAt,
     };
@@ -511,6 +524,7 @@ export const createEventCheckIn = mutation({
     review: v.optional(v.string()),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
+    durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -526,6 +540,7 @@ export const createEventCheckIn = mutation({
     const visitDate = args.visitDate ?? createdAt;
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
+    const durationHours = args.durationHours;
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -536,6 +551,7 @@ export const createEventCheckIn = mutation({
       review: args.review,
       imageIds: imageStorageIds,
       friendUserIds,
+      durationHours,
       visitDate,
       createdAt,
     });
@@ -554,6 +570,7 @@ export const createEventCheckIn = mutation({
       review: args.review,
       imageUrls: imageUrls,
       friendUserIds,
+      durationHours,
       visitDate,
       createdAt,
     };

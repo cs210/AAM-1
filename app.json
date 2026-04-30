@@ -1,5 +1,18 @@
 {
-  "ios": {
-    "bundleIdentifier": "com.eduardomoreno.yami-monorepo"
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c47b47fb-a796-4c6d-924c-65e1b7de87be"
+      }
+    },
+    "android": {
+      "package": "sh.edm.museum"
+    },
+    "ios": {
+      "bundleIdentifier": "sh.edm.museum",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
   }
 }

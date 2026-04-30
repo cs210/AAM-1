@@ -1,4 +1,5 @@
 import { useMutation } from 'convex/react';
+import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 
@@ -9,6 +10,7 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 export function useCheckInActions(onClose: () => void) {
   const updateCheckIn = useMutation(api.checkIns.updateCheckIn);
   const deleteCheckInMutation = useMutation(api.checkIns.deleteCheckIn);
+  const posthog = usePostHog();
 
   const saveCheckIn = async (
     checkInId: Id<'checkIns'>,
@@ -20,6 +22,13 @@ export function useCheckInActions(onClose: () => void) {
       rating: rating ?? undefined,
       review: review || undefined,
     });
+
+    posthog?.capture('museum_visit_updated', {
+      checkInId: String(checkInId),
+      hasRating: rating !== null,
+      hasReview: review.trim().length > 0,
+    });
+
     onClose();
   };
 

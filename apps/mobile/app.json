@@ -4,6 +4,12 @@
     "slug": "museumand",
     "version": "0.0.1",
     "orientation": "portrait",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1cb3ee35-380a-43d7-a054-786cbb3c8445"
+    },
     "icon": "./assets/images/icon.png",
     "scheme": "yami",
     "userInterfaceStyle": "automatic",
