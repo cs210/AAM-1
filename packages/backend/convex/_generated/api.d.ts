@@ -17,6 +17,7 @@ import type * as events from "../events.js";
 import type * as exhibitions from "../exhibitions.js";
 import type * as exhibitionsAutoFill from "../exhibitionsAutoFill.js";
 import type * as fakeData from "../fakeData.js";
+import type * as focusGroup from "../focusGroup.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
 import type * as museums from "../museums.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   exhibitions: typeof exhibitions;
   exhibitionsAutoFill: typeof exhibitionsAutoFill;
   fakeData: typeof fakeData;
+  focusGroup: typeof focusGroup;
   follows: typeof follows;
   http: typeof http;
   museums: typeof museums;

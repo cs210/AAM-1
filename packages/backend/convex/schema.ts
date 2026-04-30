@@ -276,6 +276,26 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_accountId", ["accountId"]),
 
+  // Archived state for reusable focus-group accounts after a testing session.
+  focusGroupSnapshots: defineTable({
+    label: v.string(),
+    createdAt: v.number(),
+    profiles: v.array(v.object({
+      profileKey: v.string(),
+      userId: v.string(),
+      name: v.string(),
+      email: v.string(),
+      profile: v.optional(v.any()),
+      museumFollows: v.array(v.any()),
+      userFollows: v.array(v.any()),
+      followers: v.array(v.any()),
+      checkIns: v.array(v.any()),
+      socialNotifications: v.array(v.any()),
+      socialNotificationPrefs: v.optional(v.any()),
+      userInterests: v.optional(v.any()),
+    })),
+  }).index("by_createdAt", ["createdAt"]),
+
   // Better Auth tables (user, session, account, etc.) are managed
   // by the @convex-dev/better-auth component automatically.
 });
