@@ -158,6 +158,16 @@ export default defineSchema({
     .index("by_museum", ["museumId"])
     .index("by_user_and_museum", ["userId", "museumId"]),
 
+  // User Bookmarks (tracks which museums a user has bookmarked)
+  bookmarks: defineTable({
+    userId: v.string(), // Better Auth user ID
+    museumId: v.id("museums"),
+    bookmarkedAt: v.number(), // Timestamp
+  })
+    .index("by_user", ["userId"])
+    .index("by_museum", ["museumId"])
+    .index("by_user_and_museum", ["userId", "museumId"]),
+
   // Public user profiles for search/following
   userProfiles: defineTable({
     userId: v.string(), // Better Auth user ID

@@ -124,37 +124,37 @@ export default function HomeScreen() {
             see what your friends are up to
           </Text>
 
-          <View className="px-5 pb-2">
-            {feedItems.length === 0 ? (
-              <FeedEmptyState />
-            ) : (
-              <View>
-                {feedItems.map((item, index) =>
-                  item.type === 'event' ? (
-                    <EventCard
-                      key={`event-${item.data._id}`}
-                      event={item.data as EventCardData}
-                      cardIndex={index}
-                    />
-                  ) : (
-                    <CheckinPost
-                      key={`checkin-${item.data._id}`}
-                      checkin={item.data as CheckinPostData}
-                      cardIndex={index}
-                      isOwnCheckin={
-                        currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                      }
-                      onEditPress={
-                        currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                          ? () => setEditingCheckin(item.data as CheckinPostData)
-                          : undefined
-                      }
-                    />
-                  )
-                )}
-              </View>
-            )}
-          </View>
+        <View className="px-5 pb-2">
+          {feedItems.length === 0 ? (
+            <FeedEmptyState />
+          ) : (
+            <View>
+              {feedItems.map((item, index) =>
+                item.type === 'event' ? (
+                  <EventCard
+                    key={`event-${item.data._id}`}
+                    event={item.data as EventCardData}
+                    cardIndex={index}
+                  />
+                ) : (
+                  <CheckinPost
+                    key={`checkin-${item.data._id}`}
+                    checkin={item.data as CheckinPostData}
+                    cardIndex={index}
+                    isOwnCheckin={
+                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                    }
+                    onEditPress={
+                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                        ? () => setEditingCheckin(item.data as CheckinPostData)
+                        : undefined
+                    }
+                  />
+                )
+              )}
+            </View>
+          )}
+        </View>
         </View>
       </ScrollView>
 
