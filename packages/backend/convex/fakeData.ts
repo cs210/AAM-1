@@ -1,4 +1,36 @@
+import { GeospatialIndex } from "@convex-dev/geospatial";
+import { components } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { mutation } from "./_generated/server";
+
+const geospatial = new GeospatialIndex(components.geospatial);
+
+/** Approximate venue coordinates so Search can show distance (geospatial index). */
+const MUSEUM_SEED_POINTS: Record<string, { latitude: number; longitude: number }> = {
+  "The Metropolitan Museum of Art": { latitude: 40.7794, longitude: -73.9632 },
+  "Los Angeles County Museum of Art": { latitude: 34.0639, longitude: -118.3594 },
+  "Field Museum of Natural History": { latitude: 41.8663, longitude: -87.6169 },
+  "Houston Museum of Fine Arts": { latitude: 29.7256, longitude: -95.3904 },
+  "Phoenix Art Museum": { latitude: 33.4495, longitude: -112.08 },
+  "Philadelphia Museum of Art": { latitude: 39.9656, longitude: -75.1809 },
+  "San Antonio Museum of Art": { latitude: 29.4253, longitude: -98.4886 },
+  "San Diego Museum of Art": { latitude: 32.7322, longitude: -117.1513 },
+  Exploratorium: { latitude: 37.8017, longitude: -122.3975 },
+  "Museum of Science and Industry": { latitude: 41.7906, longitude: -87.5831 },
+  "California Science Center": { latitude: 34.0156, longitude: -118.2862 },
+  "National Museum of American History": { latitude: 38.8913, longitude: -77.03 },
+  "The National WWII Museum": { latitude: 29.9431, longitude: -90.0704 },
+  "Museum of the American Revolution": { latitude: 39.9483, longitude: -75.1456 },
+  "National Constitution Center": { latitude: 39.9532, longitude: -75.1488 },
+  "The Museum of Modern Art": { latitude: 40.7614, longitude: -73.9776 },
+  "Institute of Contemporary Art": { latitude: 42.3522, longitude: -71.0432 },
+  "Contemporary Arts Museum Houston": { latitude: 29.7265, longitude: -95.3914 },
+  "Walker Art Center": { latitude: 44.9681, longitude: -93.2887 },
+  "National Museum of the American Indian": { latitude: 38.8839, longitude: -77.0165 },
+  "Japanese American National Museum": { latitude: 34.0496, longitude: -118.2409 },
+  "National Museum of African American History and Culture": { latitude: 38.8912, longitude: -77.0328 },
+  "Museum of Latin American Art": { latitude: 33.7749, longitude: -118.1894 },
+};
 
 // Populate fake museums into Convex database
 export const populateFakeMuseums = mutation({
@@ -172,21 +204,47 @@ export const populateFakeMuseums = mutation({
       },
     ];
 
-    const insertedIds = [];
+    const insertedIds: Id<"museums">[] = [];
+    let geospatialSynced = 0;
+
     for (const museum of museums) {
-      // Check if museum already exists by name
+      const point = MUSEUM_SEED_POINTS[museum.name];
+      const row =
+        point !== undefined
+          ? {
+              ...museum,
+              latitude: point.latitude,
+              longitude: point.longitude,
+            }
+          : museum;
+
       const existing = await ctx.db
         .query("museums")
         .filter((q) => q.eq(q.field("name"), museum.name))
         .first();
 
+      const id = existing ? existing._id : await ctx.db.insert("museums", row);
+
       if (!existing) {
-        const id = await ctx.db.insert("museums", museum);
         insertedIds.push(id);
+      } else if (point) {
+        await ctx.db.patch(id, {
+          latitude: point.latitude,
+          longitude: point.longitude,
+        });
+      }
+
+      if (point) {
+        await geospatial.insert(ctx, id, point, { category: museum.category });
+        geospatialSynced += 1;
       }
     }
 
-    return { inserted: insertedIds.length, total: museums.length };
+    return {
+      inserted: insertedIds.length,
+      geospatialSynced,
+      total: museums.length,
+    };
   },
 });
 

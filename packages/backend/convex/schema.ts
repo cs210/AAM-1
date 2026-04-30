@@ -31,6 +31,10 @@ export default defineSchema({
     // Category for recommendation
     category: v.string(), // e.g., "art", "history", "science", "contemporary"
 
+    /** WGS84 — duplicate of geospatial pin; shown in dashboard and used as distance fallback in Search. */
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+
     // Optional metadata
     imageUrl: v.optional(v.string()),
     website: v.optional(v.string()),
@@ -210,6 +214,27 @@ export default defineSchema({
   })
     .index("by_hall", ["hallId"])
     .index("by_hall_sortOrder", ["hallId", "sortOrder"]),
+
+  // In-app social notifications (mentions in check-ins, etc.)
+  socialNotifications: defineTable({
+    recipientUserId: v.string(),
+    actorUserId: v.string(),
+    checkInId: v.id("checkIns"),
+    museumId: v.optional(v.id("museums")),
+    museumName: v.optional(v.string()),
+    type: v.union(v.literal("mention_in_checkin")),
+    bodyPreview: v.string(),
+    createdAt: v.number(),
+    readAt: v.optional(v.number()),
+  })
+    .index("by_recipient_created", ["recipientUserId", "createdAt"])
+    .index("by_checkIn", ["checkInId"]),
+
+  socialNotificationPrefs: defineTable({
+    userId: v.string(),
+    mutedSocial: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 
   // Check-ins (museum or event)
   checkIns: defineTable({

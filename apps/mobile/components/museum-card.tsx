@@ -9,14 +9,22 @@ import { cn } from '@/lib/utils';
 export type MuseumCardData = Doc<"museums"> & {
   averageRating?: number | null;
   ratingCount?: number;
+  /** Present when the server computed distance from the viewer (meters). */
+  distanceMeters?: number;
 };
 
 type Props = {
   museum: MuseumCardData;
   className?: string;
+  /** When location is on but Convex has no geospatial pin for this museum, show an em dash. */
+  expectDistance?: boolean;
 };
 
-export function MuseumCard({ museum, className }: Props) {
+function museumHref(museumId: string): Href {
+  return `/(museums)/${museumId}` as Href;
+}
+
+export function MuseumCard({ museum, className, expectDistance = false }: Props) {
   const [imageFailed, setImageFailed] = React.useState(false);
   const displayRating = museum.averageRating
     ? museum.averageRating.toFixed(1)
@@ -24,6 +32,10 @@ export function MuseumCard({ museum, className }: Props) {
   const ratingLabel = museum.ratingCount && museum.ratingCount > 0
     ? `★ ${displayRating} (${museum.ratingCount})`
     : 'No ratings yet';
+  const distanceMiles =
+    typeof museum.distanceMeters === 'number' && Number.isFinite(museum.distanceMeters)
+      ? museum.distanceMeters / 1609.344
+      : null;
   const hasPrimaryImage = Boolean(museum.imageUrl) && !imageFailed;
 
   React.useEffect(() => {
@@ -59,18 +71,40 @@ export function MuseumCard({ museum, className }: Props) {
               numberOfLines={2}>
               {museum.name}
             </Text>
-            <View
-              className={cn(
-                'ml-3 rounded-lg px-2.5 py-1',
-                hasPrimaryImage ? 'bg-white/20' : 'bg-primary/15'
-              )}>
-              <Text
+            <View className="ml-3 items-end">
+              {distanceMiles != null && (
+                <Text
+                  className={cn(
+                    'mb-1 text-xs font-semibold',
+                    hasPrimaryImage ? 'text-white/95' : 'text-foreground'
+                  )}
+                  accessibilityLabel={`${distanceMiles.toFixed(1)} miles away`}>
+                  {distanceMiles.toFixed(1)} mi
+                </Text>
+              )}
+              {expectDistance && distanceMiles == null && (
+                <Text
+                  className={cn(
+                    'mb-1 text-xs font-medium',
+                    hasPrimaryImage ? 'text-white/70' : 'text-muted-foreground'
+                  )}
+                  accessibilityLabel="Distance unavailable: museum has no map coordinates in the database yet">
+                  —
+                </Text>
+              )}
+              <View
                 className={cn(
-                  'text-xs font-semibold capitalize',
-                  hasPrimaryImage ? 'text-white' : 'text-primary'
+                  'rounded-lg px-2.5 py-1',
+                  hasPrimaryImage ? 'bg-white/20' : 'bg-primary/15'
                 )}>
-                {museum.category}
-              </Text>
+                <Text
+                  className={cn(
+                    'text-xs font-semibold capitalize',
+                    hasPrimaryImage ? 'text-white' : 'text-primary'
+                  )}>
+                  {museum.category}
+                </Text>
+              </View>
             </View>
           </View>
         </CardHeader>

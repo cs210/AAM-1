@@ -23,6 +23,7 @@ import type * as museumsAutoFill from "../museumsAutoFill.js";
 import type * as organizationRequests from "../organizationRequests.js";
 import type * as permissions from "../permissions.js";
 import type * as recsys from "../recsys.js";
+import type * as socialNotifications from "../socialNotifications.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
 import type * as visualSearch from "../visualSearch.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   organizationRequests: typeof organizationRequests;
   permissions: typeof permissions;
   recsys: typeof recsys;
+  socialNotifications: typeof socialNotifications;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
   visualSearch: typeof visualSearch;
