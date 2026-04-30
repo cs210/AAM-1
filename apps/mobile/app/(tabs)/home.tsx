@@ -106,7 +106,7 @@ export default function HomeScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Open profile"
-                onPress={() => router.push('/(tabs)/profile')}
+                onPress={() => router.replace('/(tabs)/profile')}
                 className="active:opacity-80">
                 <Avatar className="size-10" alt="Your profile">
                   {currentUserProfile?.imageUrl ? (
