@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
-import { StarIcon, PencilIcon } from 'lucide-react-native';
+import { StarIcon, PencilIcon, Bookmark } from 'lucide-react-native';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -39,6 +39,8 @@ type CheckinPostProps = {
   isOwnCheckin?: boolean;
   onEditPress?: () => void;
   openOnReviewsTab?: boolean;
+  isBookmarked?: boolean;
+  onBookmarkPress?: () => void;
 };
 
 const CARD_SHADOW = {
@@ -55,6 +57,8 @@ export const CheckinPost = ({
   isOwnCheckin,
   onEditPress,
   openOnReviewsTab,
+  isBookmarked = false,
+  onBookmarkPress,
 }: CheckinPostProps) => {
   const brandPrimary = useBrandPrimaryHex();
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
@@ -141,17 +145,33 @@ export const CheckinPost = ({
           </Text>
         ) : null}
 
-        {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
-          <View className="mt-0.5 flex-row">
-            {checkin.imageUrls.slice(0, 3).map((url, index) => (
-              <Image
-                key={`${checkin._id}-photo-${index}`}
-                source={{ uri: url }}
-                className={cn('size-18 rounded-lg bg-muted', index > 0 && 'ml-2')}
+        <View className="relative">
+          {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
+            <View className="mt-0.5 flex-row">
+              {checkin.imageUrls.slice(0, 3).map((url, index) => (
+                <Image
+                  key={`${checkin._id}-photo-${index}`}
+                  source={{ uri: url }}
+                  className={cn('size-18 rounded-lg bg-muted', index > 0 && 'ml-2')}
+                />
+              ))}
+            </View>
+          ) : null}
+          {onBookmarkPress && (
+            <Pressable
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              onPress={onBookmarkPress}
+              className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
+              <Bookmark
+                size={20}
+                color={isBookmarked ? brandPrimary : 'rgba(0,0,0,0.3)'}
+                fill={isBookmarked ? brandPrimary : 'none'}
               />
-            ))}
-          </View>
-        ) : null}
+            </Pressable>
+          )}
+        </View>
       </Card>
     </Pressable>
   );

@@ -13,7 +13,8 @@ import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { FeedEmptyState } from '@/components/feed-empty-state';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { EventCard, EventCardData } from '../../components/event-card';
-import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
+import { CheckinPostData } from '../../components/checkin-post';
+import { CheckinPostWithBookmark } from '../../components/checkin-post-with-bookmark';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useUniwind } from 'uniwind';
@@ -124,37 +125,37 @@ export default function HomeScreen() {
             see what your friends are up to
           </Text>
 
-          <View className="px-5 pb-2">
-            {feedItems.length === 0 ? (
-              <FeedEmptyState />
-            ) : (
-              <View>
-                {feedItems.map((item, index) =>
-                  item.type === 'event' ? (
-                    <EventCard
-                      key={`event-${item.data._id}`}
-                      event={item.data as EventCardData}
-                      cardIndex={index}
-                    />
-                  ) : (
-                    <CheckinPost
-                      key={`checkin-${item.data._id}`}
-                      checkin={item.data as CheckinPostData}
-                      cardIndex={index}
-                      isOwnCheckin={
-                        currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                      }
-                      onEditPress={
-                        currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                          ? () => setEditingCheckin(item.data as CheckinPostData)
-                          : undefined
-                      }
-                    />
-                  )
-                )}
-              </View>
-            )}
-          </View>
+        <View className="px-5 pb-2">
+          {feedItems.length === 0 ? (
+            <FeedEmptyState />
+          ) : (
+            <View>
+              {feedItems.map((item, index) =>
+                item.type === 'event' ? (
+                  <EventCard
+                    key={`event-${item.data._id}`}
+                    event={item.data as EventCardData}
+                    cardIndex={index}
+                  />
+                ) : (
+                  <CheckinPostWithBookmark
+                    key={`checkin-${item.data._id}`}
+                    checkin={item.data as CheckinPostData}
+                    cardIndex={index}
+                    isOwnCheckin={
+                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                    }
+                    onEditPress={
+                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
+                        ? () => setEditingCheckin(item.data as CheckinPostData)
+                        : undefined
+                    }
+                  />
+                )
+              )}
+            </View>
+          )}
+        </View>
         </View>
       </ScrollView>
 
