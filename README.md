@@ -147,6 +147,7 @@ Add the secret key and site URL to the backend environment variables within `./p
 npx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 npx convex env set SITE_URL http://localhost:3000
 ```
+---
 
 For Better Auth and transactional emails (Resend), set:
 
@@ -156,6 +157,8 @@ npx convex env set RESEND_FROM_EMAIL "Museum& <onboarding@your-verified-domain.c
 ```
 
 Use a [Resend API key](https://resend.com/api-keys) and a verified domain for `RESEND_FROM_EMAIL`. For testing you can use `onboarding@resend.dev` (default if `RESEND_FROM_EMAIL` is unset).
+
+---
 
 For museum info and exhibition auto-fill (Google Places + Firecrawl scraping), set:
 
@@ -172,17 +175,38 @@ Firecrawl setup notes:
 - Create a Firecrawl API key from your Firecrawl dashboard.
 - `FIRECRAWL_API_URL` is optional unless you are using a custom/self-hosted endpoint.
 
-For museum visual search (RunPod), set:
+---
+
+For museum visual search, Convex calls the RunPod endpoint server-side. The
+browser and mobile app should never call RunPod directly.
+
+Set the RunPod API key as a Convex environment variable from
+`./packages/backend/`:
 
 ```bash
 npx convex env set RUNPOD_API_KEY your_runpod_api_key
 ```
 
-RunPod set up notes:
-- Create an API key in your settings.
-- Set a serverless/pod template with a working version of tsekai/museum-search on DockerHub.
-  - Set start command as ```bash -lc "rm -rf /app/museum-search && git clone https://github.com/t-sekai/museum-search.git && cd /app/museum-search && uvicorn app:app --host 0.0.0.0 --port 8000"```
-  - Expose HTTP port 8000 and set env var ```PORT=8000```.
-- Start your serverless/pod. You can then obtain the endpoint URL, updatable in the web admin panel.
+Then set the RunPod endpoint URL in the web admin dashboard:
 
-This secret does not live on your machine, it is managed by Convex.
+1. Open the web dashboard.
+2. Go to **Admin -> Visual Search**.
+3. Save the endpoint URL, for example:
+   `https://abc1def2ghi3.api.runpod.ai`
+
+The API key is stored only in Convex. Do not add `RUNPOD_API_KEY` to web or
+mobile `.env.local` files.
+
+(*) Optional: RunPod worker setup notes, only if you are hosting your own visual search API:
+
+- Create an API key in your RunPod settings.
+- Create a serverless endpoint or pod template using a working
+  `tsekai/museum-search` Docker image.
+- Expose HTTP port `8000` and set `PORT=8000`.
+- Use this start command if the image needs to clone and run the app at boot:
+
+```bash
+bash -lc "rm -rf /app/museum-search && git clone https://github.com/t-sekai/museum-search.git && cd /app/museum-search && uvicorn app:app --host 0.0.0.0 --port 8000"
+```
+
+- Start the endpoint or pod and obtain the generated endpoint URL.

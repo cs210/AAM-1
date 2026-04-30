@@ -6,6 +6,7 @@ import { useAction, useMutation, useQuery } from 'convex/react';
 import {
   ArrowLeftIcon,
   ScanSearchIcon,
+  LandmarkIcon,
   ExternalLinkIcon,
   ImageIcon,
   SearchIcon,
@@ -350,17 +351,14 @@ export default function VisualSearchScreen() {
         onPress={() => handleSelectMuseum(item)}>
         <Card className="gap-3 rounded-2xl py-4">
           <CardHeader className="gap-2 px-4">
-            <View className="flex-row items-start gap-3">
+            <View className="flex-row items-center gap-3">
               <View className="size-11 items-center justify-center rounded-full bg-primary/15">
-                <ScanSearchIcon size={20} color={RN_API_PRIMARY_LIGHT} />
+                <LandmarkIcon size={20} color={RN_API_PRIMARY_LIGHT} />
               </View>
-              <View className="min-w-0 flex-1">
+              <View className="min-w-0 flex-1 justify-center">
                 <CardTitle className="text-lg leading-6 text-foreground" numberOfLines={2}>
                   {item.museumName}
                 </CardTitle>
-                <CardDescription className="mt-1 font-mono text-xs">
-                  {item.museumSlug}
-                </CardDescription>
               </View>
             </View>
           </CardHeader>
@@ -382,12 +380,16 @@ export default function VisualSearchScreen() {
       ListHeaderComponent={
         <View className="mb-5 gap-4">
           <View>
-            <Text className="text-3xl font-semibold leading-tight text-foreground">
-              Visual Search
-            </Text>
-            <Text className="mt-2 text-sm leading-5 text-muted-foreground">
-              Choose a museum to search by image.
-            </Text>
+            <View className="flex-row items-center gap-3">
+              <View className="size-12 items-center justify-center rounded-full bg-primary/15">
+                <ScanSearchIcon size={24} color={RN_API_PRIMARY_LIGHT} />
+              </View>
+              <View className="min-w-0 flex-1 justify-center">
+                <CardTitle className="text-3xl font-semibold leading-tight text-foreground">
+                  Visual Search
+                </CardTitle>
+              </View>
+            </View>
           </View>
 
           <View className="flex-row items-center rounded-xl border border-border bg-background px-3">
@@ -432,19 +434,15 @@ export default function VisualSearchScreen() {
         showsVerticalScrollIndicator={false}>
         <Card className="gap-5 rounded-2xl py-6">
           <CardHeader className="gap-3">
-            <View className="size-12 items-center justify-center rounded-full bg-primary/15">
-              <ScanSearchIcon size={24} color={RN_API_PRIMARY_LIGHT} />
-            </View>
-            <View>
-              <CardTitle className="text-2xl leading-8 text-foreground">
-                Search this museum by image
-              </CardTitle>
-              <CardDescription className="mt-2 text-sm leading-5">
-                {selectedMuseum.museumName}
-              </CardDescription>
-              <CardDescription className="mt-1 font-mono text-xs">
-                {selectedMuseum.museumSlug}
-              </CardDescription>
+            <View className="flex-row items-center gap-3">
+              <View className="size-12 items-center justify-center rounded-full bg-primary/15">
+                <ScanSearchIcon size={24} color={RN_API_PRIMARY_LIGHT} />
+              </View>
+              <View className="min-w-0 flex-1 justify-center">
+                <CardTitle className="text-2xl leading-8 text-foreground">
+                  {selectedMuseum.museumName}
+                </CardTitle>
+              </View>
             </View>
           </CardHeader>
           <CardContent className="gap-5">
