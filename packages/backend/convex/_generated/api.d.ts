@@ -21,9 +21,11 @@ import type * as http from "../http.js";
 import type * as museums from "../museums.js";
 import type * as museumsAutoFill from "../museumsAutoFill.js";
 import type * as organizationRequests from "../organizationRequests.js";
+import type * as permissions from "../permissions.js";
 import type * as recsys from "../recsys.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as visualSearch from "../visualSearch.js";
 import type * as wrapped from "../wrapped.js";
 
 import type {
@@ -46,9 +48,11 @@ declare const fullApi: ApiFromModules<{
   museums: typeof museums;
   museumsAutoFill: typeof museumsAutoFill;
   organizationRequests: typeof organizationRequests;
+  permissions: typeof permissions;
   recsys: typeof recsys;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
+  visualSearch: typeof visualSearch;
   wrapped: typeof wrapped;
 }>;
 
