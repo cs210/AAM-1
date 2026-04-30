@@ -7,6 +7,8 @@ import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
+import { useBookmark } from '@/hooks/useBookmark';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
 
 export interface CheckinPostData {
   _id: string;
@@ -39,8 +41,6 @@ type CheckinPostProps = {
   isOwnCheckin?: boolean;
   onEditPress?: () => void;
   openOnReviewsTab?: boolean;
-  isBookmarked?: boolean;
-  onBookmarkPress?: () => void;
 };
 
 const CARD_SHADOW = {
@@ -57,11 +57,10 @@ export const CheckinPost = ({
   isOwnCheckin,
   onEditPress,
   openOnReviewsTab,
-  isBookmarked = false,
-  onBookmarkPress,
 }: CheckinPostProps) => {
   const brandPrimary = useBrandPrimaryHex();
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
+  const { isBookmarked, toggleBookmark } = useBookmark(checkin.contentId as Id<'museums'>);
 
   const handlePress = () => {
     if (openOnReviewsTab) {
@@ -157,20 +156,18 @@ export const CheckinPost = ({
               ))}
             </View>
           ) : null}
-          {onBookmarkPress && (
-            <Pressable
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-              onPress={onBookmarkPress}
-              className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
-              <Bookmark
-                size={20}
-                color={isBookmarked ? brandPrimary : 'rgba(0,0,0,0.3)'}
-                fill={isBookmarked ? brandPrimary : 'none'}
-              />
-            </Pressable>
-          )}
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+            onPress={toggleBookmark}
+            className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
+            <Bookmark
+              size={20}
+              color={isBookmarked ? brandPrimary : 'rgba(0,0,0,0.3)'}
+              fill={isBookmarked ? brandPrimary : 'none'}
+            />
+          </Pressable>
         </View>
       </Card>
     </Pressable>

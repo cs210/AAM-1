@@ -13,8 +13,7 @@ import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { FeedEmptyState } from '@/components/feed-empty-state';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { EventCard, EventCardData } from '../../components/event-card';
-import { CheckinPostData } from '../../components/checkin-post';
-import { CheckinPostWithBookmark } from '../../components/checkin-post-with-bookmark';
+import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useUniwind } from 'uniwind';
@@ -138,7 +137,7 @@ export default function HomeScreen() {
                     cardIndex={index}
                   />
                 ) : (
-                  <CheckinPostWithBookmark
+                  <CheckinPost
                     key={`checkin-${item.data._id}`}
                     checkin={item.data as CheckinPostData}
                     cardIndex={index}
