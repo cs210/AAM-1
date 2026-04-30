@@ -3,6 +3,7 @@ import {
   View,
   Image,
   ScrollView,
+  Pressable
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';

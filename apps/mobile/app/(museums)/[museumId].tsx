@@ -21,6 +21,7 @@ import {
   RN_API_BORDER_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_LIGHT,
+  RN_API_BACKGROUND_LIGHT
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
