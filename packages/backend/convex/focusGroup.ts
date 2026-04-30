@@ -544,6 +544,43 @@ export const listSnapshots = query({
   },
 });
 
+export const debugProfileState = query({
+  args: {},
+  handler: async (ctx) => {
+    const results = [];
+    for (const profile of PROFILES) {
+      const userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_name", (q) => q.eq("name", profile.name))
+        .first();
+      if (!userProfile) {
+        results.push({
+          email: profile.email,
+          userId: null,
+          checkInCount: 0,
+          museumDataCheckIns: 0,
+          museumDataTotalMuseums: 0,
+        });
+        continue;
+      }
+      const checkIns = await ctx.db
+        .query("checkIns")
+        .withIndex("by_user", (q) => q.eq("userId", userProfile.userId))
+        .collect();
+      const museumData = userProfile.museumData;
+      results.push({
+        email: profile.email,
+        userId: userProfile.userId,
+        checkInCount: checkIns.length,
+        museumDataCheckIns: museumData?.totalCheckIns ?? 0,
+        museumDataTotalMuseums: museumData?.totalMuseums ?? 0,
+        sampleCheckInIds: checkIns.slice(0, 3).map((ci) => ci._id),
+      });
+    }
+    return results;
+  },
+});
+
 export const restoreSnapshot = mutation({
   args: {
     snapshotId: v.id("focusGroupSnapshots"),
@@ -563,23 +600,30 @@ export const restoreSnapshot = mutation({
     let restoredCheckIns = 0;
     let restoredMuseumFollows = 0;
     let restoredUserFollows = 0;
+    const restoredCheckInIds = new Map<string, Id<"checkIns">>();
 
     for (const profile of snapshot.profiles) {
       const existingProfile = await ctx.db
         .query("userProfiles")
         .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
         .first();
+      let restoredProfileId = existingProfile?._id;
 
       if (profile.profile) {
         const profileData = {
           ...omitSystemFields(profile.profile),
           userId: profile.userId,
+          museumData: {
+            totalCheckIns: 0,
+            totalMuseums: 0,
+            checkIns: {},
+          },
           updatedAt: Date.now(),
-        };
+        } as Insertable<"userProfiles">;
         if (existingProfile) {
           await ctx.db.patch(existingProfile._id, profileData);
         } else {
-          await ctx.db.insert("userProfiles", profileData);
+          restoredProfileId = await ctx.db.insert("userProfiles", profileData);
         }
       }
 
@@ -600,15 +644,43 @@ export const restoreSnapshot = mutation({
         restoredUserFollows += 1;
       }
 
+      const checkInsByMuseum: Record<string, Id<"checkIns">[]> = {};
       for (const checkIn of profile.checkIns) {
-        await ctx.db.insert("checkIns", omitSystemFields(checkIn) as Insertable<"checkIns">);
+        const clean = omitSystemFields(checkIn) as Insertable<"checkIns">;
+        const restoredCheckInId = await ctx.db.insert("checkIns", clean);
+        if (checkIn._id) {
+          restoredCheckInIds.set(checkIn._id, restoredCheckInId);
+        }
+        if (clean.contentType === "museum") {
+          const museumId = clean.contentId as Id<"museums">;
+          checkInsByMuseum[museumId] = [...(checkInsByMuseum[museumId] ?? []), restoredCheckInId];
+        }
         restoredCheckIns += 1;
       }
 
+      if (restoredProfileId) {
+        await ctx.db.patch(restoredProfileId, {
+          museumData: {
+            totalCheckIns: Object.values(checkInsByMuseum).reduce(
+              (total, ids) => total + ids.length,
+              0,
+            ),
+            totalMuseums: Object.keys(checkInsByMuseum).length,
+            checkIns: checkInsByMuseum,
+          },
+          updatedAt: Date.now(),
+        });
+      }
+
       for (const notification of profile.socialNotifications) {
+        const clean = omitSystemFields(notification) as Insertable<"socialNotifications">;
+        const restoredCheckInId = restoredCheckInIds.get(notification.checkInId);
         await ctx.db.insert(
           "socialNotifications",
-          omitSystemFields(notification) as Insertable<"socialNotifications">,
+          {
+            ...clean,
+            checkInId: restoredCheckInId ?? clean.checkInId,
+          },
         );
       }
 
