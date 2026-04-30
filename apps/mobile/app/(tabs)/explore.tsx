@@ -71,58 +71,6 @@ function formatLocationFailure(err: unknown): string {
   return 'Could not read your location. Try again, open Settings, or on Simulator set Features -> Location.';
 }
 
-async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
-  const lastKnown = await Location.getLastKnownPositionAsync({
-    maxAge: 1000 * 60 * 60 * 24,
-    requiredAccuracy: 100_000,
-  });
-  if (lastKnown?.coords) {
-    return { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude };
-  }
-
-  try {
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
-    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-  } catch {
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest });
-    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-  }
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, message = 'LOCATION_TIMEOUT'): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error(message)), ms);
-    promise.then(
-      (v) => {
-        clearTimeout(id);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(id);
-        reject(e);
-      }
-    );
-  });
-}
-
-function formatLocationFailure(err: unknown): string {
-  const raw = err instanceof Error ? err.message : String(err);
-  const lower = raw.toLowerCase();
-  if (raw === 'LOCATION_TIMEOUT' || lower.includes('location_timeout')) {
-    return 'Location is taking too long. Try again, or move near a window.';
-  }
-  if (lower.includes('timeout') || lower.includes('timed out')) {
-    return 'Location timed out. Try again, or move outdoors for a better GPS signal.';
-  }
-  if (lower.includes('locationunknown') || lower.includes('location unknown')) {
-    return 'No position yet. On the iOS Simulator, set Features -> Location to a real place (not "None"). On a device, try again in a few seconds.';
-  }
-  if (lower.includes('denied') || lower.includes('permission')) {
-    return 'Location access is off. Enable it in Settings to see miles away and sort by distance.';
-  }
-  return 'Could not read your location. Try again, open Settings, or on Simulator set Features -> Location.';
-}
-
 function MuseumsRoute({
   museumSearch,
   setMuseumSearch,
