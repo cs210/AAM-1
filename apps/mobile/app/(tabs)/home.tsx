@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { ScanSearchIcon } from 'lucide-react-native';
+import { BellIcon, ScanSearchIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,14 +16,18 @@ import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
-import { RN_API_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
+import { useUniwind } from 'uniwind';
+import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
 
 export default function HomeScreen() {
+  const { theme } = useUniwind();
+  const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
   const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
+  const unreadNotifications = useQuery(api.socialNotifications.unreadCount);
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
@@ -77,13 +81,27 @@ export default function HomeScreen() {
               </Text>
               <Separator className="mt-2 max-w-3/5 self-start bg-border" />
             </View>
-            <View className="ml-4 mt-1 flex-row items-center gap-5">
+            <View className="ml-4 mt-1 flex-row items-center gap-3">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+                onPress={() => router.push('/notifications')}
+                className="relative p-2 active:opacity-80">
+                <BellIcon size={24} color={primaryHex} />
+                {unreadNotifications != null && unreadNotifications > 0 ? (
+                  <View className="absolute right-1 top-1 min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-destructive px-1">
+                    <Text className="text-[10px] font-bold text-white">
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Open visual search"
                 onPress={() => router.push('/visual-search')}
                 className="size-10 items-center justify-center rounded-full border border-border bg-card active:opacity-80">
-                <ScanSearchIcon size={20} color={RN_API_FOREGROUND_LIGHT} />
+                <ScanSearchIcon size={20} color={primaryHex} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
