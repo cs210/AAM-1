@@ -77,6 +77,10 @@ export const CheckinPost = ({
     }
   };
 
+  const handleProfilePress = () => {
+    router.push(`/(tabs)/profile?userId=${encodeURIComponent(checkin.userId)}`);
+  };
+
   const renderStars = (rating: number) => (
     <View className="flex-row gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -102,7 +106,9 @@ export const CheckinPost = ({
         )}
         style={CARD_SHADOW}>
         <View className="mb-3.5 flex-row items-start justify-between">
-          <View className="mr-3 flex-1 flex-row items-center">
+          <Pressable
+            onPress={handleProfilePress}
+            className="mr-3 flex-1 flex-row items-center active:opacity-70">
             <Avatar className="mr-3 size-11" alt={checkin.userName}>
               {checkin.userImage ? (
                 <AvatarImage source={{ uri: checkin.userImage }} />
@@ -133,7 +139,7 @@ export const CheckinPost = ({
                 {checkin.contentName}
               </Text>
             </View>
-          </View>
+          </Pressable>
 
           {checkin.rating ? (
             <View className="items-end gap-1.5">
