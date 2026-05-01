@@ -25,6 +25,7 @@ interface Question {
   scaleMax?: number;
   scaleLabels?: { start: string; mid?: string; end: string };
   placeholder?: string;
+  multiSelect?: boolean;
 }
 
 const QUESTIONS: Question[] = [
@@ -39,6 +40,7 @@ const QUESTIONS: Question[] = [
     question: 'What kind of museums do you enjoy most?',
     type: 'choice',
     choices: ['Art', 'History', 'Science & Nature', 'Children / Family', 'All of the Above'],
+    multiSelect: true,
   },
   {
     id: 'visit_style',
@@ -51,12 +53,14 @@ const QUESTIONS: Question[] = [
     question: 'What usually draws you to a museum?',
     type: 'choice',
     choices: ['A Specific Exhibition', 'Learning Something New', 'Quiet and Reflection', 'Fun with Others'],
+    multiSelect: true,
   },
   {
     id: 'barriers',
     question: 'What sometimes holds you back from visiting?',
     type: 'choice',
     choices: ['Time', 'Cost', 'Distance', "Not Sure What's On", 'Nothing Really'],
+    multiSelect: true,
   },
   {
     id: 'interest_scale',
@@ -85,6 +89,7 @@ const QUESTIONS: Question[] = [
     question: 'How do you usually find out about exhibitions or events?',
     type: 'choice',
     choices: ['Social Media', 'Website or Newsletter', 'Word of Mouth', 'Walking by / Signs'],
+    multiSelect: true,
   },
   {
     id: 'anything_else',
@@ -106,7 +111,7 @@ export default function IntakeScreen() {
       ? params.redirect
       : undefined;
   const [step, setStep] = React.useState(0);
-  const [answers, setAnswers] = React.useState<Record<string, string | number>>({});
+  const [answers, setAnswers] = React.useState<Record<string, string | number | string[]>>({});
   const [hasSubmitted, setHasSubmitted] = React.useState(false);
   const currentQuestion = QUESTIONS[step];
   const isComplete = step >= QUESTIONS.length;
@@ -117,8 +122,21 @@ export default function IntakeScreen() {
         : ((step + 1) / QUESTIONS.length) * 100
       : 0;
 
-  const setAnswer = React.useCallback((key: string, value: string | number) => {
+  const setAnswer = React.useCallback((key: string, value: string | number | string[]) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const toggleMultiSelect = React.useCallback((key: string, choice: string) => {
+    setAnswers((prev) => {
+      const current = prev[key] as string[] | undefined;
+      const selected = current ?? [];
+      const index = selected.indexOf(choice);
+      if (index > -1) {
+        return { ...prev, [key]: selected.filter((_, i) => i !== index) };
+      } else {
+        return { ...prev, [key]: [...selected, choice] };
+      }
+    });
   }, []);
 
   const saveUserInterests = useMutation(api.userInterests.saveForCurrentAccount);
@@ -234,14 +252,24 @@ export default function IntakeScreen() {
             {currentQuestion.type === 'choice' && currentQuestion.choices ? (
               <View className="w-full max-w-md items-center gap-3 self-center">
                 {currentQuestion.choices.map((choice) => {
-                  const isSelected =
-                    String(answers[currentQuestion.id]).toLowerCase() === choice.toLowerCase();
+                  let isSelected = false;
+                  if (currentQuestion.multiSelect) {
+                    const selected = answers[currentQuestion.id] as string[] | undefined;
+                    isSelected = (selected ?? []).includes(choice);
+                  } else {
+                    isSelected =
+                      String(answers[currentQuestion.id]).toLowerCase() === choice.toLowerCase();
+                  }
                   return (
                     <Pressable
                       key={choice}
                       onPress={() => {
-                        setAnswer(currentQuestion.id, choice);
-                        setTimeout(goNext, 280);
+                        if (currentQuestion.multiSelect) {
+                          toggleMultiSelect(currentQuestion.id, choice);
+                        } else {
+                          setAnswer(currentQuestion.id, choice);
+                          setTimeout(goNext, 280);
+                        }
                       }}
                       className={cn(
                         'w-full max-w-[340px] rounded-xl border px-5 py-4 shadow-sm shadow-black/5 active:opacity-90',

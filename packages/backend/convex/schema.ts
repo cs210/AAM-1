@@ -270,7 +270,7 @@ export default defineSchema({
     accountId: v.string(), // Better Auth account/user ID
     userInfo: v.record(
       v.string(), // question id
-      v.union(v.string(), v.number()), // answer (choice/text or scale)
+      v.union(v.array(v.string()), v.string(), v.number()), // answer (choice/text or scale)
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
