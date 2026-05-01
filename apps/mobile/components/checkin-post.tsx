@@ -157,7 +157,7 @@ export const CheckinPost = ({
           </Text>
         ) : null}
 
-        <View className="relative">
+        <View className="relative pb-4">
           {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
             <View className="mt-0.5 flex-row">
               {checkin.imageUrls.slice(0, 3).map((url, index) => (
