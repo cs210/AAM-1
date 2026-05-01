@@ -28,6 +28,7 @@ export interface CheckinPostData {
   imageUrls?: string[];
   createdAt: number;
   editedAt?: number;
+  coVisitors?: Array<{ userId: string; userName: string; userImage?: string }>;
 }
 
 /** Left accent + rating color — theme chart tokens (synced with web). */
@@ -81,6 +82,16 @@ export const CheckinPost = ({
     router.push(`/(tabs)/profile?userId=${encodeURIComponent(checkin.userId)}`);
   };
 
+  const handleMuseumPress = (e: any) => {
+    e.stopPropagation?.();
+    router.push(`/(museums)/${checkin.contentId}`);
+  };
+
+  const handleCoVisitorPress = (visitorId: string, e: any) => {
+    e.stopPropagation?.();
+    router.push(`/(tabs)/profile?userId=${encodeURIComponent(visitorId)}`);
+  };
+
   const renderStars = (rating: number) => (
     <View className="flex-row gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -106,9 +117,7 @@ export const CheckinPost = ({
         )}
         style={CARD_SHADOW}>
         <View className="mb-3.5 flex-row items-start justify-between">
-          <Pressable
-            onPress={handleProfilePress}
-            className="mr-3 flex-1 flex-row items-center active:opacity-70">
+          <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
             <Avatar className="mr-3 size-11" alt={checkin.userName}>
               {checkin.userImage ? (
                 <AvatarImage source={{ uri: checkin.userImage }} />
@@ -119,11 +128,14 @@ export const CheckinPost = ({
                 </Text>
               </AvatarFallback>
             </Avatar>
+          </Pressable>
             <View className="min-w-0 flex-1">
               <View className="mb-0.5 flex-row items-center gap-1.5">
-                <Text className="text-base font-bold text-foreground" numberOfLines={1}>
-                  {checkin.userName}
-                </Text>
+                <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
+                  <Text className="text-base font-bold text-foreground" numberOfLines={1}>
+                    {checkin.userName}
+                  </Text>
+                </Pressable>
                 {isOwnCheckin && onEditPress && (
                   <Pressable
                     hitSlop={8}
@@ -135,11 +147,28 @@ export const CheckinPost = ({
                   </Pressable>
                 )}
               </View>
-              <Text className="text-sm font-medium text-muted-foreground" numberOfLines={1}>
-                {checkin.contentName}
-              </Text>
+            <View className="flex-row flex-wrap items-baseline gap-1">
+              <Text className="text-xs font-medium text-muted-foreground">visited</Text>
+              <Pressable onPress={handleMuseumPress} className="active:opacity-70">
+                <Text className="text-xs font-semibold text-foreground">{checkin.contentName}</Text>
+              </Pressable>
+              {checkin.coVisitors && checkin.coVisitors.length > 0 && (
+                <View className="flex-row flex-wrap items-baseline gap-1">
+                  <Text className="text-xs font-medium text-muted-foreground">with</Text>
+                  {checkin.coVisitors.map((v, idx) => (
+                    <View key={v.userId} className="flex-row items-baseline gap-1">
+                      <Pressable onPress={(e) => handleCoVisitorPress(v.userId, e)} className="active:opacity-70">
+                        <Text className="text-xs font-medium text-foreground">{v.userName}</Text>
+                      </Pressable>
+                      {idx < checkin.coVisitors!.length - 1 && (
+                        <Text className="text-xs font-medium text-muted-foreground">,</Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
-          </Pressable>
+          </View>
 
           {checkin.rating ? (
             <View className="items-end gap-1.5">
