@@ -88,7 +88,7 @@ const QUESTIONS: Question[] = [
     id: 'discovery',
     question: 'How do you usually find out about exhibitions or events?',
     type: 'choice',
-    choices: ['Social Media', 'Website or Newsletter', 'Word of Mouth', 'Walking by / Signs'],
+    choices: ['Social Media', 'Website or Newsletter', 'Word of Mouth', 'Walking by / Signs', "I don't"],
     multiSelect: true,
   },
   {
