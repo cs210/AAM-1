@@ -25,6 +25,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
+import { checkInCalendarKey, formatLocalYyyyMmDd } from '@/lib/visit-calendar-date';
 import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import {
@@ -147,7 +148,13 @@ export default function MuseumDetailScreen() {
       (b.visitDate ?? b.createdAt) - (a.visitDate ?? a.createdAt)
     );
   }, [userCheckIns]);
-  const existingCheckIn = sortedUserCheckIns[0] ?? null;
+
+  const todayCheckIn = useMemo(() => {
+    const todayKey = formatLocalYyyyMmDd(new Date());
+    return (
+      sortedUserCheckIns.find((ci) => checkInCalendarKey(ci) === todayKey) ?? null
+    );
+  }, [sortedUserCheckIns]);
 
   const museumCheckInPhotoUrls = useMemo(() => {
     if (!museumCheckIns || museumCheckIns.length === 0) return [];
@@ -246,11 +253,12 @@ export default function MuseumDetailScreen() {
     
     posthog?.capture('checkin_button_clicked', {
       museumId: effectiveId,
-      isEditing: !!existingCheckIn,
+      isEditing: !!todayCheckIn,
+      hasPastVisits: sortedUserCheckIns.length > 0,
     });
     
-    if (existingCheckIn) {
-      setEditingCheckIn(existingCheckIn);
+    if (todayCheckIn) {
+      setEditingCheckIn(todayCheckIn);
     } else {
       router.push({
         pathname: '/(museums)/[museumId]/checkin',
@@ -553,7 +561,9 @@ export default function MuseumDetailScreen() {
               className="mb-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3.5 active:opacity-90"
               onPress={handleCheckInPress}>
               <CheckCircle2Icon size={20} color={RN_API_BACKGROUND_LIGHT} />
-              <Text className="text-base font-semibold text-primary-foreground">Check In</Text>
+              <Text className="text-base font-semibold text-primary-foreground">
+                {todayCheckIn ? "Edit today's check-in" : 'Check in'}
+              </Text>
             </Pressable>
 
             {visualSearchAssignment ? (

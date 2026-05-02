@@ -21,6 +21,8 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
+import { formatLocalYyyyMmDd } from '@/lib/visit-calendar-date';
+import { ConvexError } from 'convex/values';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import {
   RN_API_BACKGROUND_LIGHT,
@@ -200,6 +202,7 @@ export default function CheckInScreen() {
         friendUserIds: selectedFriends,
         durationHours,
         visitDate: visitDate.getTime(),
+        visitCalendarDate: formatLocalYyyyMmDd(visitDate),
       });
 
       posthog?.capture('museum_visited', {
@@ -214,7 +217,13 @@ export default function CheckInScreen() {
       router.back();
     } catch (error) {
       console.error('Check-in failed:', error);
-      Alert.alert('Error', 'Failed to create check-in. Please try again.');
+      let message = 'Failed to create check-in. Please try again.';
+      if (error instanceof ConvexError && typeof error.data === 'string') {
+        message = error.data;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      Alert.alert('Error', message);
     } finally {
       setIsSubmitting(false);
     }
