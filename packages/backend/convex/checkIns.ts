@@ -66,6 +66,33 @@ async function getCheckInsRaw(
   return [];
 }
 
+function utcYyyyMmDd(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+function checkInCalendarKey(row: Doc<"checkIns">): string {
+  return row.visitCalendarDate ?? utcYyyyMmDd(row.visitDate ?? row.createdAt);
+}
+
+async function assertNoDuplicateMuseumVisitDay(
+  ctx: MutationCtx,
+  userId: string,
+  museumId: Id<"museums">,
+  visitCalendarKey: string
+): Promise<void> {
+  const existing = await ctx.db
+    .query("checkIns")
+    .withIndex("by_user_and_content", (q) =>
+      q.eq("userId", userId).eq("contentType", "museum").eq("contentId", museumId)
+    )
+    .collect();
+  for (const row of existing) {
+    if (checkInCalendarKey(row) === visitCalendarKey) {
+      throw new ConvexError("You already checked in to this museum on this date.");
+    }
+  }
+}
+
 // Generate an upload URL for check-in photos
 export const generateCheckInImageUploadUrl = mutation({
   args: {},
@@ -87,6 +114,7 @@ export const createCheckIn = mutation({
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()), // If not provided, use current time
+    visitCalendarDate: v.optional(v.string()), // YYYY-MM-DD local visit day (museum); UTC fallback if omitted
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -103,6 +131,19 @@ export const createCheckIn = mutation({
     const friendUserIds = args.friendUserIds ?? [];
     const durationHours = args.durationHours;
 
+    let visitCalendarDate: string | undefined;
+    if (args.contentType === "museum") {
+      const visitCalendarKey =
+        args.visitCalendarDate ?? utcYyyyMmDd(visitDate);
+      await assertNoDuplicateMuseumVisitDay(
+        ctx,
+        user._id,
+        args.contentId as Id<"museums">,
+        visitCalendarKey
+      );
+      visitCalendarDate = visitCalendarKey;
+    }
+
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
       userId: user._id,
@@ -114,6 +155,7 @@ export const createCheckIn = mutation({
       friendUserIds,
       durationHours,
       visitDate,
+      ...(visitCalendarDate !== undefined ? { visitCalendarDate } : {}),
       createdAt,
     });
 
@@ -173,6 +215,7 @@ export const createCheckIn = mutation({
       friendUserIds,
       durationHours,
       visitDate,
+      visitCalendarDate,
       createdAt,
     };
   },
@@ -465,6 +508,7 @@ export const createMuseumCheckIn = mutation({
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()),
+    visitCalendarDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -481,6 +525,15 @@ export const createMuseumCheckIn = mutation({
     const friendUserIds = args.friendUserIds ?? [];
     const durationHours = args.durationHours;
 
+    const visitCalendarKey =
+      args.visitCalendarDate ?? utcYyyyMmDd(visitDate);
+    await assertNoDuplicateMuseumVisitDay(
+      ctx,
+      user._id,
+      args.museumId,
+      visitCalendarKey
+    );
+
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
       userId: user._id,
@@ -492,6 +545,7 @@ export const createMuseumCheckIn = mutation({
       friendUserIds,
       durationHours,
       visitDate,
+      visitCalendarDate: visitCalendarKey,
       createdAt,
     });
 
@@ -547,6 +601,7 @@ export const createMuseumCheckIn = mutation({
       friendUserIds,
       durationHours,
       visitDate,
+      visitCalendarDate: visitCalendarKey,
       createdAt,
     };
   },

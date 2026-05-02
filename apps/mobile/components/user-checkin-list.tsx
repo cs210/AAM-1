@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { StarIcon, CalendarIcon, ClockIcon } from 'lucide-react-native';
+import type { Id } from '@packages/backend/convex/_generated/dataModel';
 import { Text } from '@/components/ui/text';
 import { RN_API_PRIMARY_LIGHT, RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
 
 export interface UserCheckIn {
-  _id: string;
+  _id: Id<'checkIns'>;
   rating?: number;
   review?: string;
   visitDate?: number;
+  visitCalendarDate?: string;
   createdAt: number;
   editedAt?: number;
   durationHours?: number;

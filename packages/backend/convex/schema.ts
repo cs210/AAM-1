@@ -257,6 +257,8 @@ export default defineSchema({
     friendUserIds: v.array(v.string()),
     durationHours: v.optional(v.number()), // broad visit-length bucket in hours
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
+    /** Local calendar date YYYY-MM-DD (client); legacy rows omit and use UTC from visitDate for dedup */
+    visitCalendarDate: v.optional(v.string()),
     createdAt: v.number(), // timestamp of check-in creation
     editedAt: v.optional(v.number()), // set when user edits rating/review
   })
