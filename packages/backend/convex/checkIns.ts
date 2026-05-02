@@ -297,6 +297,22 @@ export const getMuseumCheckInsWithUsers = query({
             .query("userProfiles")
             .withIndex("by_userId", (q) => q.eq("userId", ci.userId))
             .first();
+
+          // Resolve co-visitors
+          const coVisitors = await Promise.all(
+            (ci.friendUserIds ?? []).map(async (friendId) => {
+              const friendProfile = await ctx.db
+                .query("userProfiles")
+                .withIndex("by_userId", (q) => q.eq("userId", friendId))
+                .first();
+              return {
+                userId: friendId,
+                userName: friendProfile?.name || "Unknown User",
+                userImage: friendProfile?.imageUrl,
+              };
+            })
+          );
+
           return {
             _id: ci._id,
             userId: ci.userId,
@@ -307,6 +323,7 @@ export const getMuseumCheckInsWithUsers = query({
             createdAt: ci.createdAt,
             editedAt: ci.editedAt,
             visitDate: ci.visitDate,
+            coVisitors: coVisitors,
           };
         })
     );
@@ -728,6 +745,21 @@ export const getFollowingCheckins = query({
             ? await getImageUrlsFromStorageIds(ctx, imageIds)
             : [];
 
+        // Resolve co-visitors
+        const coVisitors = await Promise.all(
+          (ci.friendUserIds ?? []).map(async (friendId) => {
+            const friendProfile = await ctx.db
+              .query("userProfiles")
+              .withIndex("by_userId", (q) => q.eq("userId", friendId))
+              .first();
+            return {
+              userId: friendId,
+              userName: friendProfile?.name || "Unknown User",
+              userImage: friendProfile?.imageUrl,
+            };
+          })
+        );
+
         return {
           _id: ci._id,
           userId: ci.userId,
@@ -741,6 +773,7 @@ export const getFollowingCheckins = query({
           imageUrls: imageUrls,
           createdAt: ci.createdAt,
           editedAt: ci.editedAt,
+          coVisitors: coVisitors,
         };
       })
     );

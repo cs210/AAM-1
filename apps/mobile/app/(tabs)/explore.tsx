@@ -251,8 +251,8 @@ function TasteAlignedRoute({
 
   return (
     <View className="flex-1" style={{ flex: 1 }}>
-      <View className="flex-row items-center gap-2 px-5 py-3">
-        <View className="flex-1">
+      <View className="items-center py-3">
+        <View className="w-full">
           <SearchFieldRow
             value={peopleSearch}
             onChangeText={setPeopleSearch}
@@ -261,11 +261,11 @@ function TasteAlignedRoute({
         </View>
         <Button
           variant="secondary"
-          size="icon"
+          className="mt-3 w-fit px-6"
           onPress={handleShareInviteLink}
           disabled={isGeneratingLink}>
-          <Text className="text-sm font-medium">
-            {isGeneratingLink ? '...' : '📤'}
+          <Text className="text-base font-semibold">
+            {isGeneratingLink ? 'Sending invite...' : 'Invite your friends'}
           </Text>
         </Button>
       </View>
