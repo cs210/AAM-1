@@ -13,6 +13,7 @@ export interface UserCheckIn {
   editedAt?: number;
   durationHours?: number;
   imageUrls?: string[];
+  friendUserIds?: string[];
 }
 
 interface UserCheckInListProps {

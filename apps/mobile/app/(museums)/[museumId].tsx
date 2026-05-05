@@ -662,12 +662,14 @@ export default function MuseumDetailScreen() {
 
       <EditCheckinModal
         visible={editingCheckIn != null}
+        checkInId={editingCheckIn?._id as Id<'checkIns'> | null}
         initialRating={editingCheckIn?.rating ?? null}
         initialReview={editingCheckIn?.review}
-        onSave={(rating, review) =>
-          editingCheckIn &&
-          saveCheckIn(editingCheckIn._id as Id<'checkIns'>, rating, review)
-        }
+        initialImageUrls={editingCheckIn?.imageUrls}
+        initialFriendUserIds={editingCheckIn?.friendUserIds}
+        initialDurationHours={editingCheckIn?.durationHours}
+        initialVisitDate={editingCheckIn?.visitDate}
+        onSave={saveCheckIn}
         onDelete={() =>
           editingCheckIn && deleteCheckIn(editingCheckIn._id as Id<'checkIns'>)
         }
