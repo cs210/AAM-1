@@ -25,6 +25,10 @@ export interface CheckinPostData {
   contentName: string;
   rating?: number;
   review?: string;
+  visitDate?: number;
+  durationHours?: number;
+  friendUserIds?: string[];
+  imageIds?: Id<'_storage'>[];
   imageUrls?: string[];
   createdAt: number;
   editedAt?: number;

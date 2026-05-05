@@ -3,6 +3,7 @@ import { View, Pressable } from 'react-native';
 import { StarIcon, CalendarIcon, ClockIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { RN_API_PRIMARY_LIGHT, RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
 
 export interface UserCheckIn {
   _id: string;
@@ -13,6 +14,7 @@ export interface UserCheckIn {
   editedAt?: number;
   durationHours?: number;
   imageUrls?: string[];
+  imageIds?: Id<'_storage'>[];
   friendUserIds?: string[];
 }
 

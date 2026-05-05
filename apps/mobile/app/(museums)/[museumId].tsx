@@ -666,6 +666,7 @@ export default function MuseumDetailScreen() {
         initialRating={editingCheckIn?.rating ?? null}
         initialReview={editingCheckIn?.review}
         initialImageUrls={editingCheckIn?.imageUrls}
+        initialImageIds={editingCheckIn?.imageIds}
         initialFriendUserIds={editingCheckIn?.friendUserIds}
         initialDurationHours={editingCheckIn?.durationHours}
         initialVisitDate={editingCheckIn?.visitDate}

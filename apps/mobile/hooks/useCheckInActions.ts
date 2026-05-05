@@ -24,17 +24,17 @@ export function useCheckInActions(onClose: () => void) {
       checkInId,
       rating: rating ?? undefined,
       review: review || undefined,
-      imageStorageIds,
-      friendUserIds,
-      durationHours,
+      ...(imageStorageIds !== undefined ? { imageStorageIds } : {}),
+      ...(friendUserIds !== undefined ? { friendUserIds } : {}),
+      ...(durationHours !== undefined ? { durationHours } : {}),
     });
 
     posthog?.capture('museum_visit_updated', {
       checkInId: String(checkInId),
       hasRating: rating !== null,
       hasReview: review.trim().length > 0,
-      photoCount: imageStorageIds?.length ?? 0,
-      taggedFriends: friendUserIds?.length ?? 0,
+      ...(imageStorageIds !== undefined ? { photoCount: imageStorageIds.length } : {}),
+      ...(friendUserIds !== undefined ? { taggedFriends: friendUserIds.length } : {}),
     });
 
     onClose();

@@ -160,11 +160,15 @@ export default function HomeScreen() {
 
       <EditCheckinModal
         visible={editingCheckin != null}
+        checkInId={editingCheckin?._id as Id<'checkIns'> | null}
         initialRating={editingCheckin?.rating ?? null}
         initialReview={editingCheckin?.review}
-        onSave={(rating, review) =>
-          editingCheckin && saveCheckIn(editingCheckin._id as Id<'checkIns'>, rating, review)
-        }
+        initialImageUrls={editingCheckin?.imageUrls}
+        initialImageIds={editingCheckin?.imageIds}
+        initialFriendUserIds={editingCheckin?.friendUserIds}
+        initialDurationHours={editingCheckin?.durationHours}
+        initialVisitDate={editingCheckin?.visitDate}
+        onSave={saveCheckIn}
         onDelete={() =>
           editingCheckin && deleteCheckIn(editingCheckin._id as Id<'checkIns'>)
         }
