@@ -2,12 +2,16 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Platform, TextInput, type TextInputProps } from 'react-native';
 
-const Input = React.forwardRef<TextInput, TextInputProps>(function Input({ className, ...props }, ref) {
+const Input = React.forwardRef<TextInput, TextInputProps>(function Input({ className, multiline, ...props }, ref) {
   return (
     <TextInput
       ref={ref}
+      multiline={multiline}
       className={cn(
-        'dark:bg-input/30 border-input bg-background text-foreground flex h-10 w-full min-w-0 flex-row items-center rounded-md border px-3 py-1 text-base leading-5 shadow-sm shadow-black/5 sm:h-9',
+        'dark:bg-input/30 border-input bg-background text-foreground w-full min-w-0 rounded-md border px-3 text-base leading-5 shadow-sm shadow-black/5',
+        multiline
+          ? 'min-h-24 h-auto shrink-0 py-3'
+          : 'flex h-10 min-h-10 flex-row items-center py-1 sm:h-9',
         props.editable === false &&
         cn(
           'opacity-50',

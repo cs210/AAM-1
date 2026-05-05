@@ -197,24 +197,28 @@ export default function CheckInScreen() {
 
           <View className="mb-6">
             <Label className="mb-3 text-base font-semibold text-foreground">Write a review</Label>
-            <Input
-              value={review}
-              onChangeText={setReview}
-              placeholder="Share your thoughts about this museum..."
-              maxLength={500}
-              multiline
-              numberOfLines={5}
-              textAlignVertical="top"
-              className="min-h-[120px] rounded-xl border-border bg-card py-3 text-base leading-5"
-            />
-            <Text className="mt-2 text-right text-xs text-muted-foreground">{review.length}/500</Text>
+            <View className="overflow-hidden rounded-xl border border-border bg-card">
+              <Input
+                value={review}
+                onChangeText={setReview}
+                placeholder="Share your thoughts about this museum..."
+                maxLength={500}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                className="min-h-[120px] border-0 bg-transparent shadow-none rounded-none px-3 pb-1 pt-3 text-base leading-5"
+              />
+              <Text className="px-3 pb-2.5 pt-0 text-right text-xs text-muted-foreground">
+                {review.length}/500
+              </Text>
+            </View>
           </View>
 
           <View className="mb-6">
-            <View className="mb-3 flex-row items-center justify-between">
-              <Label className="text-base font-semibold text-foreground">Photos</Label>
+            <View className="mb-3 flex-row items-center justify-between gap-3">
+              <Text className="min-w-0 shrink text-base font-semibold text-foreground">Photos</Text>
               <Pressable
-                className="rounded-lg bg-primary px-4 py-2 active:opacity-90"
+                className="shrink-0 rounded-lg bg-primary px-4 py-2 active:opacity-90"
                 onPress={pickImages}
                 disabled={isSubmitting}>
                 <Text className="text-sm font-semibold text-primary-foreground">

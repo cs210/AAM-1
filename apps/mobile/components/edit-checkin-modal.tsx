@@ -226,23 +226,27 @@ export function EditCheckinModal({
             <Label nativeID="edit-checkin-review" className="mb-2 text-muted-foreground">
               Comment (optional)
             </Label>
-            <Input
-              nativeID="edit-checkin-review"
-              value={review}
-              onChangeText={setReview}
-              placeholder="What did you think?"
-              multiline
-              numberOfLines={3}
-              maxLength={500}
-              className="mb-2 min-h-24 h-auto py-3 text-base leading-5"
-              textAlignVertical="top"
-            />
-            <Text className="mb-4 text-right text-xs text-muted-foreground">{review.length}/500</Text>
+            <View className="mb-4 overflow-hidden rounded-xl border border-border bg-card">
+              <Input
+                nativeID="edit-checkin-review"
+                value={review}
+                onChangeText={setReview}
+                placeholder="What did you think?"
+                multiline
+                numberOfLines={3}
+                maxLength={500}
+                textAlignVertical="top"
+                className="min-h-24 border-0 bg-transparent shadow-none rounded-none px-3 pb-1 pt-3 text-base leading-5"
+              />
+              <Text className="px-3 pb-2.5 pt-0 text-right text-xs text-muted-foreground">
+                {review.length}/500
+              </Text>
+            </View>
 
-            <View className="mb-4 flex-row items-center justify-between">
-              <Label className="text-muted-foreground">Photos</Label>
+            <View className="mb-4 flex-row items-center justify-between gap-3">
+              <Text className="min-w-0 shrink text-sm font-medium text-muted-foreground">Photos</Text>
               <Pressable
-                className="rounded-lg bg-primary px-4 py-2 active:opacity-90"
+                className="shrink-0 rounded-lg bg-primary px-4 py-2 active:opacity-90"
                 onPress={pickImages}
                 disabled={isSubmitting}>
                 <Text className="text-sm font-semibold text-primary-foreground">
