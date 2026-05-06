@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   FlatList,
@@ -46,6 +47,8 @@ import {
   RN_API_PRIMARY_DARK,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
+import { usePostHog } from 'posthog-react-native';
+import { captureMobile } from '@/lib/analytics';
 
 const { width } = Dimensions.get('window');
 /** Matches `h-30` banner (30 × 4px). */
@@ -320,6 +323,16 @@ export default function ProfileScreen() {
   const searchFromParams = Array.isArray(paramSearch) ? paramSearch[0] : paramSearch;
   const returnSearch = typeof searchFromParams === 'string' ? searchFromParams : '';
   const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
+  const posthog = usePostHog();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser === undefined) return;
+      captureMobile(posthog, 'screen_profile_focused', {
+        viewingOtherProfile: Boolean(isViewingOtherProfile),
+      });
+    }, [posthog, currentUser, isViewingOtherProfile])
+  );
 
   // Fetch user profile info
   const userProfile = useQuery(api.auth.listUsers, {});

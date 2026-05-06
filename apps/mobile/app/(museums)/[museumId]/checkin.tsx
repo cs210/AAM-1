@@ -11,6 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
+import { captureMobile } from '@/lib/analytics';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { ChevronDownIcon, StarIcon, XIcon } from 'lucide-react-native';
@@ -202,12 +203,14 @@ export default function CheckInScreen() {
         visitDate: visitDate.getTime(),
       });
 
-      posthog?.capture('museum_visited', {
+      captureMobile(posthog, 'museum_visited', {
         museumId: id,
         isRepeatVisit: isRepeatVisit === true,
         hasRating: rating !== null,
         hasReview: review.trim().length > 0,
         photoCount: imageStorageIds.length,
+        friendCount: selectedFriends.length,
+        durationHours,
       });
 
       Alert.alert('Success', 'Check-in created!');

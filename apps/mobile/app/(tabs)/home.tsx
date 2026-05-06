@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from 'convex/react';
@@ -18,10 +19,13 @@ import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useUniwind } from 'uniwind';
 import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
+import { usePostHog } from 'posthog-react-native';
+import { captureMobile } from '@/lib/analytics';
 
 export default function HomeScreen() {
   const { theme } = useUniwind();
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const posthog = usePostHog();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
@@ -30,6 +34,18 @@ export default function HomeScreen() {
   const unreadNotifications = useQuery(api.socialNotifications.unreadCount);
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
+
+  const feedItemCount =
+    events !== undefined && followingCheckins !== undefined
+      ? events.length + followingCheckins.length
+      : -1;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser === undefined || feedItemCount < 0) return;
+      captureMobile(posthog, 'screen_home_focused', { feedItemCount });
+    }, [posthog, currentUser, feedItemCount])
+  );
 
   if (
     events === undefined ||
@@ -85,7 +101,10 @@ export default function HomeScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Notifications"
-                onPress={() => router.push('/notifications')}
+                onPress={() => {
+                  captureMobile(posthog, 'notifications_opened', { source: 'home_header' });
+                  router.push('/notifications');
+                }}
                 className="relative p-2 active:opacity-80">
                 <BellIcon size={24} color={primaryHex} />
                 {unreadNotifications != null && unreadNotifications > 0 ? (
@@ -99,7 +118,10 @@ export default function HomeScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Open visual search"
-                onPress={() => router.push('/visual-search')}
+                onPress={() => {
+                  captureMobile(posthog, 'visual_search_entry', { source: 'home_header' });
+                  router.push('/visual-search');
+                }}
                 className="size-10 items-center justify-center rounded-full border border-border bg-card active:opacity-80">
                 <ScanSearchIcon size={20} color={primaryHex} />
               </Pressable>

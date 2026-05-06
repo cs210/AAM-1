@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, FlatList, Pressable, Linking, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +17,8 @@ import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import appsFlyer from 'react-native-appsflyer';
+import { usePostHog } from 'posthog-react-native';
+import { captureMobile } from '@/lib/analytics';
 
 const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
 
@@ -465,6 +468,18 @@ export default function SearchScreen() {
   const currUser = useQuery(api.auth.getCurrentUser);
   const compatibleCheckins = useQuery(api.wrapped.getCompatibleCheckIns);
   const activeTabKey = tabs[index]?.key ?? 'aligned';
+  const posthog = usePostHog();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currUser === undefined) return;
+      captureMobile(posthog, 'screen_explore_focused', {
+        segment: activeTabKey,
+        museumSearchLength: museumSearch.trim().length,
+        locationOk: locState.status === 'ok',
+      });
+    }, [posthog, currUser, activeTabKey, museumSearch, locState.status])
+  );
 
   return (
     <SafeAreaView
@@ -480,7 +495,10 @@ export default function SearchScreen() {
             <Pressable
               key={tab.key}
               className="flex-1 items-center pb-2 pt-3.5"
-              onPress={() => setIndex(tabIndex)}
+              onPress={() => {
+                setIndex(tabIndex);
+                captureMobile(posthog, 'explore_subtab_selected', { tab: tab.key });
+              }}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}>
               <Text
@@ -520,8 +538,22 @@ export default function SearchScreen() {
           filteredMuseums={filteredMuseums}
           museumPage={currentMuseumPage}
           totalMuseumPages={totalMuseumPages}
-          onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
-          onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+          onPrevPage={() => {
+            const nextPage = Math.max(1, currentMuseumPage - 1);
+            captureMobile(posthog, 'explore_museums_page_changed', {
+              direction: 'previous',
+              page: nextPage,
+            });
+            setMuseumPage((p) => Math.max(1, p - 1));
+          }}
+          onNextPage={() => {
+            const nextPage = Math.min(totalMuseumPages, currentMuseumPage + 1);
+            captureMobile(posthog, 'explore_museums_page_changed', {
+              direction: 'next',
+              page: nextPage,
+            });
+            setMuseumPage((p) => Math.min(totalMuseumPages, p + 1));
+          }}
           sortedByDistance={locState.status === 'ok'}
           expectDistanceOnCards={locState.status === 'ok'}
           locationNote={locState.status === 'unavailable' ? locState.message : null}

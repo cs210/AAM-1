@@ -11,11 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { authClient } from '@/lib/auth-client';
+import { captureMobile } from '@/lib/analytics';
+import { usePostHog } from 'posthog-react-native';
 import * as React from 'react';
 import { Pressable, type TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
 export function SignInForm() {
+  const posthog = usePostHog();
   const passwordInputRef = React.useRef<TextInput>(null);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -43,6 +46,7 @@ export function SignInForm() {
     }
 
     if (data) {
+      captureMobile(posthog, 'auth_sign_in_succeeded', { method: 'email' });
       router.replace('/post-auth');
     }
   }

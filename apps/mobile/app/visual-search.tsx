@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { FlatList, Image, Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -27,6 +28,8 @@ import {
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
+import { usePostHog } from 'posthog-react-native';
+import { captureMobile } from '@/lib/analytics';
 
 const DEFAULT_TOP_K = 5;
 const MAX_SEARCH_IMAGE_SIZE = 1280;
@@ -160,6 +163,7 @@ function getResultDetailImageUrl(result: VisualSearchResult) {
 }
 
 export default function VisualSearchScreen() {
+  const posthog = usePostHog();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     museumId?: string | string[];
@@ -199,6 +203,14 @@ export default function VisualSearchScreen() {
     }
   }, [preselectedMuseum]);
 
+  useFocusEffect(
+    useCallback(() => {
+      captureMobile(posthog, 'visual_search_screen_opened', {
+        entry: preselectedMuseum ? 'museum_context' : 'global',
+      });
+    }, [posthog, preselectedMuseum])
+  );
+
   const normalizedSearch = searchText.trim().toLowerCase();
   const filteredMuseums = useMemo(() => {
     if (!activeMuseums) return [];
@@ -230,12 +242,18 @@ export default function VisualSearchScreen() {
     router.back();
   };
 
-  const handleSelectMuseum = useCallback((museum: VisualSearchMuseum) => {
-    setSelectedMuseum(museum);
-    setSearchResponse(null);
-    setErrorMessage(null);
-    setSelectedResultIndex(null);
-  }, []);
+  const handleSelectMuseum = useCallback(
+    (museum: VisualSearchMuseum) => {
+      captureMobile(posthog, 'visual_search_museum_selected', {
+        museumId: String(museum.museumId),
+      });
+      setSelectedMuseum(museum);
+      setSearchResponse(null);
+      setErrorMessage(null);
+      setSelectedResultIndex(null);
+    },
+    [posthog]
+  );
 
   const pickImage = async () => {
     if (isWorking) return;
@@ -324,11 +342,28 @@ export default function VisualSearchScreen() {
       });
 
       setSearchResponse(response);
+      captureMobile(posthog, 'visual_search_query_completed', {
+        museumSlug: selectedMuseum.museumSlug,
+        resultCount: response.results.length,
+        ...(response.results[0] != null ? { topScore: response.results[0].score } : {}),
+      });
       if (response.results.length === 0) {
         setErrorMessage('No results returned for this image.');
       }
     } catch (error) {
       console.error('Visual search failed:', error);
+      const raw = error instanceof Error ? error.message : String(error);
+      const errorType = /permission/i.test(raw)
+        ? 'permission'
+        : /upload/i.test(raw)
+          ? 'upload'
+          : /time|network|fetch/i.test(raw)
+            ? 'network'
+            : 'unknown';
+      captureMobile(posthog, 'visual_search_query_failed', {
+        museumSlug: selectedMuseum.museumSlug,
+        errorType,
+      });
       setErrorMessage(getUserFacingError(error));
     } finally {
       setSearchStatus(null);
@@ -587,7 +622,13 @@ export default function VisualSearchScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Open match ${index + 1}`}
                       className="h-24 w-20 overflow-hidden rounded-2xl border border-white/30 bg-black/40 active:opacity-85"
-                      onPress={() => setSelectedResultIndex(index)}>
+                      onPress={() => {
+                        captureMobile(posthog, 'visual_search_result_previewed', {
+                          rank: index + 1,
+                          score: result.score,
+                        });
+                        setSelectedResultIndex(index);
+                      }}>
                       {thumbnailUrl ? (
                         <Image
                           source={{ uri: thumbnailUrl }}
@@ -688,7 +729,12 @@ export default function VisualSearchScreen() {
                     {selectedResult.sourceUrl ? (
                       <Pressable
                         className="mt-1"
-                        onPress={() => void Linking.openURL(selectedResult.sourceUrl!)}>
+                        onPress={() => {
+                          captureMobile(posthog, 'visual_search_source_opened', {
+                            rank: (selectedResultIndex ?? 0) + 1,
+                          });
+                          void Linking.openURL(selectedResult.sourceUrl!);
+                        }}>
                         <View className="flex-row items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 active:opacity-80">
                           <ExternalLinkIcon size={16} color="#ffffff" />
                           <Text className="font-semibold text-white">Open source</Text>

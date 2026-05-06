@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
@@ -36,6 +37,7 @@ import {
   RN_API_BACKGROUND_LIGHT,
   RN_API_BACKGROUND_DARK,
 } from '@/constants/rn-api-colors';
+import { captureMobile } from '@/lib/analytics';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 
@@ -226,25 +228,42 @@ export default function MuseumDetailScreen() {
   const followMuseum = useMutation(api.follows.followMuseum);
   const unfollowMuseum = useMutation(api.follows.unfollowMuseum);
 
+  const posthog = usePostHog();
+
   const handleFollowPress = async () => {
     if (!effectiveId) return;
+    const willFollow = !isFollowing;
     try {
       if (isFollowing) {
         await unfollowMuseum({ museumId: effectiveId as Id<"museums"> });
       } else {
         await followMuseum({ museumId: effectiveId as Id<"museums"> });
       }
+      captureMobile(posthog, 'museum_follow_changed', {
+        museumId: effectiveId,
+        following: willFollow,
+      });
     } catch (error) {
       console.error('Follow action failed:', error);
     }
   };
 
-  const posthog = usePostHog();
+  useFocusEffect(
+    useCallback(() => {
+      if (!effectiveId || !museum) return;
+      captureMobile(posthog, 'museum_detail_viewed', {
+        museumId: effectiveId,
+        category: museum.category ?? '',
+        hasVisualSearch: Boolean(visualSearchAssignment),
+        reviewCount: reviews?.length ?? 0,
+      });
+    }, [effectiveId, museum, posthog, reviews?.length, visualSearchAssignment])
+  );
 
   const handleCheckInPress = () => {
     if (!effectiveId) return;
-    
-    posthog?.capture('checkin_button_clicked', {
+
+    captureMobile(posthog, 'checkin_button_clicked', {
       museumId: effectiveId,
       isEditing: !!existingCheckIn,
     });
@@ -261,6 +280,11 @@ export default function MuseumDetailScreen() {
 
   const handleVisualSearchPress = () => {
     if (!effectiveId || !museum || !visualSearchAssignment) return;
+
+    captureMobile(posthog, 'visual_search_entry', {
+      source: 'museum_detail',
+      museumId: effectiveId,
+    });
 
     router.push({
       pathname: '/visual-search',
@@ -331,7 +355,15 @@ export default function MuseumDetailScreen() {
               'flex-1 items-center border-b-2 py-3',
               activeTab === 'about' ? 'border-primary' : 'border-transparent'
             )}
-            onPress={() => setActiveTab('about')}>
+            onPress={() => {
+              setActiveTab('about');
+              if (effectiveId) {
+                captureMobile(posthog, 'museum_detail_subtab_changed', {
+                  museumId: effectiveId,
+                  tab: 'about',
+                });
+              }
+            }}>
             <Text
               className={cn(
                 'text-sm font-medium',
@@ -345,7 +377,15 @@ export default function MuseumDetailScreen() {
               'flex-1 items-center border-b-2 py-3',
               activeTab === 'reviews' ? 'border-primary' : 'border-transparent'
             )}
-            onPress={() => setActiveTab('reviews')}>
+            onPress={() => {
+              setActiveTab('reviews');
+              if (effectiveId) {
+                captureMobile(posthog, 'museum_detail_subtab_changed', {
+                  museumId: effectiveId,
+                  tab: 'reviews',
+                });
+              }
+            }}>
             <Text
               className={cn(
                 'text-sm font-medium',
