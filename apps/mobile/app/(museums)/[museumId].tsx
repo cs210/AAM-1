@@ -143,11 +143,11 @@ export default function MuseumDetailScreen() {
   // Sort check-ins by visit date (most recent first)
   const sortedUserCheckIns = useMemo(() => {
     if (!userCheckIns || userCheckIns.length === 0) return [];
-    return [...userCheckIns].sort((a, b) => 
+    return [...userCheckIns].sort((a, b) =>
       (b.visitDate ?? b.createdAt) - (a.visitDate ?? a.createdAt)
     );
   }, [userCheckIns]);
-  const existingCheckIn = sortedUserCheckIns[0] ?? null;
+  const hasVisitedBefore = sortedUserCheckIns.length > 0;
 
   const museumCheckInPhotoUrls = useMemo(() => {
     if (!museumCheckIns || museumCheckIns.length === 0) return [];
@@ -246,17 +246,14 @@ export default function MuseumDetailScreen() {
     
     posthog?.capture('checkin_button_clicked', {
       museumId: effectiveId,
-      isEditing: !!existingCheckIn,
+      hasVisitedBefore,
     });
     
-    if (existingCheckIn) {
-      setEditingCheckIn(existingCheckIn);
-    } else {
-      router.push({
-        pathname: '/(museums)/[museumId]/checkin',
-        params: { museumId: effectiveId },
-      });
-    }
+    // Always navigate to check-in screen to create a new check-in
+    router.push({
+      pathname: '/(museums)/[museumId]/checkin',
+      params: { museumId: effectiveId },
+    });
   };
 
   const handleVisualSearchPress = () => {
@@ -553,7 +550,9 @@ export default function MuseumDetailScreen() {
               className="mb-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3.5 active:opacity-90"
               onPress={handleCheckInPress}>
               <CheckCircle2Icon size={20} color={RN_API_BACKGROUND_LIGHT} />
-              <Text className="text-base font-semibold text-primary-foreground">Check In</Text>
+              <Text className="text-base font-semibold text-primary-foreground">
+                {hasVisitedBefore ? 'Check In Again' : 'Check In'}
+              </Text>
             </Pressable>
 
             {visualSearchAssignment ? (
@@ -663,12 +662,15 @@ export default function MuseumDetailScreen() {
 
       <EditCheckinModal
         visible={editingCheckIn != null}
+        checkInId={editingCheckIn?._id as Id<'checkIns'> | null}
         initialRating={editingCheckIn?.rating ?? null}
         initialReview={editingCheckIn?.review}
-        onSave={(rating, review) =>
-          editingCheckIn &&
-          saveCheckIn(editingCheckIn._id as Id<'checkIns'>, rating, review)
-        }
+        initialImageUrls={editingCheckIn?.imageUrls}
+        initialImageIds={editingCheckIn?.imageIds}
+        initialFriendUserIds={editingCheckIn?.friendUserIds}
+        initialDurationHours={editingCheckIn?.durationHours}
+        initialVisitDate={editingCheckIn?.visitDate}
+        onSave={saveCheckIn}
         onDelete={() =>
           editingCheckIn && deleteCheckIn(editingCheckIn._id as Id<'checkIns'>)
         }

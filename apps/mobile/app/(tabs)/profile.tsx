@@ -54,7 +54,19 @@ const PROFILE_BANNER_HEIGHT = 120;
 type TabType = 'visits' | 'gallery' | 'bookmarks';
 
 type ProfileVisit = {
-  checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
+  checkIn: {
+    _id: string;
+    museumId: string;
+    rating?: number;
+    visitDate: number;
+    createdAt: number;
+    review?: string;
+    editedAt?: number;
+    durationHours?: number;
+    friendUserIds?: string[];
+    imageIds?: Id<'_storage'>[];
+    imageUrls?: string[];
+  };
   museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
 
@@ -777,12 +789,15 @@ export default function ProfileScreen() {
 
         <EditCheckinModal
           visible={editingVisit != null}
+          checkInId={editingVisit?.checkIn._id as Id<'checkIns'> | null}
           initialRating={editingVisit?.checkIn.rating ?? null}
           initialReview={editingVisit?.checkIn.review}
-          onSave={(rating, review) =>
-            editingVisit &&
-            saveCheckIn(editingVisit.checkIn._id as Id<'checkIns'>, rating, review)
-          }
+          initialImageUrls={editingVisit?.checkIn.imageUrls}
+          initialImageIds={editingVisit?.checkIn.imageIds}
+          initialFriendUserIds={editingVisit?.checkIn.friendUserIds}
+          initialDurationHours={editingVisit?.checkIn.durationHours}
+          initialVisitDate={editingVisit?.checkIn.visitDate}
+          onSave={saveCheckIn}
           onDelete={() =>
             editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
           }

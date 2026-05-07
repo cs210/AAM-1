@@ -15,18 +15,26 @@ export function useCheckInActions(onClose: () => void) {
   const saveCheckIn = async (
     checkInId: Id<'checkIns'>,
     rating: number | null,
-    review: string
+    review: string,
+    imageStorageIds?: Id<'_storage'>[],
+    friendUserIds?: string[],
+    durationHours?: number
   ) => {
     await updateCheckIn({
       checkInId,
       rating: rating ?? undefined,
       review: review || undefined,
+      ...(imageStorageIds !== undefined ? { imageStorageIds } : {}),
+      ...(friendUserIds !== undefined ? { friendUserIds } : {}),
+      ...(durationHours !== undefined ? { durationHours } : {}),
     });
 
     posthog?.capture('museum_visit_updated', {
       checkInId: String(checkInId),
       hasRating: rating !== null,
       hasReview: review.trim().length > 0,
+      ...(imageStorageIds !== undefined ? { photoCount: imageStorageIds.length } : {}),
+      ...(friendUserIds !== undefined ? { taggedFriends: friendUserIds.length } : {}),
     });
 
     onClose();
