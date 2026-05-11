@@ -663,7 +663,9 @@ export default function ProfileScreen() {
               )}
 
               <View className="mt-1 flex-row gap-4">
-                <Pressable onPress={() => followers && followers.length > 0 && setShowFollowModal('followers')}>
+                <Pressable
+                  onPress={() => viewedUserId === currentUserId && followers && followers.length > 0 && setShowFollowModal('followers')}
+                  disabled={viewedUserId !== currentUserId}>
                   <Text className="text-sm">
                     <Text className="text-sm font-bold text-foreground">
                       {followers ? followers.length : '0'}
@@ -671,7 +673,9 @@ export default function ProfileScreen() {
                     <Text className="text-sm text-muted-foreground"> Followers</Text>
                   </Text>
                 </Pressable>
-                <Pressable onPress={() => following && following.length > 0 && setShowFollowModal('following')}>
+                <Pressable
+                  onPress={() => viewedUserId === currentUserId && following && following.length > 0 && setShowFollowModal('following')}
+                  disabled={viewedUserId !== currentUserId}>
                   <Text className="text-sm">
                     <Text className="text-sm font-bold text-foreground">
                       {following ? following.length : '0'}
