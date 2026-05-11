@@ -635,7 +635,7 @@ export default function ProfileScreen() {
                     <Text className="text-sm font-semibold text-primary">{tasteProfile.profileName}</Text>
                   </View>
                 ) : null}
-                {!isViewingOtherProfile && (
+                {!isViewingOtherProfile && profileVisits && profileVisits.length >= 3 && (
                   <TouchableOpacity
                     className="flex-row items-center gap-1.5 rounded-full bg-primary px-2.5 py-1.5 active:opacity-90"
                     onPress={() => router.push('/wrapped')}
