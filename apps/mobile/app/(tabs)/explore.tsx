@@ -203,6 +203,7 @@ function PeopleSearchRoute({
   filteredUsers,
   currUser,
   currUserId,
+  recommendedPeople,
 }: {
   peopleSearch: string;
   setPeopleSearch: (v: string) => void;
@@ -210,6 +211,7 @@ function PeopleSearchRoute({
   filteredUsers: { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[];
   currUser: { _id: string } | null | undefined;
   currUserId: string | null;
+  recommendedPeople: { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[] | undefined;
 }) {
   const isSearching = peopleSearch.trim().length > 0;
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -318,6 +320,45 @@ function PeopleSearchRoute({
             }
           />
         )
+      ) : recommendedPeople && recommendedPeople.length > 0 ? (
+        <FlatList
+          data={recommendedPeople}
+          renderItem={({ item }) => {
+            if (currUser && item.userId === currUser._id) return null;
+            const rawName = item.name || item.email || '';
+            const displayName =
+              typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+            const initial = (displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?').toUpperCase();
+            return (
+              <Pressable
+                className="mx-5 mb-3 flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 active:opacity-90"
+                onPress={() =>
+                  router.push(
+                    `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
+                  )
+                }>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
+                ) : (
+                  <View className="size-12 items-center justify-center rounded-full bg-primary">
+                    <Text className="text-lg font-semibold text-primary-foreground">{initial}</Text>
+                  </View>
+                )}
+                <Text className="flex-1 text-lg font-medium text-foreground" numberOfLines={1}>
+                  {displayName || "Name can't be displayed"}
+                </Text>
+              </Pressable>
+            );
+          }}
+          keyExtractor={(item) => item.userId}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={LIST_PADDING_BOTTOM}
+          ListHeaderComponent={
+            <View className="px-5 py-3">
+              <Text className="text-lg font-semibold text-foreground">People you may know</Text>
+            </View>
+          }
+        />
       ) : (
         <View className="items-center px-12 py-12">
           <Text className="text-center text-base text-muted-foreground">
@@ -449,6 +490,7 @@ export default function SearchScreen() {
   }, [users, peopleSearch]);
 
   const currUser = useQuery(api.auth.getCurrentUser);
+  const recommendedPeople = useQuery(api.follows.getPeopleYouMayKnow);
   const activeTabKey = tabs[index]?.key ?? 'people';
 
   return (
@@ -494,6 +536,7 @@ export default function SearchScreen() {
           filteredUsers={filteredUsers}
           currUser={currUser}
           currUserId={currUser?._id ?? null}
+          recommendedPeople={recommendedPeople}
         />
       ) : (
         <MuseumsRoute
