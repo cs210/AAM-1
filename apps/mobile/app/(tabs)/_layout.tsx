@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs, router, useGlobalSearchParams } from 'expo-router';
-import { HomeIcon, CompassIcon, UserIcon } from 'lucide-react-native';
+import { HomeIcon, CompassIcon, UserIcon, ScanSearchIcon } from 'lucide-react-native';
 import { useConvexAuth } from 'convex/react';
 import { RN_STYLE } from '@/constants/rn-api-colors';
 import { useUniwind } from 'uniwind';
@@ -67,6 +67,15 @@ export default function TabLayout() {
           title: 'Explore',
           tabBarIcon: ({ color, size }) => (
             <CompassIcon size={28} color={isViewingSearchProfile ? t.primary : color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="visual-search"
+        options={{
+          title: 'Visual Search',
+          tabBarIcon: ({ color, size }) => (
+            <ScanSearchIcon size={28} color={color} />
           ),
         }}
       />

@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { BellIcon, ScanSearchIcon } from 'lucide-react-native';
+import { BellIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -95,13 +95,6 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 ) : null}
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open visual search"
-                onPress={() => router.push('/visual-search')}
-                className="size-10 items-center justify-center rounded-full border border-border bg-card active:opacity-80">
-                <ScanSearchIcon size={20} color={primaryHex} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
