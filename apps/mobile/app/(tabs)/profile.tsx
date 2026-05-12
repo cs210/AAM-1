@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -10,6 +10,7 @@ import {
   ImageBackground,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -54,7 +55,19 @@ const PROFILE_BANNER_HEIGHT = 120;
 type TabType = 'visits' | 'gallery' | 'bookmarks';
 
 type ProfileVisit = {
-  checkIn: { _id: string; museumId: string; rating?: number; visitDate: number; createdAt: number; review?: string; editedAt?: number };
+  checkIn: {
+    _id: string;
+    museumId: string;
+    rating?: number;
+    visitDate: number;
+    createdAt: number;
+    review?: string;
+    editedAt?: number;
+    durationHours?: number;
+    friendUserIds?: string[];
+    imageIds?: Id<'_storage'>[];
+    imageUrls?: string[];
+  };
   museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
 
@@ -333,6 +346,17 @@ export default function ProfileScreen() {
   const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
   const following = useQuery(api.follows.getFollowing, viewedUserId ? { userId: viewedUserId } : 'skip');
   const isFollowing = useQuery(api.follows.isFollowingUser, viewedUserId && currentUserId && viewedUserId !== currentUserId ? { userId: viewedUserId } : 'skip');
+  
+  // Fetch follower/following user profiles
+  const followersData = useMemo(() => {
+    if (!followers || followers.length === 0) return [];
+    return followers.map(id => userProfile?.find((u: any) => u.userId === id)).filter(Boolean);
+  }, [followers, userProfile]);
+  
+  const followingData = useMemo(() => {
+    if (!following || following.length === 0) return [];
+    return following.map(id => userProfile?.find((u: any) => u.userId === id)).filter(Boolean);
+  }, [following, userProfile]);
 
   // Cultural passport: visits for the profile being viewed
   const profileVisits = useQuery(
@@ -363,6 +387,7 @@ export default function ProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('visits');
+  const [showFollowModal, setShowFollowModal] = useState<'followers' | 'following' | null>(null);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
   const MAX_AVATAR_DIMENSION = 512;
@@ -623,7 +648,7 @@ export default function ProfileScreen() {
                     <Text className="text-sm font-semibold text-primary">{tasteProfile.profileName}</Text>
                   </View>
                 ) : null}
-                {!isViewingOtherProfile && (
+                {!isViewingOtherProfile && profileVisits && profileVisits.length >= 3 && (
                   <TouchableOpacity
                     className="flex-row items-center gap-1.5 rounded-full bg-primary px-2.5 py-1.5 active:opacity-90"
                     onPress={() => router.push('/wrapped')}
@@ -638,18 +663,26 @@ export default function ProfileScreen() {
               )}
 
               <View className="mt-1 flex-row gap-4">
-                <Text className="text-sm">
-                  <Text className="text-sm font-bold text-foreground">
-                    {followers ? followers.length : '0'}
+                <Pressable
+                  onPress={() => viewedUserId === currentUserId && followers && followers.length > 0 && setShowFollowModal('followers')}
+                  disabled={viewedUserId !== currentUserId}>
+                  <Text className="text-sm">
+                    <Text className="text-sm font-bold text-foreground">
+                      {followers ? followers.length : '0'}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground"> Followers</Text>
                   </Text>
-                  <Text className="text-sm text-muted-foreground"> Followers</Text>
-                </Text>
-                <Text className="text-sm">
-                  <Text className="text-sm font-bold text-foreground">
-                    {following ? following.length : '0'}
+                </Pressable>
+                <Pressable
+                  onPress={() => viewedUserId === currentUserId && following && following.length > 0 && setShowFollowModal('following')}
+                  disabled={viewedUserId !== currentUserId}>
+                  <Text className="text-sm">
+                    <Text className="text-sm font-bold text-foreground">
+                      {following ? following.length : '0'}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground"> Following</Text>
                   </Text>
-                  <Text className="text-sm text-muted-foreground"> Following</Text>
-                </Text>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -777,17 +810,81 @@ export default function ProfileScreen() {
 
         <EditCheckinModal
           visible={editingVisit != null}
+          checkInId={editingVisit?.checkIn._id as Id<'checkIns'> | null}
           initialRating={editingVisit?.checkIn.rating ?? null}
           initialReview={editingVisit?.checkIn.review}
-          onSave={(rating, review) =>
-            editingVisit &&
-            saveCheckIn(editingVisit.checkIn._id as Id<'checkIns'>, rating, review)
-          }
+          initialImageUrls={editingVisit?.checkIn.imageUrls}
+          initialImageIds={editingVisit?.checkIn.imageIds}
+          initialFriendUserIds={editingVisit?.checkIn.friendUserIds}
+          initialDurationHours={editingVisit?.checkIn.durationHours}
+          initialVisitDate={editingVisit?.checkIn.visitDate}
+          onSave={saveCheckIn}
           onDelete={() =>
             editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
           }
           onClose={() => setEditingVisit(null)}
         />
+
+        {/* Followers/Following Modal */}
+        {showFollowModal && (
+          <Modal
+            visible={true}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowFollowModal(null)}>
+            <Pressable
+              className="flex-1 items-center justify-center bg-black/50"
+              onPress={() => setShowFollowModal(null)}>
+              <Pressable
+                className="max-h-[50%] w-4/5 rounded-2xl border border-border bg-card"
+                onPress={(e) => e.stopPropagation()}>
+                <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+                  <Text className="text-lg font-semibold text-foreground">
+                    {showFollowModal === 'followers' ? 'Followers' : 'Following'}
+                  </Text>
+                  <Pressable
+                    onPress={() => setShowFollowModal(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text className="text-2xl font-bold text-muted-foreground">×</Text>
+                  </Pressable>
+                </View>
+                <FlatList
+                  data={showFollowModal === 'followers' ? followersData : followingData}
+                  renderItem={({ item, index }) => {
+                    if (!item) return null;
+                    const rawName = item.name || item.email || '';
+                    const displayNameForModal =
+                      typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+                    const initial = (displayNameForModal && displayNameForModal !== "Name can't be displayed" ? displayNameForModal[0] : '?').toUpperCase();
+                    const listData = showFollowModal === 'followers' ? followersData : followingData;
+                    return (
+                      <Pressable
+                        className="active:bg-muted flex-row items-center gap-3 px-5 py-3"
+                        onPress={() => {
+                          setShowFollowModal(null);
+                          router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}`);
+                        }}>
+                        {item.imageUrl ? (
+                          <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
+                        ) : (
+                          <View className="size-12 items-center justify-center rounded-full bg-primary">
+                            <Text className="text-base font-semibold text-primary-foreground">{initial}</Text>
+                          </View>
+                        )}
+                        <Text className="flex-1 text-base font-medium text-foreground" numberOfLines={1}>
+                          {displayNameForModal || "Name can't be displayed"}
+                        </Text>
+                      </Pressable>
+                    );
+                  }}
+                  keyExtractor={(item) => item?.userId || ''}
+                  scrollEnabled={true}
+                  nestedScrollEnabled={true}
+                />
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
       </Pressable>
     </SafeAreaView>
   );

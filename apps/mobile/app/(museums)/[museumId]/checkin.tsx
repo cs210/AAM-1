@@ -1,43 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  Pressable,
-  TextInput,
-  Alert,
-  Image,
-} from 'react-native';
+import { View, ScrollView, Pressable, Alert, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { ChevronDownIcon, StarIcon, XIcon } from 'lucide-react-native';
+import { XIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageManipulator as ExpoImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
+import { CheckInStarRating } from '@/components/check-in-star-rating';
+import { CheckInDurationSelect } from '@/components/check-in-duration-select';
 import { cn } from '@/lib/utils';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
+import { uploadCheckInPickerAssets } from '@/lib/check-in-image-upload';
 import {
   RN_API_BACKGROUND_LIGHT,
-  RN_API_BORDER_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
-  RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
-const MAX_UPLOAD_IMAGE_SIZE = 512;
-const DURATION_OPTIONS = [
-  { label: '1 hour', value: 1 },
-  { label: '2 hours', value: 2 },
-  { label: '3 hours', value: 3 },
-  { label: '4 hours', value: 4 },
-  { label: '5 hours', value: 5 },
-] as const;
 
 export default function CheckInScreen() {
   const insets = useSafeAreaInsets();
@@ -52,7 +40,6 @@ export default function CheckInScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [visitDate, setVisitDate] = useState(new Date());
   const [durationHours, setDurationHours] = useState<number>(1);
-  const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -71,6 +58,10 @@ export default function CheckInScreen() {
   );
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
+  const followingUserIds = useQuery(
+    api.follows.getFollowing,
+    currentUser ? { userId: currentUser._id } : 'skip'
+  );
 
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
@@ -114,71 +105,6 @@ export default function CheckInScreen() {
     setSelectedImages((prev) => prev.filter((asset) => asset.uri !== uri));
   };
 
-  const getResizedImageUri = async (asset: ImagePicker.ImagePickerAsset) => {
-    const originalWidth = asset.width;
-    const originalHeight = asset.height;
-
-    if (!originalWidth || !originalHeight) {
-      return { uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' };
-    }
-
-    if (originalWidth <= MAX_UPLOAD_IMAGE_SIZE && originalHeight <= MAX_UPLOAD_IMAGE_SIZE) {
-      return { uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' };
-    }
-
-    const scale = Math.min(
-      MAX_UPLOAD_IMAGE_SIZE / originalWidth,
-      MAX_UPLOAD_IMAGE_SIZE / originalHeight
-    );
-    const targetWidth = Math.max(1, Math.round(originalWidth * scale));
-    const targetHeight = Math.max(1, Math.round(originalHeight * scale));
-
-    const context = ExpoImageManipulator.manipulate(asset.uri);
-    context.resize({ width: targetWidth, height: targetHeight });
-
-    const renderedImage = await context.renderAsync();
-    const resizedImage = await renderedImage.saveAsync({
-      compress: 0.8,
-      format: SaveFormat.JPEG,
-    });
-
-    return { uri: resizedImage.uri, mimeType: 'image/jpeg' as const };
-  };
-
-  const uploadSelectedImages = async (): Promise<Id<'_storage'>[]> => {
-    if (selectedImages.length === 0) {
-      return [];
-    }
-
-    const storageIds: Id<'_storage'>[] = [];
-
-    for (const asset of selectedImages) {
-      const processedImage = await getResizedImageUri(asset);
-      const uploadUrl = await generateCheckInImageUploadUrl({});
-      const fileResponse = await fetch(processedImage.uri);
-      const fileBlob = await fileResponse.blob();
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': processedImage.mimeType,
-        },
-        body: fileBlob,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload one of the selected images.');
-      }
-
-      const { storageId } = (await uploadResponse.json()) as {
-        storageId: Id<'_storage'>;
-      };
-      storageIds.push(storageId);
-    }
-
-    return storageIds;
-  };
-
   const handleSubmit = async () => {
     if (!id) {
       Alert.alert('Error', 'Museum ID not found');
@@ -187,7 +113,10 @@ export default function CheckInScreen() {
 
     setIsSubmitting(true);
     try {
-      const imageStorageIds = await uploadSelectedImages();
+      const imageStorageIds =
+        selectedImages.length > 0
+          ? await uploadCheckInPickerAssets(selectedImages, () => generateCheckInImageUploadUrl({}))
+          : [];
 
       const isRepeatVisit = userCheckIns != null && userCheckIns.length > 0;
 
@@ -222,7 +151,7 @@ export default function CheckInScreen() {
 
   if (museum === undefined) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View className="flex-1 items-center justify-center">
           <BrandActivityIndicator size="large" />
@@ -233,7 +162,7 @@ export default function CheckInScreen() {
 
   if (museum === null) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
         <ScreenTitleBar title="Check In" onBackPress={() => router.back()} />
         <View className="flex-1 items-center justify-center">
@@ -245,66 +174,58 @@ export default function CheckInScreen() {
 
   return (
     <AuthGuard>
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
 
         <ScreenTitleBar title="Check In" onBackPress={() => router.back()} />
 
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 + insets.bottom }}
-          showsVerticalScrollIndicator={false}>
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="grow px-4 pt-0"
+          contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
           <View className="mb-6 rounded-xl border border-border bg-card p-4">
             <Text className="mb-1 text-xl font-bold text-foreground">{museum.name}</Text>
             <Text className="text-sm capitalize text-muted-foreground">{museum.category}</Text>
           </View>
 
           <View className="mb-6">
-            <Text className="mb-3 text-base font-semibold text-foreground">Rate Your Visit</Text>
-            <View className="mb-2 flex-row justify-around">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Pressable
-                  key={star}
-                  className="p-2"
-                  onPress={() => setRating(rating === star ? null : star)}>
-                  <StarIcon
-                    size={32}
-                    color={star <= (rating || 0) ? RN_API_PRIMARY_LIGHT : RN_API_BORDER_LIGHT}
-                    fill={star <= (rating || 0) ? RN_API_PRIMARY_LIGHT : 'none'}
-                  />
-                </Pressable>
-              ))}
-            </View>
+            <Label className="mb-3 text-base font-semibold text-foreground">Rate your visit</Label>
+            <CheckInStarRating value={rating} onChange={setRating} className="justify-center" />
             {rating ? (
-              <Text className="text-center text-sm italic text-muted-foreground">
+              <Text className="mt-2 text-center text-sm italic text-muted-foreground">
                 {rating} star{rating !== 1 ? 's' : ''}
               </Text>
             ) : null}
           </View>
 
           <View className="mb-6">
-            <Text className="mb-3 text-base font-semibold text-foreground">Write a Review</Text>
-            <TextInput
-              className="min-h-[120px] rounded-[10px] border border-border bg-card p-3 text-[15px] text-foreground"
-              placeholder="Share your thoughts about this museum..."
-              placeholderTextColor={RN_API_MUTED_FOREGROUND_LIGHT}
-              value={review}
-              onChangeText={setReview}
-              maxLength={500}
-              multiline
-              numberOfLines={5}
-              textAlignVertical="top"
-            />
-            <Text className="mt-2 text-right text-xs text-muted-foreground">{review.length}/500</Text>
+            <Label className="mb-3 text-base font-semibold text-foreground">Write a review</Label>
+            <View className="overflow-hidden rounded-xl border border-border bg-card">
+              <Input
+                value={review}
+                onChangeText={setReview}
+                placeholder="Share your thoughts about this museum..."
+                maxLength={500}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                className="min-h-[120px] border-0 bg-transparent shadow-none rounded-none px-3 pb-1 pt-3 text-base leading-5"
+              />
+              <Text className="px-3 pb-2.5 pt-0 text-right text-xs text-muted-foreground">
+                {review.length}/500
+              </Text>
+            </View>
           </View>
 
           <View className="mb-6">
-            <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-base font-semibold text-foreground">Photos</Text>
+            <View className="mb-3 flex-row items-center justify-between gap-3">
+              <Text className="min-w-0 shrink text-base font-semibold text-foreground">Photos</Text>
               <Pressable
-                className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2"
+                className="shrink-0 rounded-lg bg-primary px-4 py-2 active:opacity-90"
                 onPress={pickImages}
                 disabled={isSubmitting}>
-                <Text className="text-[13px] font-semibold text-primary">
+                <Text className="text-sm font-semibold text-primary-foreground">
                   {selectedImages.length > 0 ? 'Replace Photos' : 'Add Photos'}
                 </Text>
               </Pressable>
@@ -313,16 +234,22 @@ export default function CheckInScreen() {
             {selectedImages.length > 0 ? (
               <ScrollView
                 horizontal
+                keyboardShouldPersistTaps="handled"
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 10 }}>
+                className="-mx-1">
                 {selectedImages.map((asset) => (
-                  <View key={asset.uri} className="relative size-[84px] overflow-hidden rounded-[10px] bg-muted">
-                    <Image source={{ uri: asset.uri }} className="size-full" resizeMode="cover" />
+                  <View key={asset.uri} className="relative mx-1" collapsable={false}>
+                    <Image
+                      source={{ uri: asset.uri }}
+                      className="size-20 rounded-xl bg-muted"
+                      resizeMode="cover"
+                    />
                     <Pressable
-                      className="absolute right-1.5 top-1.5 size-5 items-center justify-center rounded-full bg-black/60"
-                      onPress={() => removeImage(asset.uri)}
-                      hitSlop={8}>
-                      <XIcon size={12} color={RN_API_BACKGROUND_LIGHT} />
+                      accessibilityLabel="Remove photo"
+                      hitSlop={12}
+                      className="absolute -right-1 -top-1 z-10 size-7 items-center justify-center rounded-full bg-destructive shadow-sm"
+                      onPress={() => removeImage(asset.uri)}>
+                      <XIcon size={14} color={RN_API_BACKGROUND_LIGHT} />
                     </Pressable>
                   </View>
                 ))}
@@ -333,55 +260,16 @@ export default function CheckInScreen() {
           </View>
 
           <View className="mb-6">
-            <Text className="mb-3 text-base font-semibold text-foreground">How long were you there?</Text>
-            <View>
-              <Pressable
-                className="flex-row items-center justify-between rounded-[10px] border border-border bg-card px-3 py-3.5"
-                onPress={() => setIsDurationDropdownOpen((prev) => !prev)}>
-                <Text className="text-[15px] font-medium text-foreground">
-                  {DURATION_OPTIONS.find((option) => option.value === durationHours)?.label ?? '1 hour'}
-                </Text>
-                <ChevronDownIcon
-                  size={18}
-                  color={RN_API_MUTED_FOREGROUND_LIGHT}
-                  style={{ transform: [{ rotate: isDurationDropdownOpen ? '180deg' : '0deg' }] }}
-                />
-              </Pressable>
-
-              {isDurationDropdownOpen ? (
-                <View className="mt-2 rounded-[10px] border border-border bg-card">
-                  {DURATION_OPTIONS.map((option, index) => {
-                    const isSelected = durationHours === option.value;
-                    const isLast = index === DURATION_OPTIONS.length - 1;
-                    return (
-                      <Pressable
-                        key={option.value}
-                        className={cn('px-3 py-3', !isLast && 'border-b border-border')}
-                        onPress={() => {
-                          setDurationHours(option.value);
-                          setIsDurationDropdownOpen(false);
-                        }}>
-                        <Text
-                          className={cn(
-                            'text-[15px] font-medium',
-                            isSelected ? 'text-primary' : 'text-foreground'
-                          )}>
-                          {option.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : null}
-            </View>
+            <Label className="mb-3 text-base font-semibold text-foreground">How long were you there?</Label>
+            <CheckInDurationSelect value={durationHours} onChange={setDurationHours} />
           </View>
 
           <View className="mb-6">
-            <Text className="mb-3 text-base font-semibold text-foreground">Date of Visit</Text>
+            <Label className="mb-3 text-base font-semibold text-foreground">Date of visit</Label>
             <Pressable
-              className="rounded-[10px] border border-border bg-card py-3.5 px-3"
+              className="rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-90"
               onPress={() => setShowDatePicker(true)}>
-              <Text className="text-[15px] font-medium text-foreground">
+              <Text className="text-base font-medium text-foreground">
                 {visitDate.toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -401,49 +289,52 @@ export default function CheckInScreen() {
             />
           )}
 
-          {allUsers && allUsers.length > 0 && (
+          {allUsers && followingUserIds && followingUserIds.length > 0 ? (
             <View className="mb-6">
-              <Text className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Text>
+              <Label className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Label>
               <View className="flex-row flex-wrap gap-2">
-                {allUsers.map((user) => (
-                  <Pressable
-                    key={user.userId}
-                    className={cn(
-                      'flex-row items-center gap-1.5 rounded-full border px-3 py-2',
-                      selectedFriends.includes(user.userId)
-                        ? 'border-primary bg-primary'
-                        : 'border-border bg-muted'
-                    )}
-                    onPress={() => toggleFriend(user.userId)}>
-                    <Text
-                      className={cn(
-                        'text-sm font-medium',
-                        selectedFriends.includes(user.userId) ? 'text-primary-foreground' : 'text-foreground'
-                      )}>
-                      {user.name || user.email}
-                    </Text>
-                    {selectedFriends.includes(user.userId) && (
-                      <XIcon size={16} color={RN_API_BACKGROUND_LIGHT} />
-                    )}
-                  </Pressable>
-                ))}
+                {allUsers
+                  .filter((user) => followingUserIds.includes(user.userId))
+                  .map((user) => {
+                    const selected = selectedFriends.includes(user.userId);
+                    return (
+                      <Pressable
+                        key={user.userId}
+                        className={cn(
+                          'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
+                          selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                        )}
+                        onPress={() => toggleFriend(user.userId)}>
+                        <Text
+                          className={cn('text-sm font-medium', selected ? 'text-primary' : 'text-foreground')}>
+                          {user.name || user.email}
+                        </Text>
+                        {selected ? <XIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} /> : null}
+                      </Pressable>
+                    );
+                  })}
               </View>
+            </View>
+          ) : (
+            <View className="mb-6">
+              <Label className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Label>
+              <Text className="text-sm text-muted-foreground">
+                Follow your friends to add them to your check-ins!
+              </Text>
             </View>
           )}
 
-          <Pressable
-            className={cn(
-              'items-center justify-center rounded-[10px] bg-primary py-4 active:opacity-90',
-              isSubmitting && 'opacity-60'
-            )}
-            onPress={handleSubmit}
-            disabled={isSubmitting}>
+          <Button
+            size="lg"
+            className="mb-12 min-h-12 w-full rounded-xl active:opacity-90"
+            disabled={isSubmitting}
+            onPress={handleSubmit}>
             {isSubmitting ? (
               <BrandActivityIndicator size="small" color={RN_API_BACKGROUND_LIGHT} />
             ) : (
-              <Text className="text-base font-semibold text-primary-foreground">Complete Check-In</Text>
+              <Text className="text-base font-semibold text-primary-foreground">Complete check-in</Text>
             )}
-          </Pressable>
+          </Button>
         </ScrollView>
       </SafeAreaView>
     </AuthGuard>

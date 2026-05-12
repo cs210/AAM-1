@@ -18,7 +18,12 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
-import { RN_API_BACKGROUND_LIGHT, RN_API_MUTED_FOREGROUND_LIGHT } from '@/constants/rn-api-colors';
+import { useUniwind } from 'uniwind';
+import {
+  RN_API_BACKGROUND_LIGHT,
+  RN_API_BACKGROUND_DARK,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+} from '@/constants/rn-api-colors';
 import appsFlyer from 'react-native-appsflyer';
 
 const { width } = Dimensions.get('window');
@@ -380,6 +385,8 @@ const ShareSlide = ({
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
+  const { theme } = useUniwind();
+  const buttonIconColor = theme === 'dark' ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
 
   useEffect(() => {
     Animated.parallel([
@@ -412,12 +419,12 @@ const ShareSlide = ({
             className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
             onPress={onShare}
             activeOpacity={0.85}>
-            <Share2 size={24} color={RN_API_BACKGROUND_LIGHT} strokeWidth={1.5} />
+            <Share2 size={24} color={buttonIconColor} strokeWidth={1.5} />
           </TouchableOpacity>
           <TouchableOpacity
             className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
             activeOpacity={0.85}>
-            <Download size={24} color={RN_API_BACKGROUND_LIGHT} strokeWidth={1.5} />
+            <Download size={24} color={buttonIconColor} strokeWidth={1.5} />
           </TouchableOpacity>
         </Animated.View>
         <Text className="mt-8 text-center text-xs tracking-wide text-muted-foreground">
@@ -563,6 +570,24 @@ export default function WrappedScreen() {
     }
   };
 
+  const goToPrevious = () => {
+    if (currentSlide > 0) {
+      // Fade out and slide
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 50, duration: 200, useNativeDriver: true }),
+      ]).start(() => {
+        setCurrentSlide(currentSlide - 1);
+        slideAnim.setValue(-50);
+        // Fade in and slide to center
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]).start();
+      });
+    }
+  };
+
   const renderCurrentSlide = () => {
     const animatedStyle = {
       opacity: fadeAnim,
@@ -647,6 +672,17 @@ export default function WrappedScreen() {
           />
         </View>
         {renderCurrentSlide()}
+        {/* Left side tap to go back */}
+        <Pressable
+          className="absolute left-0 top-0 bottom-0 z-10 w-1/4"
+          onPress={goToPrevious}
+        />
+        {/* Right side tap to go forward */}
+        <Pressable
+          className="absolute right-0 top-0 bottom-0 z-10 w-1/4"
+          onPress={goToNext}
+        />
+        {/* Close button */}
         <TouchableOpacity
           className="absolute right-5 z-20 size-9 items-center justify-center rounded-full border border-border bg-card/90 shadow-sm shadow-black/10"
           style={{ top: insets.top + 8 }}

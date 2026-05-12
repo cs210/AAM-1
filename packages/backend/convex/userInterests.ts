@@ -19,7 +19,7 @@ export const saveForCurrentAccount = mutation({
   args: {
     userInfo: v.record(
       v.string(), // question id
-      v.union(v.string(), v.number()), // answer (choice/text or scale)
+      v.union(v.string(), v.number(), v.array(v.string())), // answer (choice/text, scale, or multi-select)
     ),
   },
   handler: async (ctx, args) => {

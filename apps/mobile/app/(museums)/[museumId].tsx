@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
+import { useUniwind } from 'uniwind';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import {
@@ -29,9 +30,11 @@ import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import {
   RN_API_BORDER_LIGHT,
   RN_API_FOREGROUND_LIGHT,
+  RN_API_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_LIGHT,
-  RN_API_BACKGROUND_LIGHT
+  RN_API_BACKGROUND_LIGHT,
+  RN_API_BACKGROUND_DARK,
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
@@ -44,6 +47,11 @@ function normalizeExternalUrl(url: string): string {
 
 export default function MuseumDetailScreen() {
   const insets = useSafeAreaInsets();
+  const { theme } = useUniwind();
+  const bookmarkIconColor = theme === 'dark' ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
+  const bookmarkUnselectedIconColor = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
+  const followIconColor = theme === 'dark' ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
+    const notFollowIconColor = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
   const params = useLocalSearchParams<{ museumId: string; tab?: string; highlight?: string }>();
   const museumIdParam = params.museumId;
   const id = typeof museumIdParam === 'string' ? museumIdParam : Array.isArray(museumIdParam) ? museumIdParam[0] : undefined;
@@ -135,11 +143,11 @@ export default function MuseumDetailScreen() {
   // Sort check-ins by visit date (most recent first)
   const sortedUserCheckIns = useMemo(() => {
     if (!userCheckIns || userCheckIns.length === 0) return [];
-    return [...userCheckIns].sort((a, b) => 
+    return [...userCheckIns].sort((a, b) =>
       (b.visitDate ?? b.createdAt) - (a.visitDate ?? a.createdAt)
     );
   }, [userCheckIns]);
-  const existingCheckIn = sortedUserCheckIns[0] ?? null;
+  const hasVisitedBefore = sortedUserCheckIns.length > 0;
 
   const museumCheckInPhotoUrls = useMemo(() => {
     if (!museumCheckIns || museumCheckIns.length === 0) return [];
@@ -238,17 +246,14 @@ export default function MuseumDetailScreen() {
     
     posthog?.capture('checkin_button_clicked', {
       museumId: effectiveId,
-      isEditing: !!existingCheckIn,
+      hasVisitedBefore,
     });
     
-    if (existingCheckIn) {
-      setEditingCheckIn(existingCheckIn);
-    } else {
-      router.push({
-        pathname: '/(museums)/[museumId]/checkin',
-        params: { museumId: effectiveId },
-      });
-    }
+    // Always navigate to check-in screen to create a new check-in
+    router.push({
+      pathname: '/(museums)/[museumId]/checkin',
+      params: { museumId: effectiveId },
+    });
   };
 
   const handleVisualSearchPress = () => {
@@ -512,15 +517,15 @@ export default function MuseumDetailScreen() {
             <Pressable
               className={cn(
                 'mb-3 flex-row items-center justify-center gap-2 rounded-xl py-3.5 active:opacity-90',
-                isFollowing ? 'bg-green-600' : 'bg-primary'
+                isFollowing ? 'bg-green-600' : 'border border-border bg-card'
               )}
               onPress={handleFollowPress}>
               <HeartIcon
                 size={20}
-                color={RN_API_BACKGROUND_LIGHT}
-                fill={isFollowing ? RN_API_BACKGROUND_LIGHT : 'transparent'}
+                color={isFollowing ? followIconColor : notFollowIconColor}
+                fill={isFollowing ? followIconColor : 'transparent'}
               />
-              <Text className="text-base font-semibold text-primary-foreground">
+              <Text className={cn('text-base font-semibold', isFollowing ? 'text-green-50' : 'text-foreground')}>
                 {isFollowing ? 'Following' : 'Follow Museum'}
               </Text>
             </Pressable>
@@ -533,10 +538,10 @@ export default function MuseumDetailScreen() {
               onPress={toggleBookmark}>
               <BookmarkIcon
                 size={20}
-                color={isBookmarked ? RN_API_BACKGROUND_LIGHT : RN_API_FOREGROUND_LIGHT}
-                fill={isBookmarked ? RN_API_BACKGROUND_LIGHT : 'none'}
+                color={isBookmarked ? bookmarkIconColor : bookmarkUnselectedIconColor}
+                fill={isBookmarked ? bookmarkIconColor : 'none'}
               />
-              <Text className={cn('text-base font-semibold', isBookmarked ? 'text-white' : 'text-foreground')}>
+              <Text className={cn('text-base font-semibold', isBookmarked ? 'text-amber-50' : 'text-foreground')}>
                 {isBookmarked ? 'Bookmarked' : 'Bookmark'}
               </Text>
             </Pressable>
@@ -545,7 +550,9 @@ export default function MuseumDetailScreen() {
               className="mb-3 flex-row items-center justify-center gap-2 rounded-xl bg-primary py-3.5 active:opacity-90"
               onPress={handleCheckInPress}>
               <CheckCircle2Icon size={20} color={RN_API_BACKGROUND_LIGHT} />
-              <Text className="text-base font-semibold text-primary-foreground">Check In</Text>
+              <Text className="text-base font-semibold text-primary-foreground">
+                {hasVisitedBefore ? 'Check In Again' : 'Check In'}
+              </Text>
             </Pressable>
 
             {visualSearchAssignment ? (
@@ -655,12 +662,15 @@ export default function MuseumDetailScreen() {
 
       <EditCheckinModal
         visible={editingCheckIn != null}
+        checkInId={editingCheckIn?._id as Id<'checkIns'> | null}
         initialRating={editingCheckIn?.rating ?? null}
         initialReview={editingCheckIn?.review}
-        onSave={(rating, review) =>
-          editingCheckIn &&
-          saveCheckIn(editingCheckIn._id as Id<'checkIns'>, rating, review)
-        }
+        initialImageUrls={editingCheckIn?.imageUrls}
+        initialImageIds={editingCheckIn?.imageIds}
+        initialFriendUserIds={editingCheckIn?.friendUserIds}
+        initialDurationHours={editingCheckIn?.durationHours}
+        initialVisitDate={editingCheckIn?.visitDate}
+        onSave={saveCheckIn}
         onDelete={() =>
           editingCheckIn && deleteCheckIn(editingCheckIn._id as Id<'checkIns'>)
         }

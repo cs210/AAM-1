@@ -8,17 +8,17 @@ import { authComponent } from "./auth";
 
 /**
  * Taste profiles (Wrapped): one per museum category. Shown on profile + Wrapped.
- * - art → Picasso   (classic & fine art)
- * - science → Curie (science & natural history)
- * - history → Herodotus (history museums)
- * - contemporary → Warhol (modern & contemporary art)
+ * - art → Artisan  (classic & fine art)
+ * - science → Innovator (science & natural history)
+ * - history → Historian (history museums)
+ * - contemporary → Revolutionary (modern & contemporary art)
  * - culture → Explorer (cultural & identity museums)
  */
 export const TASTE_PROFILES: Record<string, string> = {
-  art: "Picasso",
-  science: "Curie",
-  history: "Herodotus",
-  contemporary: "Warhol",
+  art: "Artisan",
+  science: "Innovator",
+  history: "Historian",
+  contemporary: "Revolutionary",
   culture: "Explorer",
 } as const;
 
@@ -332,7 +332,7 @@ function majorityCategory(museums: { category?: string }[]): string | null {
 }
 
 /**
- * Compatibility matcher: check-ins from other users who share your taste profile (e.g. Picasso ↔ Picasso).
+ * Compatibility matcher: check-ins from other users who share your taste profile
  * Used on Explore "For You" to show posts from people with the same majority museum category.
  */
 export const getCompatibleCheckIns = query({
