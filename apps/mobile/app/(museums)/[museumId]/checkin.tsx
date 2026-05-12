@@ -58,6 +58,10 @@ export default function CheckInScreen() {
   );
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
+  const followingUserIds = useQuery(
+    api.follows.getFollowing,
+    currentUser ? { userId: currentUser._id } : 'skip'
+  );
 
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
@@ -285,35 +289,44 @@ export default function CheckInScreen() {
             />
           )}
 
-          {allUsers && allUsers.length > 0 ? (
+          {allUsers && followingUserIds && followingUserIds.length > 0 ? (
             <View className="mb-6">
               <Label className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Label>
               <View className="flex-row flex-wrap gap-2">
-                {allUsers.map((user) => {
-                  const selected = selectedFriends.includes(user.userId);
-                  return (
-                    <Pressable
-                      key={user.userId}
-                      className={cn(
-                        'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
-                        selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
-                      )}
-                      onPress={() => toggleFriend(user.userId)}>
-                      <Text
-                        className={cn('text-sm font-medium', selected ? 'text-primary' : 'text-foreground')}>
-                        {user.name || user.email}
-                      </Text>
-                      {selected ? <XIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} /> : null}
-                    </Pressable>
-                  );
-                })}
+                {allUsers
+                  .filter((user) => followingUserIds.includes(user.userId))
+                  .map((user) => {
+                    const selected = selectedFriends.includes(user.userId);
+                    return (
+                      <Pressable
+                        key={user.userId}
+                        className={cn(
+                          'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
+                          selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                        )}
+                        onPress={() => toggleFriend(user.userId)}>
+                        <Text
+                          className={cn('text-sm font-medium', selected ? 'text-primary' : 'text-foreground')}>
+                          {user.name || user.email}
+                        </Text>
+                        {selected ? <XIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} /> : null}
+                      </Pressable>
+                    );
+                  })}
               </View>
             </View>
-          ) : null}
+          ) : (
+            <View className="mb-6">
+              <Label className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Label>
+              <Text className="text-sm text-muted-foreground">
+                Follow your friends to add them to your check-ins!
+              </Text>
+            </View>
+          )}
 
           <Button
             size="lg"
-            className="mb-2 min-h-12 w-full rounded-xl active:opacity-90"
+            className="mb-12 min-h-12 w-full rounded-xl active:opacity-90"
             disabled={isSubmitting}
             onPress={handleSubmit}>
             {isSubmitting ? (
