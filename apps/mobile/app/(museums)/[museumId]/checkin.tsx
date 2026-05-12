@@ -41,6 +41,7 @@ export default function CheckInScreen() {
   const [visitDate, setVisitDate] = useState(new Date());
   const [durationHours, setDurationHours] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
   useEffect(() => {
     if (isTabSegment) {
@@ -55,6 +56,10 @@ export default function CheckInScreen() {
   const userCheckIns = useQuery(
     api.checkIns.getUserMuseumCheckIns,
     id && currentUser ? { userId: currentUser._id, museumId: id as Id<'museums'> } : 'skip'
+  );
+  const museumEvents = useQuery(
+    api.events.getEventsByMuseum,
+    id ? { museumId: id as Id<'museums'> } : 'skip'
   );
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
@@ -76,6 +81,12 @@ export default function CheckInScreen() {
   const toggleFriend = (userId: string) => {
     setSelectedFriends((prev) =>
       prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleEvent = (eventId: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventId) ? prev.filter((eid) => eid !== eventId) : [...prev, eventId]
     );
   };
 
@@ -129,6 +140,7 @@ export default function CheckInScreen() {
         friendUserIds: selectedFriends,
         durationHours,
         visitDate: visitDate.getTime(),
+        attendedEventIds: selectedEvents.length > 0 ? (selectedEvents as Id<'events'>[]) : undefined,
       });
 
       posthog?.capture('museum_visited', {
@@ -287,6 +299,34 @@ export default function CheckInScreen() {
               onChange={handleDateChange}
               maximumDate={new Date()}
             />
+          )}
+
+          {museumEvents && museumEvents.length > 0 && (
+            <View className="mb-6">
+              <Label className="mb-3 text-base font-semibold text-foreground">
+                Which events/exhibits did you attend?
+              </Label>
+              <View className="flex-row flex-wrap gap-2">
+                {museumEvents.map((event) => {
+                  const selected = selectedEvents.includes(event._id);
+                  return (
+                    <Pressable
+                      key={event._id}
+                      className={cn(
+                        'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
+                        selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                      )}
+                      onPress={() => toggleEvent(event._id)}>
+                      <Text
+                        className={cn('text-sm font-medium', selected ? 'text-primary' : 'text-foreground')}>
+                        {event.title}
+                      </Text>
+                      {selected ? <XIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} /> : null}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           )}
 
           {allUsers && followingUserIds && followingUserIds.length > 0 ? (

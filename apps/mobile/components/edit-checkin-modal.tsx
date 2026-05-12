@@ -33,6 +33,7 @@ import { useUniwind } from 'uniwind';
 type Props = {
   visible: boolean;
   checkInId: Id<'checkIns'> | null;
+  museumId: Id<'museums'> | undefined;
   initialRating: number | null | undefined;
   initialReview: string | undefined;
   initialImageUrls: string[] | undefined;
@@ -40,13 +41,15 @@ type Props = {
   initialFriendUserIds: string[] | undefined;
   initialDurationHours: number | undefined;
   initialVisitDate: number | undefined;
+  initialAttendedEventIds: Id<'events'>[] | undefined;
   onSave: (
     checkInId: Id<'checkIns'>,
     rating: number | null,
     review: string,
     imageStorageIds: Id<'_storage'>[] | undefined,
     friendUserIds: string[],
-    durationHours: number
+    durationHours: number,
+    attendedEventIds: Id<'events'>[] | undefined
   ) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;
@@ -55,6 +58,7 @@ type Props = {
 export function EditCheckinModal({
   visible,
   checkInId,
+  museumId,
   initialRating,
   initialReview,
   initialImageUrls,
@@ -62,6 +66,7 @@ export function EditCheckinModal({
   initialFriendUserIds,
   initialDurationHours,
   initialVisitDate,
+  initialAttendedEventIds,
   onSave,
   onDelete,
   onClose,
@@ -82,9 +87,16 @@ export function EditCheckinModal({
   const [selectedFriends, setSelectedFriends] = useState<string[]>(initialFriendUserIds ?? []);
   const [durationHours, setDurationHours] = useState<number>(initialDurationHours ?? 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(
+    (initialAttendedEventIds ?? []).map((id) => id as string)
+  );
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
+  const museumEvents = useQuery(
+    api.events.getEventsByMuseum,
+    museumId ? { museumId } : 'skip'
+  );
 
   useEffect(() => {
     if (visible) {
@@ -98,6 +110,7 @@ export function EditCheckinModal({
       setSelectedFriends(initialFriendUserIds ?? []);
       setDurationHours(initialDurationHours ?? 1);
       setIsSubmitting(false);
+      setSelectedEvents((initialAttendedEventIds ?? []).map((id) => id as string));
     }
   }, [
     visible,
@@ -107,11 +120,18 @@ export function EditCheckinModal({
     initialImageIds,
     initialFriendUserIds,
     initialDurationHours,
+    initialAttendedEventIds,
   ]);
 
   const toggleFriend = (userId: string) => {
     setSelectedFriends((prev) =>
       prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleEvent = (eventId: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventId) ? prev.filter((eid) => eid !== eventId) : [...prev, eventId]
     );
   };
 
@@ -166,7 +186,15 @@ export function EditCheckinModal({
         imageStorageIds = [...remainingImageIds];
       }
 
-      await onSave(checkInId, rating, review.trim(), imageStorageIds, selectedFriends, durationHours);
+      await onSave(
+        checkInId,
+        rating,
+        review.trim(),
+        imageStorageIds,
+        selectedFriends,
+        durationHours,
+        selectedEvents.length > 0 ? (selectedEvents as Id<'events'>[]) : undefined
+      );
     } catch (error) {
       console.error('Save error:', error);
       Alert.alert('Error', 'Failed to update check-in. Please try again.');
@@ -312,6 +340,35 @@ export function EditCheckinModal({
             <View className="mb-4">
               <CheckInDurationSelect value={durationHours} onChange={setDurationHours} />
             </View>
+
+            {museumEvents && museumEvents.length > 0 && (
+              <View className="mb-4">
+                <Label className="mb-2 text-muted-foreground">Events/Exhibits Attended (optional)</Label>
+                <View className="flex-row flex-wrap gap-2">
+                  {museumEvents.map((event) => {
+                    const isSelected = selectedEvents.includes(event._id);
+                    return (
+                      <Pressable
+                        key={event._id}
+                        className={cn(
+                          'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
+                          isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                        )}
+                        onPress={() => toggleEvent(event._id)}>
+                        <Text
+                          className={cn(
+                            'text-sm font-medium',
+                            isSelected ? 'text-primary' : 'text-foreground'
+                          )}>
+                          {event.title}
+                        </Text>
+                        {isSelected ? <XIcon size={16} color={mutedIcon} /> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             {allUsers && allUsers.length > 0 ? (
               <View className="mb-4">

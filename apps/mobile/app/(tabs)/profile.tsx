@@ -67,6 +67,7 @@ type ProfileVisit = {
     friendUserIds?: string[];
     imageIds?: Id<'_storage'>[];
     imageUrls?: string[];
+    attendedEventIds?: Id<'events'>[];
   };
   museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
@@ -811,6 +812,7 @@ export default function ProfileScreen() {
         <EditCheckinModal
           visible={editingVisit != null}
           checkInId={editingVisit?.checkIn._id as Id<'checkIns'> | null}
+          museumId={editingVisit?.checkIn.museumId as Id<'museums'> | undefined}
           initialRating={editingVisit?.checkIn.rating ?? null}
           initialReview={editingVisit?.checkIn.review}
           initialImageUrls={editingVisit?.checkIn.imageUrls}
@@ -818,6 +820,7 @@ export default function ProfileScreen() {
           initialFriendUserIds={editingVisit?.checkIn.friendUserIds}
           initialDurationHours={editingVisit?.checkIn.durationHours}
           initialVisitDate={editingVisit?.checkIn.visitDate}
+          initialAttendedEventIds={editingVisit?.checkIn.attendedEventIds}
           onSave={saveCheckIn}
           onDelete={() =>
             editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)

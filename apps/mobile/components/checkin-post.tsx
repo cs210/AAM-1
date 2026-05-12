@@ -33,6 +33,7 @@ export interface CheckinPostData {
   createdAt: number;
   editedAt?: number;
   coVisitors?: Array<{ userId: string; userName: string; userImage?: string }>;
+  attendedEventIds?: Id<'events'>[];
 }
 
 /** Left accent + rating color — theme chart tokens (synced with web). */
