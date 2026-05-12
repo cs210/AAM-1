@@ -86,6 +86,67 @@ export const getFollowing = query({
     return follows.map(f => f.followingId);
   },
 });
+
+// Get recommended people based on who your following follows (top 5 most followed)
+export const getPeopleYouMayKnow = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return [];
+
+    // Get the users this user is following
+    const userFollowing = await ctx.db
+      .query("userUserFollows")
+      .withIndex("by_follower", (q) => q.eq("followerId", user._id))
+      .collect();
+    
+    if (userFollowing.length === 0) return [];
+
+    const followingIds = userFollowing.map(f => f.followingId);
+
+    // For each person they follow, get who those people are following
+    const recommendationCounts = new Map<string, number>();
+    
+    for (const followingId of followingIds) {
+      const theirFollowing = await ctx.db
+        .query("userUserFollows")
+        .withIndex("by_follower", (q) => q.eq("followerId", followingId))
+        .collect();
+
+      for (const follow of theirFollowing) {
+        // Don't recommend the current user or people already following
+        if (follow.followingId === user._id || followingIds.includes(follow.followingId)) {
+          continue;
+        }
+
+        const count = recommendationCounts.get(follow.followingId) || 0;
+        recommendationCounts.set(follow.followingId, count + 1);
+      }
+    }
+
+    // Sort by count and get top 5
+    const recommendations = Array.from(recommendationCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([userId]) => userId);
+
+    // Fetch user profiles for the recommendations
+    const profiles = await ctx.db.query("userProfiles").collect();
+    const profileMap = new Map(profiles.map(p => [p.userId, p]));
+
+    return recommendations
+      .map(userId => {
+        const profile = profileMap.get(userId);
+        return {
+          userId,
+          name: profile?.name ?? null,
+          email: profile?.email ?? null,
+          imageUrl: profile?.imageUrl ?? null,
+        };
+      })
+      .filter(p => p.userId); // Filter out any missing profiles
+  },
+});
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";

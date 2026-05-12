@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, FlatList, Pressable, Linking, Share } from 'react-native';
+import { View, FlatList, Pressable, Linking, Share, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -196,22 +196,22 @@ function MuseumsRoute({
   );
 }
 
-function TasteAlignedRoute({
+function PeopleSearchRoute({
   peopleSearch,
   setPeopleSearch,
   users,
   filteredUsers,
-  compatibleCheckins,
   currUser,
   currUserId,
+  recommendedPeople,
 }: {
   peopleSearch: string;
   setPeopleSearch: (v: string) => void;
   users: ReturnType<typeof useQuery<typeof api.auth.listUsers>>;
-  filteredUsers: { userId: string; name?: string | null; email?: string | null }[];
-  compatibleCheckins: CheckinPostData[] | undefined;
+  filteredUsers: { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[];
   currUser: { _id: string } | null | undefined;
   currUserId: string | null;
+  recommendedPeople: { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[] | undefined;
 }) {
   const isSearching = peopleSearch.trim().length > 0;
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -222,11 +222,11 @@ function TasteAlignedRoute({
       appsFlyer.generateInviteLink(
         {
           channel: 'in-app',
-          campaign: 'taste-aligned-invite',
+          campaign: 'people-search-invite',
           customerID: currUserId || 'unknown',
           userParams: {
             deep_link_value: 'explore',
-            deep_link_sub1: 'taste-aligned',
+            deep_link_sub1: 'people',
             brandDomain: 'https://yami-stanford.vercel.app',
           },
         },
@@ -261,7 +261,7 @@ function TasteAlignedRoute({
         </View>
         <Button
           variant="secondary"
-          className="mt-3 w-fit px-6"
+          className="mb-3 mt-3 w-fit px-6"
           onPress={handleShareInviteLink}
           disabled={isGeneratingLink}>
           <Text className="text-base font-semibold">
@@ -285,15 +285,23 @@ function TasteAlignedRoute({
               const rawName = item.name || item.email || '';
               const displayName =
                 typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+              const initial = (displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?').toUpperCase();
               return (
                 <Pressable
-                  className="mx-5 mb-3 rounded-xl border border-border bg-card p-5 active:opacity-90"
+                  className="mx-5 mb-3 flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 active:opacity-90"
                   onPress={() =>
                     router.push(
                       `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
                     )
                   }>
-                  <Text className="text-lg font-medium text-foreground" numberOfLines={1}>
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
+                  ) : (
+                    <View className="size-12 items-center justify-center rounded-full bg-primary">
+                      <Text className="text-lg font-semibold text-primary-foreground">{initial}</Text>
+                    </View>
+                  )}
+                  <Text className="flex-1 text-lg font-medium text-foreground" numberOfLines={1}>
                     {displayName || "Name can't be displayed"}
                   </Text>
                 </Pressable>
@@ -312,34 +320,51 @@ function TasteAlignedRoute({
             }
           />
         )
-      ) : compatibleCheckins === undefined ? (
-        <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
-          <BrandActivityIndicator size="large" />
-          <Text variant="muted" className="mt-3 text-base">
-            Loading...
-          </Text>
-        </View>
-      ) : compatibleCheckins.length === 0 ? (
+      ) : recommendedPeople && recommendedPeople.length > 0 ? (
+        <FlatList
+          data={recommendedPeople}
+          renderItem={({ item }) => {
+            if (currUser && item.userId === currUser._id) return null;
+            const rawName = item.name || item.email || '';
+            const displayName =
+              typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+            const initial = (displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?').toUpperCase();
+            return (
+              <Pressable
+                className="mx-5 mb-3 flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 active:opacity-90"
+                onPress={() =>
+                  router.push(
+                    `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
+                  )
+                }>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
+                ) : (
+                  <View className="size-12 items-center justify-center rounded-full bg-primary">
+                    <Text className="text-lg font-semibold text-primary-foreground">{initial}</Text>
+                  </View>
+                )}
+                <Text className="flex-1 text-lg font-medium text-foreground" numberOfLines={1}>
+                  {displayName || "Name can't be displayed"}
+                </Text>
+              </Pressable>
+            );
+          }}
+          keyExtractor={(item) => item.userId}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={LIST_PADDING_BOTTOM}
+          ListHeaderComponent={
+            <View className="px-5 py-3">
+              <Text className="text-lg font-semibold text-foreground">People you may know</Text>
+            </View>
+          }
+        />
+      ) : (
         <View className="items-center px-12 py-12">
           <Text className="text-center text-base text-muted-foreground">
-            Follow museums to get a taste profile. Posts from taste-aligned people will show up here.
+            Search for people to follow and see their profiles!
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={compatibleCheckins}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item, index }) => (
-            <CheckinPost
-              checkin={item}
-              cardIndex={index}
-              isOwnCheckin={currUserId != null && item.userId === currUserId}
-              openOnReviewsTab
-            />
-          )}
-          contentContainerStyle={FEED_LIST_PADDING}
-          showsVerticalScrollIndicator={false}
-        />
       )}
     </View>
   );
@@ -350,13 +375,15 @@ export default function SearchScreen() {
   const [index, setIndex] = useState(0);
   const tabs = React.useMemo(
     () => [
-      { key: 'aligned', title: 'Taste Aligned' },
+      { key: 'people', title: 'People' },
       { key: 'museums', title: 'Museums' },
     ],
     []
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
+
+
   useEffect(() => {
     const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
     const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
@@ -365,7 +392,7 @@ export default function SearchScreen() {
     }
     if (tabParam === 'museums') {
       setIndex(1);
-    } else if (tabParam === 'aligned' || tabParam === 'people') {
+    } else if (tabParam === 'people') {
       setIndex(0);
     }
   }, [params.search, params.tab]);
@@ -450,21 +477,21 @@ export default function SearchScreen() {
     }
   }, [museumPage, totalMuseumPages]);
 
-  const users = useQuery(api.auth.listUsers);
+  const users = useQuery(api.auth.listUsers) as { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[] | undefined;
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     if (!peopleSearch.trim()) return [];
     const lowerSearch = peopleSearch.toLowerCase();
     return users.filter(
-      (user: { name?: string | null; email?: string | null }) =>
+      (user: { name?: string | null; email?: string | null; imageUrl?: string | null }) =>
         user.name?.toLowerCase().includes(lowerSearch) ||
         user.email?.toLowerCase().includes(lowerSearch)
     );
   }, [users, peopleSearch]);
 
   const currUser = useQuery(api.auth.getCurrentUser);
-  const compatibleCheckins = useQuery(api.wrapped.getCompatibleCheckIns);
-  const activeTabKey = tabs[index]?.key ?? 'aligned';
+  const recommendedPeople = useQuery(api.follows.getPeopleYouMayKnow);
+  const activeTabKey = tabs[index]?.key ?? 'people';
 
   return (
     <SafeAreaView
@@ -501,15 +528,15 @@ export default function SearchScreen() {
         })}
       </View>
 
-      {activeTabKey === 'aligned' ? (
-        <TasteAlignedRoute
+      {activeTabKey === 'people' ? (
+        <PeopleSearchRoute
           peopleSearch={peopleSearch}
           setPeopleSearch={setPeopleSearch}
           users={users}
           filteredUsers={filteredUsers}
-          compatibleCheckins={compatibleCheckins}
           currUser={currUser}
           currUserId={currUser?._id ?? null}
+          recommendedPeople={recommendedPeople}
         />
       ) : (
         <MuseumsRoute
