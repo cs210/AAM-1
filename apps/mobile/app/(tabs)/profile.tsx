@@ -25,18 +25,13 @@ import {
   Grid3x3Icon,
   ListIcon,
   BookmarkIcon,
-  Palette,
-  FlaskConical,
-  BookOpen,
-  Zap,
-  Compass,
-  Info,
 } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { MuseumCard } from '@/components/museum-card';
+import { TasteProfileExplainerModal } from '@/components/taste-profile-explainer-modal';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -59,35 +54,6 @@ const { width } = Dimensions.get('window');
 const PROFILE_BANNER_HEIGHT = 120;
 
 type TabType = 'visits' | 'gallery' | 'bookmarks';
-
-// Taste profile information with icons and descriptions
-const TASTE_PROFILE_INFO: Record<string, { icon: any; description: string }> = {
-  Artisan: {
-    icon: Palette,
-    description: 'A connoisseur of classical beauty and timeless artistic mastery. Your refined eye gravitates toward the masterworks of history.',
-  },
-  Innovator: {
-    icon: FlaskConical,
-    description: 'Driven by curiosity and wonder, you explore the frontiers of discovery where science meets the extraordinary.',
-  },
-  Historian: {
-    icon: BookOpen,
-    description: 'A keeper of stories and guardian of the past. You find meaning in the rich tapestry of human heritage and memory.',
-  },
-  Revolutionary: {
-    icon: Zap,
-    description: 'Bold and avant-garde, you embrace the cutting edge of contemporary expression. You challenge conventions and celebrate the new.',
-  },
-  Explorer: {
-    icon: Compass,
-    description: 'A wanderer through diverse cultures and traditions. You seek authentic connections across the mosaic of human identity.',
-  },
-};
-
-const TASTE_PROFILE_HOW_IT_WORKS = [
-  'We primarily look at the museums you follow and group them by broad type.',
-  'As you engage with other users, exhibits, and museums, your taste profile will evolve!',
-] as const;
 
 type ProfileVisit = {
   checkIn: {
@@ -424,13 +390,7 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('visits');
   const [showFollowModal, setShowFollowModal] = useState<'followers' | 'following' | null>(null);
   const [showTasteProfileModal, setShowTasteProfileModal] = useState(false);
-  const [tasteProfileHowItWorksVisible, setTasteProfileHowItWorksVisible] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
-
-  const closeTasteProfileModal = () => {
-    setTasteProfileHowItWorksVisible(false);
-    setShowTasteProfileModal(false);
-  };
 
   const MAX_AVATAR_DIMENSION = 512;
   const MAX_BANNER_WIDTH = 1200;
@@ -688,10 +648,7 @@ export default function ProfileScreen() {
                 {tasteProfile?.profileName ? (
                   <TouchableOpacity
                     className="flex-row items-center gap-1 rounded-xl bg-primary/15 px-2.5 py-1 active:opacity-80"
-                    onPress={() => {
-                      setTasteProfileHowItWorksVisible(false);
-                      setShowTasteProfileModal(true);
-                    }}
+                    onPress={() => setShowTasteProfileModal(true)}
                     activeOpacity={0.7}>
                     <Text className="text-sm font-semibold text-primary">{tasteProfile.profileName}</Text>
                   </TouchableOpacity>
@@ -934,75 +891,11 @@ export default function ProfileScreen() {
           </Modal>
         )}
 
-        {/* Taste Profile Modal */}
-        {showTasteProfileModal && tasteProfile?.profileName && (
-          <Modal
-            visible={true}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={closeTasteProfileModal}>
-            <Pressable
-              className="flex-1 items-center justify-center bg-black/60"
-              onPress={closeTasteProfileModal}>
-              <Pressable
-                className="w-4/5 rounded-2xl border border-border bg-card p-6 shadow-xl"
-                onPress={(e) => e.stopPropagation()}>
-                <View className="items-center">
-                  {/* Icon */}
-                  <View className="mb-4 size-16 items-center justify-center rounded-full bg-primary/15">
-                    {React.createElement(TASTE_PROFILE_INFO[tasteProfile.profileName]?.icon || Compass, {
-                      size: 32,
-                      color: primaryHex,
-                      strokeWidth: 2,
-                    })}
-                  </View>
-
-                  {/* Title + how it works */}
-                  <View className="mb-2 flex-row items-center justify-center gap-1.5">
-                    <Text className="text-2xl font-bold text-foreground">{tasteProfile.profileName}</Text>
-                    <TouchableOpacity
-                      onPress={() => setTasteProfileHowItWorksVisible((v) => !v)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      accessibilityRole="button"
-                      accessibilityLabel="How your taste profile is calculated"
-                      className="rounded-full p-1 active:opacity-70">
-                      <Info size={22} color={mutedHex} strokeWidth={2.25} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Description */}
-                  <Text
-                    className={cn(
-                      'text-center text-base leading-relaxed text-muted-foreground',
-                      tasteProfileHowItWorksVisible ? 'mb-3' : 'mb-5',
-                    )}>
-                    {TASTE_PROFILE_INFO[tasteProfile.profileName]?.description}
-                  </Text>
-
-                  {tasteProfileHowItWorksVisible ? (
-                    <View className="mb-5 w-full border-t border-border pt-4">
-                      {TASTE_PROFILE_HOW_IT_WORKS.map((line) => (
-                        <Text
-                          key={line}
-                          className="mb-2 text-center text-xs italic leading-relaxed text-muted-foreground last:mb-0">
-                          {line}
-                        </Text>
-                      ))}
-                    </View>
-                  ) : null}
-
-                  {/* Close Button */}
-                  <TouchableOpacity
-                    className="rounded-xl bg-primary px-6 py-3 active:opacity-90"
-                    onPress={closeTasteProfileModal}
-                    activeOpacity={0.8}>
-                    <Text className="text-base font-semibold text-primary-foreground">Got it</Text>
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
-            </Pressable>
-          </Modal>
-        )}
+        <TasteProfileExplainerModal
+          visible={showTasteProfileModal && !!tasteProfile?.profileName}
+          profileName={tasteProfile?.profileName ?? ''}
+          onClose={() => setShowTasteProfileModal(false)}
+        />
       </Pressable>
     </SafeAreaView>
   );
