@@ -5,10 +5,13 @@ import { router } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { usePostHog } from 'posthog-react-native';
 
 export default function PostAuthScreen() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
+  const posthog = usePostHog();
   const getOrCreateProfile = useMutation(api.userProfiles.getOrCreateUserProfile);
+  const currentUser = useQuery(api.auth.getCurrentUser, isAuthenticated ? undefined : 'skip');
   const userInterests = useQuery(api.userInterests.getForCurrentAccount, isAuthenticated ? {} : 'skip');
   const [profileCreated, setProfileCreated] = React.useState(false);
 
@@ -17,6 +20,12 @@ export default function PostAuthScreen() {
     if (!isAuthenticated || profileCreated) return;
     getOrCreateProfile()
       .then(() => {
+        if (currentUser) {
+          posthog?.identify(currentUser._id, {
+            email: currentUser.email,
+            name: currentUser.name,
+          });
+        }
         setProfileCreated(true);
       })
       .catch((error) => {
@@ -24,7 +33,7 @@ export default function PostAuthScreen() {
         // Still set to true to allow the flow to continue
         setProfileCreated(true);
       });
-  }, [isAuthenticated, profileCreated, getOrCreateProfile]);
+  }, [isAuthenticated, profileCreated, getOrCreateProfile, currentUser, posthog]);
 
   // Then check user interests and redirect
   React.useEffect(() => {
