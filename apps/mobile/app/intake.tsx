@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { api } from '@packages/backend/convex/_generated/api';
 import { useMutation } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import * as React from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -115,6 +115,7 @@ export default function IntakeScreen() {
   const [hasSubmitted, setHasSubmitted] = React.useState(false);
   const currentQuestion = QUESTIONS[step];
   const isComplete = step >= QUESTIONS.length;
+  const isLastQuestion = step === QUESTIONS.length - 1;
   const progress =
     QUESTIONS.length > 0
       ? isComplete
@@ -268,7 +269,6 @@ export default function IntakeScreen() {
                           toggleMultiSelect(currentQuestion.id, choice);
                         } else {
                           setAnswer(currentQuestion.id, choice);
-                          setTimeout(goNext, 280);
                         }
                       }}
                       className={cn(
@@ -300,7 +300,6 @@ export default function IntakeScreen() {
                         key={n}
                         onPress={() => {
                           setAnswer(currentQuestion.id, n);
-                          setTimeout(goNext, 280);
                         }}
                         className={cn(
                           'size-12 items-center justify-center rounded-[10px] border shadow-sm shadow-black/5 active:opacity-90',
@@ -347,12 +346,15 @@ export default function IntakeScreen() {
               />
             ) : null}
 
-            <View className="mt-auto flex-row justify-between pt-8">
+            <View className="mt-auto flex-row items-center justify-between pt-8">
               <Button variant="outline" size="icon" className="rounded-full" onPress={goBack}>
                 <Icon as={ArrowLeft} size={24} className="text-foreground" />
               </Button>
-              <Button variant="outline" size="icon" className="rounded-full" onPress={goNext}>
-                <Icon as={ArrowRight} size={24} className="text-foreground" />
+              <Button
+                variant="default"
+                className="min-w-[104px]"
+                onPress={goNext}>
+                <Text className="text-sm font-semibold">{isLastQuestion ? 'Finish' : 'Next'}</Text>
               </Button>
             </View>
           </ScrollView>
