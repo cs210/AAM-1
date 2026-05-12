@@ -9,7 +9,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { XIcon, CalendarIcon } from 'lucide-react-native';
+import { XIcon, CalendarIcon, ChevronDownIcon, CheckIcon } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
@@ -90,6 +90,7 @@ export function EditCheckinModal({
   const [selectedEvents, setSelectedEvents] = useState<string[]>(
     (initialAttendedEventIds ?? []).map((id) => id as string)
   );
+  const [eventsDropdownOpen, setEventsDropdownOpen] = useState(false);
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
@@ -111,6 +112,7 @@ export function EditCheckinModal({
       setDurationHours(initialDurationHours ?? 1);
       setIsSubmitting(false);
       setSelectedEvents((initialAttendedEventIds ?? []).map((id) => id as string));
+      setEventsDropdownOpen(false);
     }
   }, [
     visible,
@@ -343,29 +345,50 @@ export function EditCheckinModal({
 
             {museumEvents && museumEvents.length > 0 && (
               <View className="mb-4">
-                <Label className="mb-2 text-muted-foreground">Events/Exhibits Attended (optional)</Label>
-                <View className="flex-row flex-wrap gap-2">
-                  {museumEvents.map((event) => {
-                    const isSelected = selectedEvents.includes(event._id);
-                    return (
-                      <Pressable
-                        key={event._id}
-                        className={cn(
-                          'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
-                          isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card'
-                        )}
-                        onPress={() => toggleEvent(event._id)}>
-                        <Text
-                          className={cn(
-                            'text-sm font-medium',
-                            isSelected ? 'text-primary' : 'text-foreground'
-                          )}>
-                          {event.title}
-                        </Text>
-                        {isSelected ? <XIcon size={16} color={mutedIcon} /> : null}
-                      </Pressable>
-                    );
-                  })}
+                <Label className="mb-2 text-muted-foreground">Exhibitions & Events</Label>
+                <View className="relative">
+                  <Pressable
+                    className="flex-row items-center justify-between rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-90"
+                    onPress={() => setEventsDropdownOpen((o) => !o)}>
+                    <Text className="flex-1 text-base text-foreground">
+                      {selectedEvents.length === 0
+                        ? 'Select events/exhibitions'
+                        : `${selectedEvents.length} selected`}
+                    </Text>
+                    <ChevronDownIcon
+                      size={20}
+                      color={mutedIcon}
+                      style={{ transform: [{ rotate: eventsDropdownOpen ? '180deg' : '0deg' }] }}
+                    />
+                  </Pressable>
+                  {eventsDropdownOpen ? (
+                    <View className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
+                      {museumEvents.map((event, index) => {
+                        const isSelected = selectedEvents.includes(event._id);
+                        const isLast = index === museumEvents.length - 1;
+                        return (
+                          <Pressable
+                            key={event._id}
+                            className={cn(
+                              'flex-row items-center gap-3 px-4 py-3 active:bg-muted',
+                              !isLast && 'border-b border-border'
+                            )}
+                            onPress={() => toggleEvent(event._id)}>
+                            <View
+                              className={cn(
+                                'size-5 items-center justify-center rounded border-2',
+                                isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                              )}>
+                              {isSelected ? (
+                                <CheckIcon size={14} color={RN_API_BACKGROUND_LIGHT} strokeWidth={3} />
+                              ) : null}
+                            </View>
+                            <Text className="flex-1 text-base text-foreground">{event.title}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
                 </View>
               </View>
             )}
