@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { BellIcon, ClipboardCheckIcon } from 'lucide-react-native';
+import { BellIcon, PlusIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -89,7 +89,7 @@ export default function HomeScreen() {
                 accessibilityLabel="Check in at a museum"
                 onPress={() => setMuseumCheckinPickerOpen(true)}
                 className="p-2 active:opacity-80">
-                <ClipboardCheckIcon size={24} color={primaryHex} />
+                <PlusIcon size={24} color={primaryHex} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
