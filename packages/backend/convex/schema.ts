@@ -246,6 +246,15 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
 
+  /** Expo push tokens for remote mention alerts (one row per device token). */
+  expoPushTokens: defineTable({
+    userId: v.string(),
+    token: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_token", ["token"]),
+
   // Check-ins (museum or event)
   checkIns: defineTable({
     userId: v.string(), // Better Auth user ID

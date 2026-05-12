@@ -186,6 +186,14 @@ async function clearProfileState(ctx: MutationCtx, userId: string) {
     await ctx.db.delete(pref._id);
   }
 
+  const pushTokens = await ctx.db
+    .query("expoPushTokens")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .collect();
+  for (const row of pushTokens) {
+    await ctx.db.delete(row._id);
+  }
+
   const interests = await ctx.db
     .query("userInterests")
     .withIndex("by_accountId", (q) => q.eq("accountId", userId))

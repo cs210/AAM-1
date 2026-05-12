@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { authComponent } from "./auth";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -66,6 +67,7 @@ export async function notifyTaggedFriendsForCheckIn(
   let inserted = 0;
   let skippedMuted = 0;
   const now = Date.now();
+  const pushRecipientIds: string[] = [];
   for (const recipientUserId of recipientIds) {
     const prefs = await ctx.db
       .query("socialNotificationPrefs")
@@ -89,6 +91,20 @@ export async function notifyTaggedFriendsForCheckIn(
       createdAt: now,
     });
     inserted += 1;
+    pushRecipientIds.push(recipientUserId);
+  }
+
+  if (pushRecipientIds.length > 0) {
+    await ctx.scheduler.runAfter(0, internal.pushNotifications.sendMentionExpoPushes, {
+      recipientUserIds: pushRecipientIds,
+      title: "Tagged you",
+      body: `${firstName} tagged you in a check-in at ${museumName}.`,
+      data: {
+        kind: "mention_in_checkin",
+        museumId: museumId as string,
+        checkInId: checkInId as string,
+      },
+    });
   }
 
   console.log(

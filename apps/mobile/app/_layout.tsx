@@ -1,5 +1,6 @@
 import '@/global.css';
 
+import { SocialMentionOsNotifications } from '@/components/social-mention-os-notifications';
 import { SentryUserSync } from '@/components/sentry-user-sync';
 import { navigationIntegration } from '@/lib/sentry';
 import { NAV_THEME } from '@/constants/rn-api-colors';
@@ -39,6 +40,7 @@ function RootLayout() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <ConvexClientProvider>
+        <SocialMentionOsNotifications />
         <PostHogProvider
             apiKey={posthogProjectKey}
             options={{
