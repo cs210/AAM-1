@@ -9,17 +9,15 @@ import {
 } from 'react-native';
 import { useQuery } from 'convex/react';
 import { router } from 'expo-router';
-import { SearchIcon, XIcon } from 'lucide-react-native';
+import { XIcon } from 'lucide-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { Text } from '@/components/ui/text';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
-import { useUniwind } from 'uniwind';
-import {
-  RN_API_MUTED_FOREGROUND_DARK,
-  RN_API_MUTED_FOREGROUND_LIGHT,
-} from '@/constants/rn-api-colors';
+import { SearchFieldRow } from '@/components/search-field-row';
 
 type Props = {
   visible: boolean;
@@ -37,9 +35,6 @@ function locationSubtitle(museum: {
 }
 
 export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
-  const { theme } = useUniwind();
-  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
-
   const [search, setSearch] = useState('');
   const museums = useQuery(api.museums.listMuseumsWithStats, {});
 
@@ -88,30 +83,25 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
             <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
             <View className="flex-row items-center justify-between gap-3">
               <Text className="flex-1 text-xl font-bold text-foreground">Check in</Text>
-              <Pressable
-                accessibilityRole="button"
+              <Button
+                variant="ghost"
+                size="icon"
                 accessibilityLabel="Close"
-                hitSlop={12}
                 onPress={onClose}
-                className="p-2 active:opacity-70">
-                <XIcon size={22} color={mutedHex} />
-              </Pressable>
+                className="shrink-0">
+                <Icon as={XIcon} className="text-muted-foreground" size={22} />
+              </Button>
             </View>
             <Text className="mt-1 text-sm text-muted-foreground">Choose a museum to log your visit.</Text>
           </View>
 
           <View className="px-5 pt-3">
-            <View className="mb-3 flex-row items-center rounded-xl bg-muted px-3 py-2.5">
-              <SearchIcon size={18} color={mutedHex} />
-              <Input
-                value={search}
-                onChangeText={setSearch}
-                placeholder="Search museums..."
-                autoCapitalize="none"
-                autoCorrect={false}
-                className="ml-2 flex-1 border-0 bg-transparent py-0 text-base text-foreground shadow-none"
-              />
-            </View>
+            <SearchFieldRow
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search museums..."
+              className="mx-0 mb-3 mt-0"
+            />
           </View>
 
           {museums === undefined ? (
@@ -126,7 +116,7 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
               data={filtered}
               keyExtractor={(item) => item._id}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}
+              contentContainerClassName="grow px-5 pb-7"
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 <Text className="py-8 text-center text-muted-foreground">
@@ -140,11 +130,15 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel={`Check in at ${item.name}`}
                     onPress={() => onPickMuseum(item._id)}
-                    className="mb-2 rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-90">
-                    <Text className="text-base font-semibold text-foreground">{item.name}</Text>
-                    {sub ? (
-                      <Text className="mt-0.5 text-sm text-muted-foreground">{sub}</Text>
-                    ) : null}
+                    className="mb-2 active:opacity-90">
+                    <Card className="gap-0 border py-0 shadow-sm">
+                      <CardContent className="gap-1 px-4 py-3.5">
+                        <CardTitle className="text-base font-semibold leading-snug">{item.name}</CardTitle>
+                        {sub ? (
+                          <CardDescription numberOfLines={2}>{sub}</CardDescription>
+                        ) : null}
+                      </CardContent>
+                    </Card>
                   </Pressable>
                 );
               }}
