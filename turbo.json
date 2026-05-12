@@ -28,7 +28,8 @@
         "NEXT_PUBLIC_CONVEX_URL",
         "EXPO_PUBLIC_APP_ENV",
         "EXPO_PUBLIC_SENTRY_DSN",
-        "EXPO_PUBLIC_SENTRY_RELEASE"
+        "EXPO_PUBLIC_SENTRY_RELEASE",
+        "EXPO_PUBLIC_POSTHOG_PROJECT_KEY"
     ],
     "ui": "tui",
     "tasks": {

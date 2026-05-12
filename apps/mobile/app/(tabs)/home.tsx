@@ -5,7 +5,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { BellIcon } from 'lucide-react-native';
+import { BellIcon, PlusIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +15,7 @@ import { DecorativeGradientShapes } from '@/components/decorative-gradient-shape
 import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
+import { MuseumCheckinPickerModal } from '../../components/museum-checkin-picker-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useUniwind } from 'uniwind';
 import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
   const unreadNotifications = useQuery(api.socialNotifications.unreadCount);
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
+  const [museumCheckinPickerOpen, setMuseumCheckinPickerOpen] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
   if (
@@ -82,6 +84,13 @@ export default function HomeScreen() {
               <Separator className="mt-2 max-w-3/5 self-start bg-border" />
             </View>
             <View className="ml-4 mt-1 flex-row items-center gap-3">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Check in at a museum"
+                onPress={() => setMuseumCheckinPickerOpen(true)}
+                className="p-2 active:opacity-80">
+                <PlusIcon size={24} color={primaryHex} />
+              </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Notifications"
@@ -150,6 +159,11 @@ export default function HomeScreen() {
         </View>
         </View>
       </ScrollView>
+
+      <MuseumCheckinPickerModal
+        visible={museumCheckinPickerOpen}
+        onClose={() => setMuseumCheckinPickerOpen(false)}
+      />
 
       <EditCheckinModal
         visible={editingCheckin != null}

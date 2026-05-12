@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
 import { CalendarIcon, MapPinIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
@@ -117,7 +117,7 @@ export function EventCard({
           <>
             <Image
               source={{ uri: event.imageUrl }}
-              style={StyleSheet.absoluteFillObject}
+              className="absolute inset-0 size-full"
               resizeMode="cover"
             />
             <View className="absolute inset-0 bg-black/45" />

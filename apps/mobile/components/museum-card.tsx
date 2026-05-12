@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Pressable, Image, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { View, Pressable, Image } from 'react-native';
+import { router, type Href } from 'expo-router';
 import { Doc } from '@packages/backend/convex/_generated/dataModel';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -57,7 +57,7 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
           <>
             <Image
               source={{ uri: museum.imageUrl }}
-              style={StyleSheet.absoluteFillObject}
+              className="absolute inset-0 size-full"
               resizeMode="cover"
               onError={() => setImageFailed(true)}
             />
