@@ -58,11 +58,12 @@ jobs:
           echo "Android fingerprint: $HASH"
 
       # ── Check cache (cache hit = fingerprint unchanged, no build needed) ───
+      # Cache paths are repo-root-relative; fingerprint files are written under apps/mobile.
       - name: Check iOS fingerprint cache
         id: ios-cache
         uses: actions/cache@v4
         with:
-          path: .fingerprint-ios
+          path: apps/mobile/.fingerprint-ios
           key: fingerprint-ios-${{ steps.ios-fp.outputs.hash }}
           lookup-only: true
 
@@ -70,7 +71,7 @@ jobs:
         id: android-cache
         uses: actions/cache@v4
         with:
-          path: .fingerprint-android
+          path: apps/mobile/.fingerprint-android
           key: fingerprint-android-${{ steps.android-fp.outputs.hash }}
           lookup-only: true
 
@@ -118,7 +119,7 @@ jobs:
         if: success() && steps.ios-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: .fingerprint-ios
+          path: apps/mobile/.fingerprint-ios
           key: fingerprint-ios-${{ steps.ios-fp.outputs.hash }}
 
       - name: Save Android fingerprint cache
@@ -129,7 +130,7 @@ jobs:
         if: success() && steps.android-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: .fingerprint-android
+          path: apps/mobile/.fingerprint-android
           key: fingerprint-android-${{ steps.android-fp.outputs.hash }}
 
       # ── Publish OTA if fingerprint unchanged ───────────────────────────────
