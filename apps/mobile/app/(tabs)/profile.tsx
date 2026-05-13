@@ -31,6 +31,7 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { MuseumCard } from '@/components/museum-card';
+import { TasteProfileExplainerModal } from '@/components/taste-profile-explainer-modal';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -391,6 +392,7 @@ export default function ProfileScreen() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('visits');
   const [showFollowModal, setShowFollowModal] = useState<'followers' | 'following' | null>(null);
+  const [showTasteProfileModal, setShowTasteProfileModal] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
 
   const MAX_AVATAR_DIMENSION = 512;
@@ -647,9 +649,12 @@ export default function ProfileScreen() {
                   {displayName}
                 </Text>
                 {tasteProfile?.profileName ? (
-                  <View className="flex-row items-center gap-1 rounded-xl bg-primary/15 px-2.5 py-1">
+                  <TouchableOpacity
+                    className="flex-row items-center gap-1 rounded-xl bg-primary/15 px-2.5 py-1 active:opacity-80"
+                    onPress={() => setShowTasteProfileModal(true)}
+                    activeOpacity={0.7}>
                     <Text className="text-sm font-semibold text-primary">{tasteProfile.profileName}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ) : null}
                 {!isViewingOtherProfile && profileVisits && profileVisits.length >= 3 && (
                   <TouchableOpacity
@@ -891,6 +896,12 @@ export default function ProfileScreen() {
             </Pressable>
           </Modal>
         )}
+
+        <TasteProfileExplainerModal
+          visible={showTasteProfileModal && !!tasteProfile?.profileName}
+          profileName={tasteProfile?.profileName ?? ''}
+          onClose={() => setShowTasteProfileModal(false)}
+        />
       </Pressable>
     </SafeAreaView>
   );
