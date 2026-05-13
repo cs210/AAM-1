@@ -669,7 +669,34 @@
       "loadFailed": "Failed to load museums",
       "createFailed": "Failed to create museum",
       "deleteFailed": "Failed to delete museum",
-      "museumRequired": "Museum name is required."
+      "museumRequired": "Museum name is required.",
+      "csv": {
+        "title": "CSV import",
+        "description": "Upload a CSV with museum_name, city, state, country, and exhibition_page_url. Each row creates or reuses a museum, fills details, then imports exhibitions.",
+        "chooseFile": "Choose CSV",
+        "selectedFile": "{fileName} · {count} rows ready",
+        "parsed": "Parsed {count} CSV rows.",
+        "parseFailed": "Failed to parse CSV.",
+        "start": "Start import",
+        "stop": "Stop run",
+        "stopping": "Stopping…",
+        "runningRow": "Running row {current} of {total}: {name}",
+        "progress": "{completed} of {total} rows processed",
+        "percent": "{percent}%",
+        "rowLabel": "Row {rowNumber}",
+        "locationUnknown": "Location unknown",
+        "created": "created",
+        "reused": "reused",
+        "resultSummary": "Museum {museumAction}; details {detailsStatus}; {images} images; {exhibitions} exhibitions imported from {parsed} parsed.",
+        "importFailed": "Failed to import CSV row.",
+        "status": {
+          "pending": "Pending",
+          "running": "Running",
+          "completed": "Done",
+          "failed": "Failed",
+          "stopped": "Stopped"
+        }
+      }
     },
     "adminVisualSearch": {
       "config": {
