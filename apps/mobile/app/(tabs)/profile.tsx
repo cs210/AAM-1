@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -47,6 +47,7 @@ import {
   RN_API_PRIMARY_DARK,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
+import { usePostHog } from 'posthog-react-native';
 
 const { width } = Dimensions.get('window');
 /** Matches `h-30` banner (30 × 4px). */
@@ -341,6 +342,8 @@ export default function ProfileScreen() {
     if (!userProfile || !viewedUserId) return null;
     return userProfile.find((u: any) => u.userId === viewedUserId);
   }, [userProfile, viewedUserId]);
+
+  const posthog = usePostHog()
 
   // Fetch follower/following counts
   const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
@@ -651,7 +654,10 @@ export default function ProfileScreen() {
                 {!isViewingOtherProfile && profileVisits && profileVisits.length >= 3 && (
                   <TouchableOpacity
                     className="flex-row items-center gap-1.5 rounded-full bg-primary px-2.5 py-1.5 active:opacity-90"
-                    onPress={() => router.push('/wrapped')}
+                    onPress={() => {
+                      posthog?.capture('wrapped_click', {});
+                      router.push('/wrapped')
+                    }}
                     activeOpacity={0.8}>
                     <Sparkles size={14} color="#FFFFFF" />
                     <Text className="text-sm font-bold text-primary-foreground">Wrapped</Text>
