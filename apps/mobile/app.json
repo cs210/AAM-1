@@ -41,6 +41,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@react-native-async-storage/expo-with-async-storage",
       "expo-router",
       "expo-secure-store",
       "expo-font",
