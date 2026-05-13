@@ -67,7 +67,7 @@ type ProfileVisit = {
     friendUserIds?: string[];
     imageIds?: Id<'_storage'>[];
     imageUrls?: string[];
-    attendedEventIds?: Id<'events'>[];
+    attendedEventIds?: (Id<'events'> | Id<'exhibitions'>)[];
   };
   museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };

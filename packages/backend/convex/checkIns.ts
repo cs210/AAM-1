@@ -88,7 +88,7 @@ export const createCheckIn = mutation({
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()), // If not provided, use current time
-    attendedEventIds: v.optional(v.array(v.id("events"))), // events/exhibitions attended
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))), // events/exhibitions attended
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -363,7 +363,7 @@ export const updateCheckIn = mutation({
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
-    attendedEventIds: v.optional(v.array(v.id("events"))),
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -474,7 +474,7 @@ export const createMuseumCheckIn = mutation({
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()),
-    attendedEventIds: v.optional(v.array(v.id("events"))),
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);

@@ -146,7 +146,7 @@ export default function CheckInScreen() {
         friendUserIds: selectedFriends,
         durationHours,
         visitDate: visitDate.getTime(),
-        attendedEventIds: selectedEvents.length > 0 ? (selectedEvents as Id<'events'>[]) : undefined,
+        attendedEventIds: selectedEvents.length > 0 ? (selectedEvents as (Id<'events'> | Id<'exhibitions'>)[]) : undefined,
       });
 
       posthog?.capture('museum_visited', {

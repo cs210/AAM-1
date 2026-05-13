@@ -41,7 +41,7 @@ type Props = {
   initialFriendUserIds: string[] | undefined;
   initialDurationHours: number | undefined;
   initialVisitDate: number | undefined;
-  initialAttendedEventIds: Id<'events'>[] | undefined;
+  initialAttendedEventIds: (Id<'events'> | Id<'exhibitions'>)[] | undefined;
   onSave: (
     checkInId: Id<'checkIns'>,
     rating: number | null,
@@ -49,7 +49,7 @@ type Props = {
     imageStorageIds: Id<'_storage'>[] | undefined,
     friendUserIds: string[],
     durationHours: number,
-    attendedEventIds: Id<'events'>[] | undefined
+    attendedEventIds: (Id<'events'> | Id<'exhibitions'>)[] | undefined
   ) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;

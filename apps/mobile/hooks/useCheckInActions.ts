@@ -19,7 +19,7 @@ export function useCheckInActions(onClose: () => void) {
     imageStorageIds?: Id<'_storage'>[],
     friendUserIds?: string[],
     durationHours?: number,
-    attendedEventIds?: Id<'events'>[]
+    attendedEventIds?: (Id<'events'> | Id<'exhibitions'>)[]
   ) => {
     await updateCheckIn({
       checkInId,
