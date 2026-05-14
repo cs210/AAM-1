@@ -710,8 +710,10 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              {viewedUserId === currentUserId && profile?.email && (
-                <Text className="text-muted-foreground mb-2 text-sm">{profile.email}</Text>
+              {viewedUserId === currentUserId && (currentUser?.email || profile?.email) && (
+                <Text className="text-muted-foreground mb-2 text-sm">
+                  {currentUser?.email ?? profile?.email}
+                </Text>
               )}
 
               <View className="mt-1 flex-row gap-4">

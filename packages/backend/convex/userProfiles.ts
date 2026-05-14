@@ -94,6 +94,15 @@ export const getOrCreateUserProfile = mutation({
       return { _id: profileId, _creationTime: Date.now(), ...profileData };
     }
 
+    const updates: { name?: string; email?: string; updatedAt?: number } = {};
+    if (profile.name !== user.name) updates.name = user.name;
+    if (profile.email !== user.email) updates.email = user.email;
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = Date.now();
+      await ctx.db.patch(profile._id, updates);
+      return { ...profile, ...updates };
+    }
+
     return profile;
   },
 });
