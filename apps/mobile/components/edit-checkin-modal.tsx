@@ -9,7 +9,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { XIcon, CalendarIcon } from 'lucide-react-native';
+import { XIcon, CalendarIcon, ChevronDownIcon, CheckIcon } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
@@ -33,6 +33,7 @@ import { useUniwind } from 'uniwind';
 type Props = {
   visible: boolean;
   checkInId: Id<'checkIns'> | null;
+  museumId: Id<'museums'> | undefined;
   initialRating: number | null | undefined;
   initialReview: string | undefined;
   initialImageUrls: string[] | undefined;
@@ -40,13 +41,15 @@ type Props = {
   initialFriendUserIds: string[] | undefined;
   initialDurationHours: number | undefined;
   initialVisitDate: number | undefined;
+  initialAttendedEventIds: (Id<'events'> | Id<'exhibitions'>)[] | undefined;
   onSave: (
     checkInId: Id<'checkIns'>,
     rating: number | null,
     review: string,
     imageStorageIds: Id<'_storage'>[] | undefined,
     friendUserIds: string[],
-    durationHours: number
+    durationHours: number,
+    attendedEventIds: (Id<'events'> | Id<'exhibitions'>)[] | undefined
   ) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;
@@ -55,6 +58,7 @@ type Props = {
 export function EditCheckinModal({
   visible,
   checkInId,
+  museumId,
   initialRating,
   initialReview,
   initialImageUrls,
@@ -62,6 +66,7 @@ export function EditCheckinModal({
   initialFriendUserIds,
   initialDurationHours,
   initialVisitDate,
+  initialAttendedEventIds,
   onSave,
   onDelete,
   onClose,
@@ -82,9 +87,17 @@ export function EditCheckinModal({
   const [selectedFriends, setSelectedFriends] = useState<string[]>(initialFriendUserIds ?? []);
   const [durationHours, setDurationHours] = useState<number>(initialDurationHours ?? 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(
+    (initialAttendedEventIds ?? []).map((id) => id as string)
+  );
+  const [eventsDropdownOpen, setEventsDropdownOpen] = useState(false);
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
+  const museumEvents = useQuery(
+    api.events.getEventsByMuseum,
+    museumId ? { museumId } : 'skip'
+  );
 
   useEffect(() => {
     if (visible) {
@@ -98,6 +111,8 @@ export function EditCheckinModal({
       setSelectedFriends(initialFriendUserIds ?? []);
       setDurationHours(initialDurationHours ?? 1);
       setIsSubmitting(false);
+      setSelectedEvents((initialAttendedEventIds ?? []).map((id) => id as string));
+      setEventsDropdownOpen(false);
     }
   }, [
     visible,
@@ -107,11 +122,18 @@ export function EditCheckinModal({
     initialImageIds,
     initialFriendUserIds,
     initialDurationHours,
+    initialAttendedEventIds,
   ]);
 
   const toggleFriend = (userId: string) => {
     setSelectedFriends((prev) =>
       prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleEvent = (eventId: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventId) ? prev.filter((eid) => eid !== eventId) : [...prev, eventId]
     );
   };
 
@@ -166,7 +188,15 @@ export function EditCheckinModal({
         imageStorageIds = [...remainingImageIds];
       }
 
-      await onSave(checkInId, rating, review.trim(), imageStorageIds, selectedFriends, durationHours);
+      await onSave(
+        checkInId,
+        rating,
+        review.trim(),
+        imageStorageIds,
+        selectedFriends,
+        durationHours,
+        selectedEvents.length > 0 ? (selectedEvents as Id<'events'>[]) : undefined
+      );
     } catch (error) {
       console.error('Save error:', error);
       Alert.alert('Error', 'Failed to update check-in. Please try again.');
@@ -312,6 +342,56 @@ export function EditCheckinModal({
             <View className="mb-4">
               <CheckInDurationSelect value={durationHours} onChange={setDurationHours} />
             </View>
+
+            {museumEvents && museumEvents.length > 0 && (
+              <View className="mb-4">
+                <Label className="mb-2 text-muted-foreground">Exhibitions & Events</Label>
+                <View className="relative">
+                  <Pressable
+                    className="flex-row items-center justify-between rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-90"
+                    onPress={() => setEventsDropdownOpen((o) => !o)}>
+                    <Text className="flex-1 text-base text-foreground">
+                      {selectedEvents.length === 0
+                        ? 'Select events/exhibitions'
+                        : `${selectedEvents.length} selected`}
+                    </Text>
+                    <ChevronDownIcon
+                      size={20}
+                      color={mutedIcon}
+                      style={{ transform: [{ rotate: eventsDropdownOpen ? '180deg' : '0deg' }] }}
+                    />
+                  </Pressable>
+                  {eventsDropdownOpen ? (
+                    <View className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
+                      {museumEvents.map((event, index) => {
+                        const isSelected = selectedEvents.includes(event._id);
+                        const isLast = index === museumEvents.length - 1;
+                        return (
+                          <Pressable
+                            key={event._id}
+                            className={cn(
+                              'flex-row items-center gap-3 px-4 py-3 active:bg-muted',
+                              !isLast && 'border-b border-border'
+                            )}
+                            onPress={() => toggleEvent(event._id)}>
+                            <View
+                              className={cn(
+                                'size-5 items-center justify-center rounded border-2',
+                                isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                              )}>
+                              {isSelected ? (
+                                <CheckIcon size={14} color={RN_API_BACKGROUND_LIGHT} strokeWidth={3} />
+                              ) : null}
+                            </View>
+                            <Text className="flex-1 text-base text-foreground">{event.title}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            )}
 
             {allUsers && allUsers.length > 0 ? (
               <View className="mb-4">

@@ -168,6 +168,11 @@ export default function HomeScreen() {
       <EditCheckinModal
         visible={editingCheckin != null}
         checkInId={editingCheckin?._id as Id<'checkIns'> | null}
+        museumId={
+          editingCheckin?.contentType === 'museum'
+            ? (editingCheckin.contentId as Id<'museums'>)
+            : undefined
+        }
         initialRating={editingCheckin?.rating ?? null}
         initialReview={editingCheckin?.review}
         initialImageUrls={editingCheckin?.imageUrls}
@@ -175,6 +180,7 @@ export default function HomeScreen() {
         initialFriendUserIds={editingCheckin?.friendUserIds}
         initialDurationHours={editingCheckin?.durationHours}
         initialVisitDate={editingCheckin?.visitDate}
+        initialAttendedEventIds={editingCheckin?.attendedEventIds}
         onSave={saveCheckIn}
         onDelete={() =>
           editingCheckin && deleteCheckIn(editingCheckin._id as Id<'checkIns'>)
