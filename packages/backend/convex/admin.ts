@@ -457,6 +457,105 @@ export const listOrganizationMembersForOwner = action({
   },
 });
 
+/** Search users by email for the current org owner member-management UX. */
+export const searchUsersByEmailForOwner = action({
+  args: {
+    organizationId: v.string(),
+    emailQuery: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedAction(ctx);
+    const membership = (await ctx.runQuery(
+      (components.betterAuth as any).getOrganization.getMember,
+      { organizationId: args.organizationId, userId: user._id }
+    )) as BetterAuthMemberRow | null;
+    if (!membership || membership.role !== "owner") {
+      throw new Error("Only the organization owner can search users");
+    }
+
+    const organization = await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
+      id: args.organizationId,
+    });
+    if (!organization) throw new Error("Organization not found");
+
+    return (await ctx.runQuery((components.betterAuth as any).getUser.searchUsersByEmail, {
+      emailQuery: args.emailQuery,
+      limit: args.limit,
+    })) as BetterAuthUserRow[];
+  },
+});
+
+/** Add an existing user as a member of the current owner's organization. */
+export const addUserToOrganizationByEmailForOwner = mutation({
+  args: {
+    organizationId: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await requireAuthenticatedUser(ctx);
+    const membership = (await ctx.runQuery(
+      (components.betterAuth as any).getOrganization.getMember,
+      { organizationId: args.organizationId, userId: currentUser._id }
+    )) as BetterAuthMemberRow | null;
+    if (!membership || membership.role !== "owner") {
+      throw new Error("Only the organization owner can add members");
+    }
+
+    const organization = await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
+      id: args.organizationId,
+    });
+    if (!organization) throw new Error("Organization not found");
+
+    const componentUser = (await ctx.runQuery((components.betterAuth as any).getUser.getUserByEmail, {
+      email: args.email,
+    })) as BetterAuthUserRow | null;
+    if (!componentUser) throw new Error("No user found for that email");
+
+    await ctx.runMutation((components.betterAuth as any).getOrganization.addMemberToOrganization, {
+      organizationId: args.organizationId,
+      userId: componentUser.id,
+      role: "member",
+    });
+    return componentUser;
+  },
+});
+
+/** Remove a non-owner member from the current owner's organization. */
+export const removeUserFromOrganizationForOwner = mutation({
+  args: {
+    organizationId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await requireAuthenticatedUser(ctx);
+    const membership = (await ctx.runQuery(
+      (components.betterAuth as any).getOrganization.getMember,
+      { organizationId: args.organizationId, userId: currentUser._id }
+    )) as BetterAuthMemberRow | null;
+    if (!membership || membership.role !== "owner") {
+      throw new Error("Only the organization owner can remove members");
+    }
+    if (args.userId === currentUser._id) {
+      throw new Error("Transfer ownership before removing yourself");
+    }
+
+    const targetMembership = (await ctx.runQuery(
+      (components.betterAuth as any).getOrganization.getMember,
+      { organizationId: args.organizationId, userId: args.userId }
+    )) as BetterAuthMemberRow | null;
+    if (!targetMembership) throw new Error("Member not found");
+    if (targetMembership.role === "owner") {
+      throw new Error("Transfer ownership before removing the owner");
+    }
+
+    await ctx.runMutation((components.betterAuth as any).getOrganization.removeMemberFromOrganization, {
+      organizationId: args.organizationId,
+      userId: args.userId,
+    });
+  },
+});
+
 /** Transfer organization ownership from the current owner to another member. */
 export const transferOrganizationOwnership = mutation({
   args: {

@@ -64,7 +64,10 @@ export function DashboardOrganizations() {
   const userId = (user as { _id?: string } | null | undefined)?._id ?? null
   const myOrgs = useQuery(api.admin.listMyOrganizations) as OrgRow[] | undefined
   const listOrganizationMembersForOwner = useAction(api.admin.listOrganizationMembersForOwner)
+  const searchUsersByEmailForOwner = useAction(api.admin.searchUsersByEmailForOwner)
   const submitRequest = useMutation(api.organizationRequests.submitRequest)
+  const addUserToOrganizationByEmailForOwner = useMutation(api.admin.addUserToOrganizationByEmailForOwner)
+  const removeUserFromOrganizationForOwner = useMutation(api.admin.removeUserFromOrganizationForOwner)
   const transferOrganizationOwnership = useMutation(api.admin.transferOrganizationOwnership)
 
   const [isCreateOpen, setIsCreateOpen] = React.useState(false)
@@ -76,6 +79,18 @@ export function DashboardOrganizations() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState<string | null>(null)
+  const [memberOrganization, setMemberOrganization] = React.useState<OrgRow | null>(null)
+  const [memberManagementMembers, setMemberManagementMembers] = React.useState<
+    OrgMemberRow[] | null | undefined
+  >(undefined)
+  const [memberSearchQuery, setMemberSearchQuery] = React.useState("")
+  const [memberSearchResults, setMemberSearchResults] = React.useState<
+    { id: string; name?: string; email: string }[]
+  >([])
+  const [memberError, setMemberError] = React.useState<string | null>(null)
+  const [memberSuccess, setMemberSuccess] = React.useState<string | null>(null)
+  const [isMemberSearchLoading, setIsMemberSearchLoading] = React.useState(false)
+  const [memberBusyKey, setMemberBusyKey] = React.useState<string | null>(null)
   const [transferOrganization, setTransferOrganization] = React.useState<OrgRow | null>(null)
   const [transferMembers, setTransferMembers] = React.useState<OrgMemberRow[] | null | undefined>(undefined)
   const [transferUserId, setTransferUserId] = React.useState("")
@@ -157,6 +172,109 @@ export function DashboardOrganizations() {
     }
   }
 
+  const loadOwnerMembers = React.useCallback(
+    async (organizationId: string) => {
+      const members = (await listOrganizationMembersForOwner({
+        organizationId,
+      })) as OrgMemberRow[]
+      return members
+    },
+    [listOrganizationMembersForOwner]
+  )
+
+  const handleOpenMemberDialog = React.useCallback(
+    async (organization: OrgRow) => {
+      setMemberOrganization(organization)
+      setMemberManagementMembers(undefined)
+      setMemberSearchQuery("")
+      setMemberSearchResults([])
+      setMemberError(null)
+      setMemberSuccess(null)
+      try {
+        setMemberManagementMembers(await loadOwnerMembers(organization._id))
+      } catch (membersError) {
+        setMemberManagementMembers(null)
+        setMemberError(membersError instanceof Error ? membersError.message : t("errors.loadMembers"))
+      }
+    },
+    [loadOwnerMembers, t]
+  )
+
+  const handleSearchUsers = React.useCallback(async () => {
+    const query = memberSearchQuery.trim()
+    if (!memberOrganization || query.length < 2) {
+      setMemberSearchResults([])
+      return
+    }
+
+    setIsMemberSearchLoading(true)
+    setMemberError(null)
+    try {
+      const results = (await searchUsersByEmailForOwner({
+        organizationId: memberOrganization._id,
+        emailQuery: query,
+        limit: 10,
+      })) as { id: string; name?: string; email: string }[]
+      const existingMemberIds = new Set((memberManagementMembers ?? []).map((member) => member.userId))
+      setMemberSearchResults(results.filter((result) => !existingMemberIds.has(result.id)))
+    } catch (searchError) {
+      setMemberError(searchError instanceof Error ? searchError.message : t("errors.searchUsers"))
+    } finally {
+      setIsMemberSearchLoading(false)
+    }
+  }, [memberManagementMembers, memberOrganization, memberSearchQuery, searchUsersByEmailForOwner, t])
+
+  const handleAddMember = React.useCallback(
+    async (email: string) => {
+      if (!memberOrganization) return
+      const normalizedEmail = email.trim()
+      if (!normalizedEmail) return
+
+      setMemberBusyKey(`add:${normalizedEmail.toLowerCase()}`)
+      setMemberError(null)
+      setMemberSuccess(null)
+      try {
+        await addUserToOrganizationByEmailForOwner({
+          organizationId: memberOrganization._id,
+          email: normalizedEmail,
+        })
+        setMemberSuccess(t("memberAdded", { email: normalizedEmail }))
+        setMemberManagementMembers(await loadOwnerMembers(memberOrganization._id))
+        setMemberSearchResults((results) =>
+          results.filter((result) => result.email.toLowerCase() !== normalizedEmail.toLowerCase())
+        )
+      } catch (addError) {
+        setMemberError(addError instanceof Error ? addError.message : t("errors.addUser"))
+      } finally {
+        setMemberBusyKey(null)
+      }
+    },
+    [addUserToOrganizationByEmailForOwner, loadOwnerMembers, memberOrganization, t]
+  )
+
+  const handleRemoveMember = React.useCallback(
+    async (member: OrgMemberRow) => {
+      if (!memberOrganization) return
+
+      setMemberBusyKey(`remove:${member.userId}`)
+      setMemberError(null)
+      setMemberSuccess(null)
+      try {
+        await removeUserFromOrganizationForOwner({
+          organizationId: memberOrganization._id,
+          userId: member.userId,
+        })
+        setMemberSuccess(t("memberRemoved", { email: member.userEmail || member.userId }))
+        setMemberManagementMembers(await loadOwnerMembers(memberOrganization._id))
+      } catch (removeError) {
+        setMemberError(removeError instanceof Error ? removeError.message : t("errors.removeUser"))
+      } finally {
+        setMemberBusyKey(null)
+      }
+    },
+    [loadOwnerMembers, memberOrganization, removeUserFromOrganizationForOwner, t]
+  )
+
   const handleOpenTransferDialog = React.useCallback(
     async (organization: OrgRow) => {
       setTransferOrganization(organization)
@@ -164,9 +282,7 @@ export function DashboardOrganizations() {
       setTransferUserId("")
       setTransferError(null)
       try {
-        const members = (await listOrganizationMembersForOwner({
-          organizationId: organization._id,
-        })) as OrgMemberRow[]
+        const members = await loadOwnerMembers(organization._id)
         setTransferMembers(members)
         const firstCandidate = members.find((member) => member.userId !== userId)
         setTransferUserId(firstCandidate?.userId ?? "")
@@ -175,7 +291,7 @@ export function DashboardOrganizations() {
         setTransferError(membersError instanceof Error ? membersError.message : t("errors.loadMembers"))
       }
     },
-    [listOrganizationMembersForOwner, t, userId]
+    [loadOwnerMembers, t, userId]
   )
 
   const handleTransferOwnership = React.useCallback(async () => {
@@ -260,14 +376,24 @@ export function DashboardOrganizations() {
                       ) : null}
                     </div>
                     {org.memberRole === "owner" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleOpenTransferDialog(org)}
-                      >
-                        {t("transferOwnership")}
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleOpenMemberDialog(org)}
+                        >
+                          {t("manageMembers")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleOpenTransferDialog(org)}
+                        >
+                          {t("transferOwnership")}
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
                 </li>
@@ -336,6 +462,141 @@ export function DashboardOrganizations() {
             >
               {isSubmitting ? t("submitting") : t("submitRequest")}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={memberOrganization !== null}
+        onOpenChange={(open) => {
+          if (!open && !memberBusyKey) {
+            setMemberOrganization(null)
+            setMemberManagementMembers(undefined)
+            setMemberSearchQuery("")
+            setMemberSearchResults([])
+            setMemberError(null)
+            setMemberSuccess(null)
+          }
+        }}
+      >
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{memberOrganization?.name ?? t("organizationFallback")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("membersDialogDescription")}</AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            {memberError ? (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {memberError}
+              </div>
+            ) : null}
+            {memberSuccess ? (
+              <div className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+                {memberSuccess}
+              </div>
+            ) : null}
+
+            <div className="rounded-xl border bg-muted/20 p-3">
+              <p className="text-sm font-medium">{t("addUserByEmail")}</p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  className="min-w-0"
+                  placeholder={t("searchEmailPlaceholder")}
+                  value={memberSearchQuery}
+                  onChange={(event) => setMemberSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      void handleSearchUsers()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  disabled={isMemberSearchLoading}
+                  onClick={() => void handleSearchUsers()}
+                >
+                  {isMemberSearchLoading ? t("searching") : t("search")}
+                </Button>
+              </div>
+
+              {memberSearchResults.length > 0 ? (
+                <ul className="mt-2 space-y-2">
+                  {memberSearchResults.map((searchUser) => {
+                    const addKey = `add:${searchUser.email.toLowerCase()}`
+                    return (
+                      <li
+                        key={searchUser.id}
+                        className="grid gap-2 rounded-lg border bg-background px-3 py-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
+                      >
+                        <span className="min-w-0 truncate self-center">
+                          {searchUser.name ? `${searchUser.name} · ` : ""}
+                          {searchUser.email}
+                        </span>
+                        <Button
+                          size="sm"
+                          disabled={memberBusyKey === addKey}
+                          onClick={() => void handleAddMember(searchUser.email)}
+                        >
+                          {memberBusyKey === addKey ? t("adding") : t("add")}
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : memberSearchQuery.trim().length >= 2 && !isMemberSearchLoading ? (
+                <p className="text-muted-foreground mt-2 text-xs">{t("noMatchingUsers")}</p>
+              ) : null}
+            </div>
+
+            <div className="rounded-xl border bg-muted/20 p-3">
+              <p className="text-sm font-medium">{t("members")}</p>
+              {memberManagementMembers === undefined ? (
+                <p className="text-muted-foreground mt-2 text-sm">{t("loadingMembers")}</p>
+              ) : memberManagementMembers === null ? (
+                <p className="text-muted-foreground mt-2 text-sm">{t("unableToLoadMembers")}</p>
+              ) : memberManagementMembers.length === 0 ? (
+                <p className="text-muted-foreground mt-2 text-sm">{t("noMembers")}</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {memberManagementMembers.map((member) => (
+                    <li
+                      key={member._id}
+                      className="grid gap-2 rounded-lg border bg-background px-3 py-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
+                    >
+                      <span className="min-w-0 truncate">
+                        {member.userName ? `${member.userName} · ` : ""}
+                        {member.userEmail || member.userId}
+                      </span>
+                      <div className="flex items-center gap-2 sm:justify-end">
+                        <span className="text-muted-foreground text-xs">
+                          {member.role === "owner" ? t("roles.owner") : t("roles.member")}
+                        </span>
+                        {member.role !== "owner" && member.userId !== userId ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={memberBusyKey === `remove:${member.userId}`}
+                            onClick={() => void handleRemoveMember(member)}
+                          >
+                            {memberBusyKey === `remove:${member.userId}` ? t("removing") : t("remove")}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(memberBusyKey)}>
+              {tCommon("close")}
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
