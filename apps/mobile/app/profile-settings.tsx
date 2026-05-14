@@ -1,12 +1,18 @@
 import React from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { ArrowLeftIcon, ChevronRightIcon, LogOutIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, ChevronRightIcon, LogOutIcon, Trash2Icon } from 'lucide-react-native';
 import { useUniwind } from 'uniwind';
 import {
+  RN_API_BACKGROUND_DARK,
+  RN_API_BACKGROUND_LIGHT,
+  RN_API_BORDER_DARK,
+  RN_API_BORDER_LIGHT,
+  RN_API_CARD_DARK,
+  RN_API_CARD_LIGHT,
   RN_API_DESTRUCTIVE_DARK,
   RN_API_DESTRUCTIVE_LIGHT,
   RN_API_FOREGROUND_DARK,
@@ -17,6 +23,12 @@ import {
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
 
+type OrganizationMembership = {
+  _id: string;
+  name?: string;
+  memberRole?: string | null;
+};
+
 /** Screen copy uses RN `Text` + `style` + `rn-api-colors` (Uniwind `className` on Text was invisible here). */
 export default function ProfileSettingsScreen() {
   const { theme } = useUniwind();
@@ -25,12 +37,28 @@ export default function ProfileSettingsScreen() {
   const destructiveHex = isDark ? RN_API_DESTRUCTIVE_DARK : RN_API_DESTRUCTIVE_LIGHT;
   const fg = isDark ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
   const muted = isDark ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
+  const background = isDark ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
+  const card = isDark ? RN_API_CARD_DARK : RN_API_CARD_LIGHT;
+  const border = isDark ? RN_API_BORDER_DARK : RN_API_BORDER_LIGHT;
 
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const myOrganizations = useQuery(api.admin.listMyOrganizations) as
+    | OrganizationMembership[]
+    | undefined;
   const prefs = useQuery(api.socialNotifications.getPrefs);
   const setMutedSocial = useMutation(api.socialNotifications.setMutedSocial);
   const [busy, setBusy] = React.useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+  const [deletePassword, setDeletePassword] = React.useState('');
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = React.useState(false);
 
   const alertsEnabled = !prefs?.mutedSocial;
+  const ownedOrganizations = React.useMemo(
+    () => (myOrganizations ?? []).filter((organization) => organization.memberRole === 'owner'),
+    [myOrganizations]
+  );
+  const isCheckingOrganizations = myOrganizations === undefined;
 
   const toggleAlerts = async (enabled: boolean) => {
     setBusy(true);
@@ -47,26 +75,61 @@ export default function ProfileSettingsScreen() {
     router.replace('/sign-in');
   };
 
+  const closeDeleteModal = () => {
+    if (deleteBusy) return;
+    setDeleteModalOpen(false);
+    setDeletePassword('');
+    setDeleteError(null);
+  };
+
+  const deleteAccount = async () => {
+    const password = deletePassword.trim();
+    if (!password || deleteBusy || isCheckingOrganizations) return;
+
+    setDeleteError(null);
+    setDeleteBusy(true);
+    try {
+      const { authClient } = await import('@/lib/auth-client');
+      const { error } = await authClient.deleteUser({ password });
+      if (error) {
+        setDeleteError(error.message ?? 'Could not delete account. Check your password.');
+        return;
+      }
+      router.replace('/sign-in');
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Could not delete account.');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: background }]} edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View className="flex-row items-center gap-2 border-b border-border px-4 pb-3 pt-2">
+      <View style={[styles.header, { borderColor: border }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={() => router.back()}
-          className="p-2 active:opacity-70">
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
           <ArrowLeftIcon size={22} color={primaryHex} />
         </Pressable>
         <Text style={{ color: fg, fontSize: 20, fontWeight: '600' }}>Settings</Text>
       </View>
 
-      <View className="flex-1 px-4 pb-10 pt-4">
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
         <Pressable
           accessibilityRole="button"
           onPress={() => void logOut()}
-          className="mb-8 h-11 w-full flex-row items-center justify-center gap-2 rounded-full border-2 border-destructive bg-background active:opacity-80">
+          style={({ pressed }) => [
+            styles.logoutButton,
+            { backgroundColor: background, borderColor: destructiveHex },
+            pressed && styles.pressed,
+          ]}>
           <LogOutIcon size={18} color={destructiveHex} />
           <Text style={{ color: destructiveHex, fontSize: 16, fontWeight: '600' }}>Log out</Text>
         </Pressable>
@@ -75,8 +138,12 @@ export default function ProfileSettingsScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/intake?redirect=/(tabs)/profile')}
-          className="mb-8 rounded-xl border border-border bg-card px-4 py-4 active:opacity-90">
-          <View className="flex-row items-center justify-between gap-2">
+          style={({ pressed }) => [
+            styles.cardButton,
+            { backgroundColor: card, borderColor: border },
+            pressed && styles.pressed,
+          ]}>
+          <View style={styles.row}>
             <Text style={{ color: fg, flex: 1, fontSize: 16, fontWeight: '500' }}>
               Taste & interests
             </Text>
@@ -88,8 +155,8 @@ export default function ProfileSettingsScreen() {
         </Pressable>
 
         <SectionLabel muted={muted}>Notifications</SectionLabel>
-        <View className="rounded-xl border border-border bg-card px-4 py-4">
-          <View className="flex-row items-center justify-between gap-3">
+        <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+          <View style={styles.rowLargeGap}>
             <Text style={{ color: fg, flex: 1, fontSize: 16, fontWeight: '500' }}>
               Social notifications
             </Text>
@@ -110,10 +177,283 @@ export default function ProfileSettingsScreen() {
             (in-app).
           </Text>
         </View>
-      </View>
+
+        <SectionLabel muted={muted}>Account</SectionLabel>
+        <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+          <View style={styles.rowLargeGap}>
+            <View style={styles.flexOne}>
+              <Text style={{ color: fg, fontSize: 16, fontWeight: '500' }}>Delete account</Text>
+              <Text style={{ color: muted, fontSize: 14, lineHeight: 20, marginTop: 4 }}>
+                Permanently remove your account and personal app data.
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+              onPress={() => setDeleteModalOpen(true)}
+              style={({ pressed }) => [
+                styles.deleteIconButton,
+                {
+                  backgroundColor: `${destructiveHex}1A`,
+                  borderColor: `${destructiveHex}4D`,
+                },
+                pressed && styles.pressed,
+              ]}>
+              <Trash2Icon size={18} color={destructiveHex} />
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+
+      <Modal
+        visible={deleteModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeDeleteModal}>
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[styles.modalCard, { backgroundColor: card, borderColor: border }]}>
+            <Text style={{ color: fg, fontSize: 20, fontWeight: '700' }}>Delete account?</Text>
+            <Text style={{ color: muted, fontSize: 14, lineHeight: 20, marginTop: 8 }}>
+              This permanently deletes {currentUser?.email ?? 'your account'} and your profile,
+              follows, bookmarks, check-ins, and notification settings.
+            </Text>
+
+            {isCheckingOrganizations ? (
+              <View style={[styles.warningBox, { backgroundColor: card, borderColor: border }]}>
+                <Text style={{ color: muted, fontSize: 13, lineHeight: 18 }}>
+                  Checking museum dashboard memberships...
+                </Text>
+              </View>
+            ) : myOrganizations.length > 0 ? (
+              <View
+                style={[
+                  styles.warningBox,
+                  {
+                    backgroundColor: `${destructiveHex}1A`,
+                    borderColor: `${destructiveHex}66`,
+                  },
+                ]}>
+                <Text style={{ color: destructiveHex, fontSize: 14, fontWeight: '700' }}>
+                  This also deletes your web museum dashboard account.
+                </Text>
+                <Text style={{ color: destructiveHex, fontSize: 13, lineHeight: 18, marginTop: 6 }}>
+                  You will leave {myOrganizations.length === 1 ? 'this organization' : 'these organizations'}:
+                </Text>
+                <View style={styles.organizationList}>
+                  {myOrganizations.map((organization) => (
+                    <Text
+                      key={organization._id}
+                      numberOfLines={1}
+                      style={{ color: destructiveHex, fontSize: 13, lineHeight: 18 }}>
+                      - {organization.name ?? organization._id}
+                      {organization.memberRole === 'owner' ? ' (owner)' : ''}
+                    </Text>
+                  ))}
+                </View>
+                {ownedOrganizations.length > 0 ? (
+                  <Text style={{ color: destructiveHex, fontSize: 13, fontWeight: '700', lineHeight: 18, marginTop: 6 }}>
+                    You own {ownedOrganizations.length === 1 ? 'an organization' : 'organizations'}. Transfer ownership in the web dashboard first, or continue and leave owned organizations without an owner.
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
+            <TextInput
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!deleteBusy}
+              placeholder="Password"
+              placeholderTextColor={muted}
+              returnKeyType="done"
+              onSubmitEditing={() => void deleteAccount()}
+              style={{
+                backgroundColor: background,
+                borderColor: border,
+                borderRadius: 10,
+                borderWidth: 1,
+                color: fg,
+                fontSize: 16,
+                marginTop: 16,
+                paddingHorizontal: 12,
+                paddingVertical: 11,
+              }}
+            />
+
+            {deleteError ? (
+              <View
+                style={[
+                  styles.errorBox,
+                  {
+                    backgroundColor: `${destructiveHex}1A`,
+                    borderColor: `${destructiveHex}66`,
+                  },
+                ]}>
+                <Text style={{ color: destructiveHex, fontSize: 13, lineHeight: 18 }}>
+                  {deleteError}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.modalActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={closeDeleteModal}
+                disabled={deleteBusy}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  { backgroundColor: background, borderColor: border },
+                  pressed && !deleteBusy && styles.pressed,
+                  deleteBusy && styles.disabled,
+                ]}>
+                <Text style={{ color: fg, fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void deleteAccount()}
+                disabled={!deletePassword.trim() || deleteBusy || isCheckingOrganizations}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  { backgroundColor: destructiveHex, borderColor: destructiveHex },
+                  pressed && deletePassword.trim() && !deleteBusy && !isCheckingOrganizations && styles.pressed,
+                  (!deletePassword.trim() || deleteBusy || isCheckingOrganizations) && styles.disabled,
+                ]}>
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                  {deleteBusy ? 'Deleting…' : 'Delete'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  backButton: {
+    padding: 8,
+  },
+  card: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  cardButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  content: {
+    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  deleteIconButton: {
+    alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  errorBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  flexOne: {
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  logoutButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: 8,
+    height: 48,
+    justifyContent: 'center',
+    marginBottom: 28,
+    width: '100%',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flex: 1,
+    height: 44,
+    justifyContent: 'center',
+  },
+  modalCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 20,
+  },
+  organizationList: {
+    marginTop: 4,
+    maxHeight: 72,
+  },
+  pressed: {
+    opacity: 0.75,
+  },
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  rowLargeGap: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  warningBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+});
 
 function SectionLabel({ children, muted }: { children: React.ReactNode; muted: string }) {
   return (
