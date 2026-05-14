@@ -60,6 +60,12 @@
           "locationWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance.",
           "locationAlwaysAndWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "$(PRODUCT_NAME) accesses your photos to let you share them with your friends and search for similar images."
+        }
       ]
     ],
     "experiments": {
