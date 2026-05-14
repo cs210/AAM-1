@@ -208,12 +208,44 @@
       "noWorkspace": "Sin espacio de trabajo",
       "pendingActivation": "Activación pendiente"
     },
+    "accountDeletion": {
+      "button": "Eliminar cuenta",
+      "title": "¿Eliminar cuenta?",
+      "description": "Esto eliminará permanentemente tu cuenta y tus datos personales de la app, incluidos tu perfil, seguimientos, marcadores, visitas y ajustes de notificaciones.",
+      "ownerWarningTitle": "Eres propietario de una o más organizaciones.",
+      "ownerWarningDescription": "Vuelve y transfiere la propiedad primero, o continúa eliminando tu cuenta. Si continúas, estas organizaciones quedarán sin propietario; solo los administradores de Museum& podrán editar la propiedad.",
+      "passwordLabel": "Confirma con tu contraseña",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar cuenta",
+      "deleting": "Eliminando…",
+      "error": "No se pudo eliminar la cuenta. Revisa tu contraseña e inténtalo de nuevo."
+    },
     "organizations": {
       "title": "Tus espacios de trabajo",
       "requestNewOrganization": "Solicitar nueva organización",
       "description": "Organizaciones a las que perteneces y su asignación actual de museo.",
       "empty": "Aún no perteneces a ningún espacio de trabajo.",
       "museumLabel": "Museo: ",
+      "roleLabel": "Rol: ",
+      "roles": {
+        "member": "miembro",
+        "owner": "propietario"
+      },
+      "transferOwnership": "Transferir propiedad",
+      "transferDialogTitle": "Transferir propiedad",
+      "transferDialogDescription": "Elige un miembro para que sea propietario de {name}. Tú pasarás a ser miembro.",
+      "organizationFallback": "Organización",
+      "loadingMembers": "Cargando miembros...",
+      "unableToLoadMembers": "No se pudieron cargar los miembros.",
+      "noTransferMembers": "Añade otro miembro antes de transferir la propiedad.",
+      "selectNewOwner": "Seleccionar nuevo propietario",
+      "transfer": "Transferir",
+      "transferring": "Transfiriendo...",
+      "transferSuccess": "Propiedad transferida para {name}.",
+      "errors": {
+        "loadMembers": "No se pudieron cargar los miembros",
+        "transferOwnership": "No se pudo transferir la propiedad"
+      },
       "requestDialogTitle": "Solicitar nueva organización",
       "requestDialogDescription": "Envía una nueva solicitud de espacio de trabajo de museo para aprobación del administrador.",
       "museumNamePlaceholder": "Nombre del museo",
@@ -607,6 +639,12 @@
       "remove": "Eliminar",
       "memberAdded": "Se añadió {email} a {organization}.",
       "memberRemoved": "Se eliminó {email} de la organización.",
+      "memberRoleUpdated": "Se actualizó {email} a {role}.",
+      "deleteOrganization": "Eliminar",
+      "deleteOrganizationTitle": "¿Eliminar organización?",
+      "deleteOrganizationDescription": "Esto elimina permanentemente \"{name}\", quita todas las membresías y borra su asignación de museo. Esta acción no se puede deshacer.",
+      "deleteOrganizationConfirm": "Eliminar organización",
+      "deletingOrganization": "Eliminando...",
       "roles": {
         "member": "miembro",
         "admin": "admin",
@@ -623,6 +661,8 @@
         "searchUsers": "No se pudieron buscar usuarios",
         "addUser": "No se pudo añadir el usuario",
         "removeUser": "No se pudo eliminar el usuario",
+        "updateRole": "No se pudo actualizar el rol del miembro",
+        "deleteOrganization": "No se pudo eliminar la organización",
         "updateRequest": "No se pudo actualizar la solicitud",
         "updateMuseumLink": "No se pudo actualizar el vínculo del museo de la organización"
       }

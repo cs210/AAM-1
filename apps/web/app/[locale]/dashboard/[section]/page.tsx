@@ -3,7 +3,11 @@ import { redirect } from "next/navigation"
 import { AdminInvitations } from "@/components/dashboard/admin-invitations"
 import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
 import { AdminUsers } from "@/components/dashboard/admin-users"
-import { dashboardPathToTabId, dashboardTabMessageKeys } from "@/components/dashboard/constants"
+import {
+  dashboardPathToTabId,
+  dashboardTabMessageKeys,
+  workspaceDashboardPathToTabId,
+} from "@/components/dashboard/constants"
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics"
 import { DashboardExhibitions } from "@/components/dashboard/dashboard-exhibitions"
 import { DashboardInteractions } from "@/components/dashboard/dashboard-interactions"
@@ -27,7 +31,7 @@ export default async function DashboardSectionPage({
     redirect(`/${locale}/dashboard/admin/org-requests`)
   }
 
-  const tabId = dashboardPathToTabId[section]
+  const tabId = dashboardPathToTabId[section] ?? workspaceDashboardPathToTabId[section]
   if (!tabId) {
     redirect(`/${locale}/dashboard/details`)
   }
