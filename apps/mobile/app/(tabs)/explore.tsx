@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, FlatList, Pressable, Linking, Share, Image } from 'react-native';
+import { View, FlatList, Pressable, Linking, Share, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -8,6 +8,8 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
+import { KeyboardScrollHint } from '@/components/keyboard-scroll-hint';
+import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 import { PaginationPill } from '../../components/pagination-pill';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -41,8 +43,18 @@ appsFlyer.initSdk(
 appsFlyer.setAppInviteOneLinkID('Rz7b');
 
 const MUSEUMS_PER_PAGE = 10;
-const LIST_PADDING_BOTTOM = { paddingBottom: 80 } as const;
+const LIST_PADDING_BOTTOM = 80;
 const FEED_LIST_PADDING = { paddingBottom: 80, paddingHorizontal: 20 } as const;
+
+function useKeyboardAwareListPadding(keyboardHeight: number) {
+  return useMemo(
+    () => ({
+      paddingBottom:
+        LIST_PADDING_BOTTOM + (Platform.OS === 'android' ? keyboardHeight : 0),
+    }),
+    [keyboardHeight]
+  );
+}
 
 async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
   const lastKnown = await Location.getLastKnownPositionAsync({
@@ -170,7 +182,7 @@ function MuseumsRoute({
           )}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={LIST_PADDING_BOTTOM}
+          contentContainerStyle={{ paddingBottom: LIST_PADDING_BOTTOM }}
           scrollEnabled
           ListFooterComponent={
             filteredMuseums.length > 0 ? (
@@ -226,6 +238,9 @@ function PeopleSearchRoute({
 }) {
   const isSearching = peopleSearch.trim().length > 0;
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const { keyboardHeight, isKeyboardVisible } = useKeyboardInset();
+  const listContentPadding = useKeyboardAwareListPadding(keyboardHeight);
+  const showKeyboardHint = isKeyboardVisible && (isSearching ? filteredUsers.length > 0 : (recommendedPeople?.length ?? 0) > 0);
 
   const handleShareInviteLink = async () => {
     setIsGeneratingLink(true);
@@ -289,8 +304,61 @@ function PeopleSearchRoute({
             </Text>
           </View>
         ) : (
+          <View className="flex-1">
+            <FlatList
+              data={filteredUsers}
+              renderItem={({ item }) => {
+                if (currUser && item.userId === currUser._id) return null;
+                const rawName = item.name || item.email || '';
+                const displayName =
+                  typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
+                const initial = (
+                  displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?'
+                ).toUpperCase();
+                return (
+                  <Pressable
+                    className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
+                    onPress={() =>
+                      router.push(
+                        `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
+                      )
+                    }>
+                    {item.imageUrl ? (
+                      <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
+                    ) : (
+                      <View className="bg-primary size-12 items-center justify-center rounded-full">
+                        <Text className="text-primary-foreground text-lg font-semibold">
+                          {initial}
+                        </Text>
+                      </View>
+                    )}
+                    <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
+                      {displayName || "Name can't be displayed"}
+                    </Text>
+                  </Pressable>
+                );
+              }}
+              keyExtractor={(item) => item.userId}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={listContentPadding}
+              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+              keyboardDismissMode="on-drag"
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <View className="items-center px-12 py-12">
+                  <Text className="text-muted-foreground text-center text-base">
+                    No people match your search
+                  </Text>
+                </View>
+              }
+            />
+            <KeyboardScrollHint keyboardHeight={keyboardHeight} visible={showKeyboardHint} />
+          </View>
+        )
+      ) : recommendedPeople && recommendedPeople.length > 0 ? (
+        <View className="flex-1">
           <FlatList
-            data={filteredUsers}
+            data={recommendedPeople}
             renderItem={({ item }) => {
               if (currUser && item.userId === currUser._id) return null;
               const rawName = item.name || item.email || '';
@@ -311,9 +379,7 @@ function PeopleSearchRoute({
                     <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                   ) : (
                     <View className="bg-primary size-12 items-center justify-center rounded-full">
-                      <Text className="text-primary-foreground text-lg font-semibold">
-                        {initial}
-                      </Text>
+                      <Text className="text-primary-foreground text-lg font-semibold">{initial}</Text>
                     </View>
                   )}
                   <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
@@ -324,58 +390,18 @@ function PeopleSearchRoute({
             }}
             keyExtractor={(item) => item.userId}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={LIST_PADDING_BOTTOM}
+            contentContainerStyle={listContentPadding}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <View className="items-center px-12 py-12">
-                <Text className="text-muted-foreground text-center text-base">
-                  No people match your search
-                </Text>
+            ListHeaderComponent={
+              <View className="px-5 py-3">
+                <Text className="text-foreground text-lg font-semibold">People you may know</Text>
               </View>
             }
           />
-        )
-      ) : recommendedPeople && recommendedPeople.length > 0 ? (
-        <FlatList
-          data={recommendedPeople}
-          renderItem={({ item }) => {
-            if (currUser && item.userId === currUser._id) return null;
-            const rawName = item.name || item.email || '';
-            const displayName =
-              typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
-            const initial = (
-              displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?'
-            ).toUpperCase();
-            return (
-              <Pressable
-                className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
-                onPress={() =>
-                  router.push(
-                    `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
-                  )
-                }>
-                {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
-                ) : (
-                  <View className="bg-primary size-12 items-center justify-center rounded-full">
-                    <Text className="text-primary-foreground text-lg font-semibold">{initial}</Text>
-                  </View>
-                )}
-                <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
-                  {displayName || "Name can't be displayed"}
-                </Text>
-              </Pressable>
-            );
-          }}
-          keyExtractor={(item) => item.userId}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={LIST_PADDING_BOTTOM}
-          ListHeaderComponent={
-            <View className="px-5 py-3">
-              <Text className="text-foreground text-lg font-semibold">People you may know</Text>
-            </View>
-          }
-        />
+          <KeyboardScrollHint keyboardHeight={keyboardHeight} visible={showKeyboardHint} />
+        </View>
       ) : (
         <View className="items-center px-12 py-12">
           <Text className="text-muted-foreground text-center text-base">
