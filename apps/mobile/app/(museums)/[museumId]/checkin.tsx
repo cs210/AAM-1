@@ -9,6 +9,7 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { XIcon, ChevronDownIcon, CheckIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { CategoryTag } from '@/components/category-tag';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { Label } from '@/components/ui/label';
@@ -204,7 +205,7 @@ export default function CheckInScreen() {
           contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
           <View className="mb-6 rounded-xl border border-border bg-card p-4">
             <Text className="mb-1 text-xl font-bold text-foreground">{museum.name}</Text>
-            <Text className="text-sm capitalize text-muted-foreground">{museum.category}</Text>
+            <CategoryTag category={museum.category} className="self-start" />
           </View>
 
           <View className="mb-6">
