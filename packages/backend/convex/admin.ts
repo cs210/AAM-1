@@ -702,7 +702,32 @@ function normalizeMuseumLookupText(value: string) {
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/^the\s+/, "")
     .replace(/\s+/g, " ");
+}
+
+function getMuseumLookupKeys(value: string) {
+  const keys = new Set<string>();
+  const parentheticalMatches = [...value.matchAll(/\(([^)]+)\)/g)];
+  const withoutParentheticals = value.replace(/\([^)]*\)/g, " ");
+
+  for (const candidate of [value, withoutParentheticals, ...parentheticalMatches.map((match) => match[1] ?? "")]) {
+    const normalized = normalizeMuseumLookupText(candidate);
+    if (normalized) keys.add(normalized);
+  }
+
+  return keys;
+}
+
+function museumNamesMatch(left: string, right: string) {
+  const leftKeys = getMuseumLookupKeys(left);
+  const rightKeys = getMuseumLookupKeys(right);
+  for (const key of leftKeys) {
+    if (rightKeys.has(key)) return true;
+  }
+  return false;
 }
 
 function parseCsvImportCoordinate(value: string | undefined) {
@@ -834,8 +859,7 @@ export const importMuseumCsvRowForAdmin = action({
     const exhibitionPageUrl = optionalTrimmed(args.exhibitionPageUrl);
 
     const museums = (await ctx.runQuery(api.museums.listMuseums, {})) as CsvImportMuseumLookupRow[];
-    const normalizedName = normalizeMuseumLookupText(museumName);
-    const nameMatches = museums.filter((museum: CsvImportMuseumLookupRow) => normalizeMuseumLookupText(museum.name) === normalizedName);
+    const nameMatches = museums.filter((museum: CsvImportMuseumLookupRow) => museumNamesMatch(museum.name, museumName));
     const existingMuseum =
       nameMatches.find(
         (museum: CsvImportMuseumLookupRow) =>
