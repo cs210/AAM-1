@@ -605,6 +605,7 @@ const museumLocationValidator = v.object({
   address: v.optional(v.string()),
   city: v.optional(v.string()),
   state: v.optional(v.string()),
+  country: v.optional(v.string()),
   postalCode: v.optional(v.string()),
 });
 
@@ -614,6 +615,152 @@ const operatingHourValidator = v.object({
   openTime: v.string(),
   closeTime: v.string(),
 });
+
+const csvImportMuseumCategoryOptions = [
+  "art",
+  "contemporary",
+  "history",
+  "science",
+  "natural-history",
+  "children",
+  "design",
+  "photography",
+  "culture",
+  "specialty",
+] as const;
+
+type CsvImportPrefillResult = {
+  sourceUrl: string;
+  imageUrls: string[];
+  needsWebsiteForFallback: boolean;
+  prefill: {
+    name: string;
+    tagline: string;
+    description: string;
+    category: string;
+    publicEmail: string;
+    website: string;
+    phone: string;
+    timezone: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+    latitude: string;
+    longitude: string;
+    imageUrl: string;
+    accessibilityNotes: string;
+  };
+  operatingHours?: {
+    day: string;
+    isOpen: boolean;
+    openTime: string;
+    closeTime: string;
+  }[];
+  accessibilityFeatures?: string[];
+};
+
+type CsvImportExhibitionResult = {
+  sourceUrl: string;
+  createdCount: number;
+  skippedCount: number;
+  parsedCount: number;
+};
+
+type CsvImportActionReturn = {
+  museumId: Id<"museums">;
+  museumName: string;
+  wasCreated: boolean;
+  museum: {
+    status: "updated" | "skipped" | "failed";
+    message?: string;
+    imagesImportedCount: number;
+    sourceUrl?: string;
+    needsWebsiteForFallback?: boolean;
+  };
+  exhibitions: {
+    status: "imported" | "skipped" | "failed";
+    message?: string;
+    createdCount: number;
+    skippedCount: number;
+    parsedCount: number;
+    sourceUrl?: string;
+  };
+};
+
+type CsvImportMuseumLookupRow = Doc<"museums">;
+
+function optionalTrimmed(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeMuseumLookupText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/^the\s+/, "")
+    .replace(/\s+/g, " ");
+}
+
+function getMuseumLookupKeys(value: string) {
+  const keys = new Set<string>();
+  const parentheticalMatches = [...value.matchAll(/\(([^)]+)\)/g)];
+  const withoutParentheticals = value.replace(/\([^)]*\)/g, " ");
+
+  for (const candidate of [value, withoutParentheticals, ...parentheticalMatches.map((match) => match[1] ?? "")]) {
+    const normalized = normalizeMuseumLookupText(candidate);
+    if (normalized) keys.add(normalized);
+  }
+
+  return keys;
+}
+
+function museumNamesMatch(left: string, right: string) {
+  const leftKeys = getMuseumLookupKeys(left);
+  const rightKeys = getMuseumLookupKeys(right);
+  for (const key of leftKeys) {
+    if (rightKeys.has(key)) return true;
+  }
+  return false;
+}
+
+function parseCsvImportCoordinate(value: string | undefined) {
+  const parsed = Number(value?.trim());
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeCsvImportCategory(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  if (!normalized) return "uncategorized";
+
+  const selected = csvImportMuseumCategoryOptions.filter((category) => {
+    const comparable = category.replaceAll("-", " ");
+    return normalized === category || normalized.includes(comparable);
+  });
+  if (selected.length > 0) return selected.join(", ");
+
+  if (normalized.includes("modern") || normalized.includes("contemporary")) return "contemporary";
+  if (normalized.includes("natural")) return "natural-history";
+  if (normalized.includes("child")) return "children";
+  if (normalized.includes("photo")) return "photography";
+  if (normalized.includes("cultur")) return "culture";
+  if (normalized.includes("design")) return "design";
+  if (normalized.includes("histor")) return "history";
+  if (normalized.includes("science")) return "science";
+  if (normalized.includes("art")) return "art";
+  return "specialty";
+}
+
+function toErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "Unknown error";
+}
 
 /** Action: list pending invitations with org names (admin). */
 export const listPendingInvitationsForAdmin = action({
@@ -651,9 +798,9 @@ export const listMuseumsForAdmin = action({
   args: {},
   handler: async (ctx): Promise<MuseumAdminRow[]> => {
     await requireAdminAction(ctx);
-    const museums = await ctx.runQuery(api.museums.listMuseums, {});
+    const museums = (await ctx.runQuery(api.museums.listMuseums, {})) as Doc<"museums">[];
     const rowsWithPoints = await Promise.all(
-      museums.map(async (museum) => {
+      museums.map(async (museum: Doc<"museums">) => {
         const geospatialDoc = await ctx.runQuery(components.geospatial.document.get, {
           key: museum._id,
         });
@@ -668,7 +815,7 @@ export const listMuseumsForAdmin = action({
         };
       })
     );
-    return rowsWithPoints.sort((a, b) => a.name.localeCompare(b.name));
+    return rowsWithPoints.sort((a: MuseumAdminRow, b: MuseumAdminRow) => a.name.localeCompare(b.name));
   },
 });
 
@@ -688,6 +835,189 @@ export const createMuseumForAdmin = mutation({
       location: {},
     });
     return museumId;
+  },
+});
+
+/** Action: import one museum CSV row, create if missing, and run existing detail/exhibition auto-fill flows. */
+export const importMuseumCsvRowForAdmin = action({
+  args: {
+    museumName: v.string(),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    country: v.optional(v.string()),
+    exhibitionPageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<CsvImportActionReturn> => {
+    await requireAdminAction(ctx);
+
+    const museumName = args.museumName.trim();
+    if (!museumName) throw new Error("Museum name is required");
+
+    const city = optionalTrimmed(args.city);
+    const state = optionalTrimmed(args.state);
+    const country = optionalTrimmed(args.country);
+    const exhibitionPageUrl = optionalTrimmed(args.exhibitionPageUrl);
+
+    const museums = (await ctx.runQuery(api.museums.listMuseums, {})) as CsvImportMuseumLookupRow[];
+    const nameMatches = museums.filter((museum: CsvImportMuseumLookupRow) => museumNamesMatch(museum.name, museumName));
+    const existingMuseum =
+      nameMatches.find(
+        (museum: CsvImportMuseumLookupRow) =>
+          (!city || normalizeMuseumLookupText(museum.location.city ?? "") === normalizeMuseumLookupText(city)) &&
+          (!state || normalizeMuseumLookupText(museum.location.state ?? "") === normalizeMuseumLookupText(state))
+      ) ??
+      nameMatches[0] ??
+      null;
+
+    if (existingMuseum) {
+      return {
+        museumId: existingMuseum._id,
+        museumName,
+        wasCreated: false,
+        museum: {
+          status: "skipped",
+          message: "Existing museum found in database; skipped row.",
+          imagesImportedCount: 0,
+        },
+        exhibitions: {
+          status: "skipped",
+          message: "Skipped because museum already exists.",
+          createdCount: 0,
+          skippedCount: 0,
+          parsedCount: 0,
+        },
+      };
+    }
+
+    const museumId: Id<"museums"> =
+      ((await ctx.runMutation((api as any).admin.createMuseumForAdmin, {
+        name: museumName,
+      })) as Id<"museums">);
+
+    const museumResult: {
+      status: "updated" | "skipped" | "failed";
+      message?: string;
+      imagesImportedCount: number;
+      sourceUrl?: string;
+      needsWebsiteForFallback?: boolean;
+    } = {
+      status: "skipped",
+      imagesImportedCount: 0,
+    };
+
+    try {
+      const details = (await ctx.runQuery(api.museums.getMuseumDetailsForDashboard, {
+        id: museumId,
+      })) as (Doc<"museums"> & {
+        point: { latitude: number; longitude: number } | null;
+        accessibilityFeatures?: string[];
+      }) | null;
+      if (!details) throw new Error("Museum not found after create/find");
+
+      const prefillResult = (await ctx.runAction(api.museumsAutoFill.prefillMuseumDetailsWithFirecrawl, {
+        museumId,
+        museumName,
+        ...(city ? { city } : {}),
+        ...(state ? { state } : {}),
+        ...(country ? { country } : {}),
+      })) as CsvImportPrefillResult;
+
+      const latitude = parseCsvImportCoordinate(prefillResult.prefill.latitude) ?? details.point?.latitude;
+      const longitude = parseCsvImportCoordinate(prefillResult.prefill.longitude) ?? details.point?.longitude;
+      if (latitude === undefined || longitude === undefined) {
+        throw new Error("Museum details scrape did not return coordinates.");
+      }
+
+      await ctx.runMutation((api as any).admin.updateMuseumForAdmin, {
+        museumId,
+        point: { latitude, longitude },
+        name: optionalTrimmed(prefillResult.prefill.name) ?? details.name,
+        description: optionalTrimmed(prefillResult.prefill.description),
+        tagline: optionalTrimmed(prefillResult.prefill.tagline),
+        publicEmail: optionalTrimmed(prefillResult.prefill.publicEmail),
+        timezone: optionalTrimmed(prefillResult.prefill.timezone),
+        primaryLanguage: details.primaryLanguage,
+        category: normalizeCsvImportCategory(prefillResult.prefill.category || details.category),
+        location: {
+          address: optionalTrimmed(prefillResult.prefill.address) ?? details.location.address,
+          city: optionalTrimmed(prefillResult.prefill.city) ?? city ?? details.location.city,
+          state: optionalTrimmed(prefillResult.prefill.state) ?? state ?? details.location.state,
+          country: optionalTrimmed(prefillResult.prefill.country) ?? country ?? details.location.country,
+          postalCode: optionalTrimmed(prefillResult.prefill.postalCode) ?? details.location.postalCode,
+        },
+        imageUrl: optionalTrimmed(prefillResult.prefill.imageUrl) ?? details.imageUrl,
+        website: optionalTrimmed(prefillResult.prefill.website) ?? details.website,
+        phone: optionalTrimmed(prefillResult.prefill.phone) ?? details.phone,
+        operatingHours: prefillResult.operatingHours ?? details.operatingHours,
+        accessibilityFeatures: prefillResult.accessibilityFeatures ?? details.accessibilityFeatures,
+        accessibilityNotes: optionalTrimmed(prefillResult.prefill.accessibilityNotes) ?? details.accessibilityNotes,
+      });
+
+      const existingImages = (await ctx.runQuery(api.museums.listMuseumImagesForDashboard, {
+        museumId,
+      })) as Array<{ imageUrl: string }>;
+      const existingImageUrls = new Set(existingImages.map((image) => image.imageUrl));
+      for (const imageUrl of prefillResult.imageUrls.slice(0, 5)) {
+        if (existingImageUrls.has(imageUrl)) continue;
+        await ctx.runMutation(api.museums.addMuseumImageForDashboard, {
+          museumId,
+          imageUrl,
+        });
+        existingImageUrls.add(imageUrl);
+        museumResult.imagesImportedCount += 1;
+      }
+
+      museumResult.status = "updated";
+      museumResult.sourceUrl = prefillResult.sourceUrl;
+      museumResult.needsWebsiteForFallback = prefillResult.needsWebsiteForFallback;
+    } catch (error) {
+      museumResult.status = "failed";
+      museumResult.message = toErrorMessage(error);
+    }
+
+    const exhibitionResult: {
+      status: "imported" | "skipped" | "failed";
+      message?: string;
+      createdCount: number;
+      skippedCount: number;
+      parsedCount: number;
+      sourceUrl?: string;
+    } = {
+      status: exhibitionPageUrl ? "skipped" : "skipped",
+      createdCount: 0,
+      skippedCount: 0,
+      parsedCount: 0,
+    };
+
+    if (exhibitionPageUrl) {
+      try {
+        const result = (await ctx.runAction(api.exhibitionsAutoFill.prefillExhibitionsWithFirecrawl, {
+          museumId,
+          exhibitionsPageUrl: exhibitionPageUrl,
+        })) as CsvImportExhibitionResult;
+        exhibitionResult.status = result.createdCount > 0 ? "imported" : "skipped";
+        exhibitionResult.createdCount = result.createdCount;
+        exhibitionResult.skippedCount = result.skippedCount;
+        exhibitionResult.parsedCount = result.parsedCount;
+        exhibitionResult.sourceUrl = result.sourceUrl;
+        if (result.createdCount <= 0) {
+          exhibitionResult.message = result.parsedCount > 0 ? "No new exhibitions to import." : "No exhibitions found.";
+        }
+      } catch (error) {
+        exhibitionResult.status = "failed";
+        exhibitionResult.message = toErrorMessage(error);
+      }
+    } else {
+      exhibitionResult.message = "No exhibition page URL provided.";
+    }
+
+    return {
+      museumId,
+      museumName,
+      wasCreated: !existingMuseum,
+      museum: museumResult,
+      exhibitions: exhibitionResult,
+    };
   },
 });
 

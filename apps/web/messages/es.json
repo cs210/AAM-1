@@ -727,7 +727,34 @@
       "loadFailed": "No se pudieron cargar los museos",
       "createFailed": "No se pudo crear el museo",
       "deleteFailed": "No se pudo eliminar el museo",
-      "museumRequired": "El nombre del museo es obligatorio."
+      "museumRequired": "El nombre del museo es obligatorio.",
+      "csv": {
+        "title": "Importación CSV",
+        "description": "Sube un CSV con museum_name, city, state, country y exhibition_page_url. Cada fila crea o reutiliza un museo, completa los detalles e importa exposiciones.",
+        "chooseFile": "Elegir CSV",
+        "selectedFile": "{fileName} · {count} filas listas",
+        "parsed": "Se analizaron {count} filas del CSV.",
+        "parseFailed": "No se pudo analizar el CSV.",
+        "start": "Iniciar importación",
+        "stop": "Detener ejecución",
+        "stopping": "Deteniendo…",
+        "runningRow": "Procesando fila {current} de {total}: {name}",
+        "progress": "{completed} de {total} filas procesadas",
+        "percent": "{percent}%",
+        "rowLabel": "Fila {rowNumber}",
+        "locationUnknown": "Ubicación desconocida",
+        "created": "creado",
+        "reused": "reutilizado",
+        "resultSummary": "Museo {museumAction}; detalles {detailsStatus}; {images} imágenes; {exhibitions} exposiciones importadas de {parsed} analizadas.",
+        "importFailed": "No se pudo importar la fila del CSV.",
+        "status": {
+          "pending": "Pendiente",
+          "running": "Procesando",
+          "completed": "Listo",
+          "failed": "Error",
+          "stopped": "Detenido"
+        }
+      }
     },
     "adminVisualSearch": {
       "config": {

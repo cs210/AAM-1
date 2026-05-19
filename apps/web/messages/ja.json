@@ -727,7 +727,34 @@
       "loadFailed": "ミュージアムの読み込みに失敗しました",
       "createFailed": "ミュージアムの作成に失敗しました",
       "deleteFailed": "ミュージアムの削除に失敗しました",
-      "museumRequired": "ミュージアム名は必須です。"
+      "museumRequired": "ミュージアム名は必須です。",
+      "csv": {
+        "title": "CSV インポート",
+        "description": "museum_name、city、state、country、exhibition_page_url を含む CSV をアップロードします。各行でミュージアムを作成または再利用し、詳細入力と展覧会取り込みを実行します。",
+        "chooseFile": "CSVを選択",
+        "selectedFile": "{fileName} · {count} 行準備完了",
+        "parsed": "CSV {count} 行を読み込みました。",
+        "parseFailed": "CSVを解析できませんでした。",
+        "start": "インポート開始",
+        "stop": "停止",
+        "stopping": "停止中…",
+        "runningRow": "{total} 行中 {current} 行目を処理中: {name}",
+        "progress": "{total} 行中 {completed} 行を処理済み",
+        "percent": "{percent}%",
+        "rowLabel": "{rowNumber} 行目",
+        "locationUnknown": "所在地不明",
+        "created": "作成",
+        "reused": "再利用",
+        "resultSummary": "ミュージアム: {museumAction}; 詳細: {detailsStatus}; 画像 {images} 件; 解析 {parsed} 件から展覧会 {exhibitions} 件を取り込み。",
+        "importFailed": "CSV行のインポートに失敗しました。",
+        "status": {
+          "pending": "待機中",
+          "running": "実行中",
+          "completed": "完了",
+          "failed": "失敗",
+          "stopped": "停止"
+        }
+      }
     },
     "adminVisualSearch": {
       "config": {
