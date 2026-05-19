@@ -16,6 +16,7 @@ export interface UserCheckIn {
   imageUrls?: string[];
   imageIds?: Id<'_storage'>[];
   friendUserIds?: string[];
+  attendedEventIds?: (Id<'events'> | Id<'exhibitions'>)[];
 }
 
 interface UserCheckInListProps {

@@ -1,11 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { authClient } from '@/lib/auth-client';
@@ -43,9 +39,9 @@ export function UserMenu() {
           <View className="flex-row items-center gap-3">
             <UserAvatar className="size-10" />
             <View className="flex-1">
-              <Text className="font-medium leading-5">{USER.fullName}</Text>
+              <Text className="leading-5 font-medium">{USER.fullName}</Text>
               {USER.fullName?.length ? (
-                <Text className="text-muted-foreground text-sm font-normal leading-4">
+                <Text className="text-muted-foreground text-sm leading-4 font-normal">
                   {USER.username}
                 </Text>
               ) : null}
@@ -56,7 +52,8 @@ export function UserMenu() {
               variant="outline"
               size="sm"
               onPress={() => {
-                // TODO: Navigate to account settings screen
+                popoverTriggerRef.current?.close();
+                router.push('/profile-settings');
               }}>
               <Icon as={SettingsIcon} className="size-4" />
               <Text>Manage Account</Text>

@@ -6,7 +6,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import { XIcon } from 'lucide-react-native';
+import { XIcon, ChevronDownIcon, CheckIcon } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthGuard } from '@/components/AuthGuard';
@@ -20,15 +20,20 @@ import { CheckInDurationSelect } from '@/components/check-in-duration-select';
 import { cn } from '@/lib/utils';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { uploadCheckInPickerAssets } from '@/lib/check-in-image-upload';
+import { useUniwind } from 'uniwind';
 import {
   RN_API_BACKGROUND_LIGHT,
   RN_API_MUTED_FOREGROUND_LIGHT,
+  RN_API_MUTED_FOREGROUND_DARK,
+  RN_API_PRIMARY_LIGHT,
+  RN_API_PRIMARY_DARK,
 } from '@/constants/rn-api-colors';
 
 const TAB_ROUTE_SEGMENTS = new Set(['tabs', 'index', 'home', 'explore', 'profile']);
 
 export default function CheckInScreen() {
   const insets = useSafeAreaInsets();
+  const { theme } = useUniwind();
   const { museumId } = useLocalSearchParams<{ museumId: string }>();
   const rawId = typeof museumId === 'string' ? museumId : Array.isArray(museumId) ? museumId[0] : undefined;
   const isTabSegment = rawId != null && TAB_ROUTE_SEGMENTS.has(rawId);
@@ -41,6 +46,8 @@ export default function CheckInScreen() {
   const [visitDate, setVisitDate] = useState(new Date());
   const [durationHours, setDurationHours] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [eventsDropdownOpen, setEventsDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (isTabSegment) {
@@ -55,6 +62,10 @@ export default function CheckInScreen() {
   const userCheckIns = useQuery(
     api.checkIns.getUserMuseumCheckIns,
     id && currentUser ? { userId: currentUser._id, museumId: id as Id<'museums'> } : 'skip'
+  );
+  const museumEvents = useQuery(
+    api.events.getEventsByMuseum,
+    id ? { museumId: id as Id<'museums'> } : 'skip'
   );
 
   const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
@@ -76,6 +87,12 @@ export default function CheckInScreen() {
   const toggleFriend = (userId: string) => {
     setSelectedFriends((prev) =>
       prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleEvent = (eventId: string) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventId) ? prev.filter((eid) => eid !== eventId) : [...prev, eventId]
     );
   };
 
@@ -129,6 +146,7 @@ export default function CheckInScreen() {
         friendUserIds: selectedFriends,
         durationHours,
         visitDate: visitDate.getTime(),
+        attendedEventIds: selectedEvents.length > 0 ? (selectedEvents as (Id<'events'> | Id<'exhibitions'>)[]) : undefined,
       });
 
       posthog?.capture('museum_visited', {
@@ -287,6 +305,59 @@ export default function CheckInScreen() {
               onChange={handleDateChange}
               maximumDate={new Date()}
             />
+          )}
+
+          {museumEvents && museumEvents.length > 0 && (
+            <View className="mb-6">
+              <Label className="mb-3 text-base font-semibold text-foreground">
+                Exhibitions & Events
+              </Label>
+              <View className="relative">
+                <Pressable
+                  className="flex-row items-center justify-between rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-90"
+                  onPress={() => setEventsDropdownOpen((o) => !o)}>
+                  <Text className="flex-1 text-base text-foreground">
+                    {selectedEvents.length === 0
+                      ? 'Select events/exhibitions'
+                      : `${selectedEvents.length} selected`}
+                  </Text>
+                  <ChevronDownIcon
+                    size={20}
+                    color={theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT}
+                    style={{ transform: [{ rotate: eventsDropdownOpen ? '180deg' : '0deg' }] }}
+                  />
+                </Pressable>
+                {eventsDropdownOpen ? (
+                  <View className="mt-2 overflow-hidden rounded-xl border border-border bg-card">
+                    {museumEvents.map((event, index) => {
+                      const isSelected = selectedEvents.includes(event._id);
+                      const isLast = index === museumEvents.length - 1;
+                      return (
+                        <Pressable
+                          key={event._id}
+                          className={cn('flex-row items-center gap-3 px-4 py-3 active:bg-muted', !isLast && 'border-b border-border')}
+                          onPress={() => toggleEvent(event._id)}>
+                          <View
+                            className={cn(
+                              'size-5 items-center justify-center rounded border-2',
+                              isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                            )}>
+                            {isSelected ? (
+                              <CheckIcon
+                                size={14}
+                                color={RN_API_BACKGROUND_LIGHT}
+                                strokeWidth={3}
+                              />
+                            ) : null}
+                          </View>
+                          <Text className="flex-1 text-base text-foreground">{event.title}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </View>
+            </View>
           )}
 
           {allUsers && followingUserIds && followingUserIds.length > 0 ? (

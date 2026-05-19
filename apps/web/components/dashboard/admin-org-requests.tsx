@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -75,6 +76,8 @@ export function AdminOrgRequests() {
   const setOrganizationMuseumLink = useMutation(api.admin.setOrganizationMuseumLinkForAdmin)
   const addUserToOrganizationByEmail = useMutation(api.admin.addUserToOrganizationByEmailForAdmin)
   const removeUserFromOrganization = useMutation(api.admin.removeUserFromOrganizationForAdmin)
+  const setOrganizationMemberRole = useMutation(api.admin.setOrganizationMemberRoleForAdmin)
+  const deleteOrganization = useMutation(api.admin.deleteOrganizationForAdmin)
 
   const [requests, setRequests] = React.useState<OrgRequestAdminRow[] | null | undefined>(undefined)
   const [organizations, setOrganizations] = React.useState<OrganizationAdminRow[] | null | undefined>(undefined)
@@ -94,6 +97,9 @@ export function AdminOrgRequests() {
   const [memberSuccess, setMemberSuccess] = React.useState<string | null>(null)
   const [isMemberSearchLoading, setIsMemberSearchLoading] = React.useState(false)
   const [memberBusyKey, setMemberBusyKey] = React.useState<string | null>(null)
+  const [pendingDeleteOrganization, setPendingDeleteOrganization] =
+    React.useState<OrganizationAdminRow | null>(null)
+  const [isDeletingOrganization, setIsDeletingOrganization] = React.useState(false)
 
   const load = React.useCallback(async () => {
     setError(null)
@@ -255,6 +261,57 @@ export function AdminOrgRequests() {
     },
     [handleSearchUsers, loadMembers, removeUserFromOrganization, selectedOrganization, t]
   )
+
+  const handleSetMemberRole = React.useCallback(
+    async (member: OrgMemberRow, role: "member" | "owner") => {
+      if (!selectedOrganization) return
+      const currentRole = member.role === "owner" ? "owner" : "member"
+      if (currentRole === role) return
+
+      setMemberBusyKey(`role:${member.userId}`)
+      setMemberError(null)
+      setMemberSuccess(null)
+      try {
+        await setOrganizationMemberRole({
+          organizationId: selectedOrganization._id,
+          userId: member.userId,
+          role,
+        })
+        setMemberSuccess(
+          t("memberRoleUpdated", {
+            email: member.userEmail ?? member.userId,
+            role: tRole(role),
+          })
+        )
+        await loadMembers(selectedOrganization._id)
+      } catch (roleError) {
+        setMemberError(roleError instanceof Error ? roleError.message : t("errors.updateRole"))
+      } finally {
+        setMemberBusyKey(null)
+      }
+    },
+    [loadMembers, selectedOrganization, setOrganizationMemberRole, t, tRole]
+  )
+
+  const handleDeleteOrganization = React.useCallback(async () => {
+    if (!pendingDeleteOrganization) return
+
+    setIsDeletingOrganization(true)
+    setError(null)
+    try {
+      await deleteOrganization({ organizationId: pendingDeleteOrganization._id })
+      if (selectedOrganizationId === pendingDeleteOrganization._id) {
+        setIsMemberDialogOpen(false)
+        setSelectedOrganizationId(null)
+      }
+      setPendingDeleteOrganization(null)
+      await load()
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : t("errors.deleteOrganization"))
+    } finally {
+      setIsDeletingOrganization(false)
+    }
+  }, [deleteOrganization, load, pendingDeleteOrganization, selectedOrganizationId, t])
 
   const handleRequestStatus = async (request: OrgRequestAdminRow, status: "approved" | "rejected") => {
     setBusyKey(`request:${request._id}`)
@@ -471,6 +528,11 @@ export function AdminOrgRequests() {
           <CardDescription>{t("organizationsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {error ? (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
           {organizations.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("noOrganizations")}</p>
           ) : (
@@ -492,14 +554,24 @@ export function AdminOrgRequests() {
 
               return (
                 <div key={organization._id} className="rounded-xl border bg-muted/30 p-4">
-                  <div className="space-y-1">
-                    <p className="font-medium">{organization.name ?? t("unnamedOrganization")}</p>
-                    <p className="text-muted-foreground text-sm">
-                      {t("currentMuseum")}
-                      {organization.hasInvalidMuseumContext
-                        ? t("invalidMuseumContext")
-                        : organization.linkedMuseumName ?? t("unassigned")}
-                    </p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-medium">{organization.name ?? t("unnamedOrganization")}</p>
+                      <p className="text-muted-foreground text-sm">
+                        {t("currentMuseum")}
+                        {organization.hasInvalidMuseumContext
+                          ? t("invalidMuseumContext")
+                          : organization.linkedMuseumName ?? t("unassigned")}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setPendingDeleteOrganization(organization)}
+                    >
+                      {t("deleteOrganization")}
+                    </Button>
                   </div>
 
                   <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
@@ -565,7 +637,7 @@ export function AdminOrgRequests() {
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>{selectedOrganization?.name ?? t("organizationFallback")}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -587,8 +659,9 @@ export function AdminOrgRequests() {
 
             <div className="rounded-xl border bg-muted/20 p-3">
               <p className="text-sm font-medium">{t("addUserByEmail")}</p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                 <Input
+                  className="min-w-0"
                   placeholder={t("searchEmailPlaceholder")}
                   value={memberSearchQuery}
                   onChange={(event) => setMemberSearchQuery(event.target.value)}
@@ -596,6 +669,7 @@ export function AdminOrgRequests() {
                 <Button
                   type="button"
                   variant="outline"
+                  className="shrink-0"
                   disabled={isMemberSearchLoading}
                   onClick={() => void handleSearchUsers()}
                 >
@@ -643,28 +717,44 @@ export function AdminOrgRequests() {
                 <ul className="mt-2 space-y-2">
                   {members.map((member) => {
                     const removeKey = `remove:${member.userId}`
+                    const roleKey = `role:${member.userId}`
+                    const roleValue = member.role === "owner" ? "owner" : "member"
                     return (
                       <li
                         key={member._id}
-                        className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2"
+                        className="grid gap-2 rounded-lg border bg-background px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto]"
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 self-center">
                           <p className="truncate text-sm">
                             {member.userName ? `${member.userName} · ` : ""}
                             {member.userEmail || member.userId}
                           </p>
-                          <p className="text-muted-foreground text-xs">
-                            {tRole(member.role)}
-                          </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={memberBusyKey === removeKey}
-                          onClick={() => void handleRemoveUserFromOrganization(member)}
-                        >
-                          {memberBusyKey === removeKey ? t("removing") : t("remove")}
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Select
+                            value={roleValue}
+                            disabled={memberBusyKey === roleKey}
+                            onValueChange={(value) =>
+                              void handleSetMemberRole(member, value as "member" | "owner")
+                            }
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">{tRole("member")}</SelectItem>
+                              <SelectItem value="owner">{tRole("owner")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={memberBusyKey === removeKey}
+                            onClick={() => void handleRemoveUserFromOrganization(member)}
+                          >
+                            {memberBusyKey === removeKey ? t("removing") : t("remove")}
+                          </Button>
+                        </div>
                       </li>
                     )
                   })}
@@ -675,6 +765,39 @@ export function AdminOrgRequests() {
 
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon("close")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingDeleteOrganization !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingOrganization) {
+            setPendingDeleteOrganization(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteOrganizationTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("deleteOrganizationDescription", {
+                name: pendingDeleteOrganization?.name ?? t("organizationFallback"),
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingOrganization}>
+              {tCommon("cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              type="button"
+              variant="destructive"
+              disabled={isDeletingOrganization}
+              onClick={() => void handleDeleteOrganization()}
+            >
+              {isDeletingOrganization ? t("deletingOrganization") : t("deleteOrganizationConfirm")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

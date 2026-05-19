@@ -30,6 +30,7 @@ import {
   type AllDashboardTabId,
 } from "@/components/dashboard/constants"
 import { SidebarUserDetails } from "@/components/dashboard/sidebar-user-details"
+import { DeleteAccountDialog } from "@/components/dashboard/delete-account-dialog"
 import { LocaleSwitcher } from "@/components/locale-switcher"
 import { authClient } from "@/lib/auth-client"
 
@@ -80,13 +81,18 @@ export function DashboardSidebar({
   const tCommon = useTranslations("common")
   const router = useRouter()
   const [isLanguageOpen, setIsLanguageOpen] = React.useState(false)
-  const getTabLabel = (id: AllDashboardTabId) => tTabs(dashboardTabMessageKeys[id])
-  const museumOptionById = new Map(museumContextOptions.map((option) => [option.id, option]))
+  const getTabLabel = (id: AllDashboardTabId) =>
+    tTabs(dashboardTabMessageKeys[id])
+  const museumOptionById = new Map(
+    museumContextOptions.map((option) => [option.id, option]),
+  )
   const comboboxItems = museumContextOptions.map((option) => option.label)
   const activeMuseumOptionLabel = activeMuseumContextId
-    ? museumOptionById.get(activeMuseumContextId)?.label ?? ""
+    ? (museumOptionById.get(activeMuseumContextId)?.label ?? "")
     : ""
-  const labelToMuseumId = new Map(museumContextOptions.map((option) => [option.label, option.id]))
+  const labelToMuseumId = new Map(
+    museumContextOptions.map((option) => [option.label, option.id]),
+  )
 
   return (
     <aside className="bg-card/85 fixed top-4 bottom-4 left-4 hidden h-[calc(100vh-2rem)] w-72 flex-col rounded-2xl border p-4 shadow-xl shadow-black/5 backdrop-blur md:flex">
@@ -106,13 +112,21 @@ export function DashboardSidebar({
                 items={comboboxItems}
                 value={activeMuseumOptionLabel || null}
                 onValueChange={(value) => {
-                  const museumId = value ? labelToMuseumId.get(value) : undefined
+                  const museumId = value
+                    ? labelToMuseumId.get(value)
+                    : undefined
                   if (museumId) onMuseumContextChange?.(museumId)
                 }}
               >
                 <ComboboxInput
-                  placeholder={museumContextLoading ? t("loadingMuseums") : t("searchSelectMuseum")}
-                  disabled={museumContextLoading || museumContextOptions.length === 0}
+                  placeholder={
+                    museumContextLoading
+                      ? t("loadingMuseums")
+                      : t("searchSelectMuseum")
+                  }
+                  disabled={
+                    museumContextLoading || museumContextOptions.length === 0
+                  }
                   showClear={false}
                 />
                 <ComboboxContent>
@@ -127,7 +141,9 @@ export function DashboardSidebar({
                 </ComboboxContent>
               </Combobox>
             ) : (
-              <p className="line-clamp-2 text-sm font-medium">{museumContextLabel}</p>
+              <p className="line-clamp-2 text-sm font-medium">
+                {museumContextLabel}
+              </p>
             )}
             {museumContextWarning && (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-primary">
@@ -151,7 +167,7 @@ export function DashboardSidebar({
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "h-10 w-full justify-start gap-2 rounded-xl px-3",
-                    isActive && "ring-border shadow-xs ring-1"
+                    isActive && "ring-border shadow-xs ring-1",
                   )}
                   render={<Link href={`/dashboard/${tab.path}`} />}
                 >
@@ -170,12 +186,17 @@ export function DashboardSidebar({
               className="h-10 w-full justify-start gap-2 rounded-xl px-3"
               render={
                 <Link
-                  href={isAdminMode ? "/dashboard/details" : "/dashboard/admin/org-requests"}
+                  href={
+                    isAdminMode
+                      ? "/dashboard/details"
+                      : "/dashboard/admin/org-requests"
+                  }
                 />
               }
             >
               <ShieldIcon className="size-4" />
-              {t("adminMode")} {isAdminMode ? t("adminModeOn") : t("adminModeOff")}
+              {t("adminMode")}{" "}
+              {isAdminMode ? t("adminModeOn") : t("adminModeOff")}
             </Button>
             {isAdminMode && (
               <nav className="mt-2 space-y-1">
@@ -192,7 +213,7 @@ export function DashboardSidebar({
                       variant={isActive ? "secondary" : "ghost"}
                       className={cn(
                         "h-10 w-full justify-start gap-2 rounded-xl px-3",
-                        isActive && "ring-border shadow-xs ring-1"
+                        isActive && "ring-border shadow-xs ring-1",
                       )}
                       render={<Link href={`/dashboard/admin/${tab.path}`} />}
                     >
@@ -224,14 +245,14 @@ export function DashboardSidebar({
         <div
           className={cn(
             "mt-3 rounded-lg border bg-muted/20",
-            isLanguageOpen ? "p-2" : "px-2 py-1"
+            isLanguageOpen ? "p-2" : "px-2 py-1",
           )}
         >
           <button
             type="button"
             className={cn(
               "flex w-full items-center justify-between gap-2 rounded-md px-1 text-left",
-              isLanguageOpen ? "py-1" : "py-0.5"
+              isLanguageOpen ? "py-1" : "py-0.5",
             )}
             onClick={() => setIsLanguageOpen((v) => !v)}
             aria-expanded={isLanguageOpen}
@@ -244,7 +265,7 @@ export function DashboardSidebar({
               className={cn(
                 "text-muted-foreground transition-transform duration-200",
                 isLanguageOpen ? "size-4" : "size-3.5",
-                isLanguageOpen ? "rotate-180" : "rotate-0"
+                isLanguageOpen ? "rotate-180" : "rotate-0",
               )}
             />
           </button>
@@ -254,16 +275,21 @@ export function DashboardSidebar({
               "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
               isLanguageOpen
                 ? "grid-rows-[1fr] opacity-100"
-                : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                : "grid-rows-[0fr] opacity-0 pointer-events-none",
             )}
             aria-hidden={!isLanguageOpen}
           >
-            <div className={cn("overflow-hidden", isLanguageOpen ? "pt-2" : "pt-0")}>
+            <div
+              className={cn(
+                "overflow-hidden",
+                isLanguageOpen ? "pt-2" : "pt-0",
+              )}
+            >
               <LocaleSwitcher />
             </div>
           </div>
         </div>
-        {!isAdmin && (
+        {(
           <nav className="mt-3 space-y-1">
             {workspaceDashboardTabs.map((tab) => {
               const Icon = tab.icon
@@ -275,7 +301,7 @@ export function DashboardSidebar({
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "h-10 w-full justify-start gap-2 rounded-xl px-3",
-                    isActive && "ring-border shadow-xs ring-1"
+                    isActive && "ring-border shadow-xs ring-1",
                   )}
                   render={<Link href={`/dashboard/${tab.path}`} />}
                 >
@@ -301,6 +327,7 @@ export function DashboardSidebar({
           <LogOutIcon className="size-4" />
           {t("logOut")}
         </Button>
+        <DeleteAccountDialog className="mt-2 w-full justify-start" />
       </div>
     </aside>
   )
