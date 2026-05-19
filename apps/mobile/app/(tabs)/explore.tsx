@@ -20,7 +20,7 @@ import appsFlyer from 'react-native-appsflyer';
 const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
 
 if (!appsFlyerKey) {
-  throw new Error("Missing EXPO_PUBLIC_APPSFLYER_DEV_KEY")
+  throw new Error('Missing EXPO_PUBLIC_APPSFLYER_DEV_KEY');
 }
 
 appsFlyer.initSdk(
@@ -133,22 +133,24 @@ function MuseumsRoute({
         placeholder="Search museums..."
       />
       {sortedByDistance ? (
-        <Text className="mx-5 mb-2 mt-[-2px] text-xs text-muted-foreground" accessibilityLiveRegion="polite">
+        <Text
+          className="text-muted-foreground mx-5 mt-[-2px] mb-2 text-xs"
+          accessibilityLiveRegion="polite">
           Nearest first - distances in miles from you
         </Text>
       ) : locationNote ? (
-        <View className="mx-5 mb-3 mt-[-2px] rounded-xl border border-border bg-muted/30 p-3">
-          <Text className="text-sm leading-5 text-muted-foreground">{locationNote}</Text>
+        <View className="border-border bg-muted/30 mx-5 mt-[-2px] mb-3 rounded-xl border p-3">
+          <Text className="text-muted-foreground text-sm leading-5">{locationNote}</Text>
           <View className="mt-2.5 flex-row flex-wrap gap-2.5">
             <Pressable
               onPress={onRetryLocation}
-              className="rounded-lg bg-primary px-3 py-1.5 active:opacity-90">
-              <Text className="text-xs font-semibold text-primary-foreground">Try again</Text>
+              className="bg-primary rounded-lg px-3 py-1.5 active:opacity-90">
+              <Text className="text-primary-foreground text-xs font-semibold">Try again</Text>
             </Pressable>
             <Pressable
               onPress={() => Linking.openSettings()}
-              className="rounded-lg border border-border bg-card px-3 py-1.5 active:opacity-90">
-              <Text className="text-xs font-semibold text-foreground">Open Settings</Text>
+              className="border-border bg-card rounded-lg border px-3 py-1.5 active:opacity-90">
+              <Text className="text-foreground text-xs font-semibold">Open Settings</Text>
             </Pressable>
           </View>
         </View>
@@ -163,16 +165,18 @@ function MuseumsRoute({
       ) : (
         <FlatList
           data={pagedMuseums}
-          renderItem={({ item }) => <MuseumCard museum={item} expectDistance={expectDistanceOnCards} />}
+          renderItem={({ item }) => (
+            <MuseumCard museum={item} expectDistance={expectDistanceOnCards} />
+          )}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={LIST_PADDING_BOTTOM}
           scrollEnabled
           ListFooterComponent={
             filteredMuseums.length > 0 ? (
-              <View className="mb-6 mt-2.5 flex-row items-center justify-center gap-2.5">
+              <View className="mt-2.5 mb-6 flex-row items-center justify-center gap-2.5">
                 <PaginationPill label="Previous" onPress={onPrevPage} disabled={museumPage <= 1} />
-                <Text className="text-sm font-medium text-muted-foreground">
+                <Text className="text-muted-foreground text-sm font-medium">
                   Page {museumPage} of {totalMuseumPages}
                 </Text>
                 <PaginationPill
@@ -185,7 +189,7 @@ function MuseumsRoute({
           }
           ListEmptyComponent={
             <View className="items-center px-12 py-12">
-              <Text className="text-center text-base text-muted-foreground">
+              <Text className="text-muted-foreground text-center text-base">
                 No museums match your search
               </Text>
             </View>
@@ -208,10 +212,17 @@ function PeopleSearchRoute({
   peopleSearch: string;
   setPeopleSearch: (v: string) => void;
   users: ReturnType<typeof useQuery<typeof api.auth.listUsers>>;
-  filteredUsers: { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[];
+  filteredUsers: {
+    userId: string;
+    name?: string | null;
+    email?: string | null;
+    imageUrl?: string | null;
+  }[];
   currUser: { _id: string } | null | undefined;
   currUserId: string | null;
-  recommendedPeople: { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[] | undefined;
+  recommendedPeople:
+    | { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[]
+    | undefined;
 }) {
   const isSearching = peopleSearch.trim().length > 0;
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -261,7 +272,7 @@ function PeopleSearchRoute({
         </View>
         <Button
           variant="secondary"
-          className="mb-3 mt-3 w-fit px-6"
+          className="mt-3 mb-3 w-fit px-6"
           onPress={handleShareInviteLink}
           disabled={isGeneratingLink}>
           <Text className="text-base font-semibold">
@@ -285,10 +296,12 @@ function PeopleSearchRoute({
               const rawName = item.name || item.email || '';
               const displayName =
                 typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
-              const initial = (displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?').toUpperCase();
+              const initial = (
+                displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?'
+              ).toUpperCase();
               return (
                 <Pressable
-                  className="mx-5 mb-3 flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 active:opacity-90"
+                  className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
                   onPress={() =>
                     router.push(
                       `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
@@ -297,11 +310,13 @@ function PeopleSearchRoute({
                   {item.imageUrl ? (
                     <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                   ) : (
-                    <View className="size-12 items-center justify-center rounded-full bg-primary">
-                      <Text className="text-lg font-semibold text-primary-foreground">{initial}</Text>
+                    <View className="bg-primary size-12 items-center justify-center rounded-full">
+                      <Text className="text-primary-foreground text-lg font-semibold">
+                        {initial}
+                      </Text>
                     </View>
                   )}
-                  <Text className="flex-1 text-lg font-medium text-foreground" numberOfLines={1}>
+                  <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
                     {displayName || "Name can't be displayed"}
                   </Text>
                 </Pressable>
@@ -313,7 +328,7 @@ function PeopleSearchRoute({
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
               <View className="items-center px-12 py-12">
-                <Text className="text-center text-base text-muted-foreground">
+                <Text className="text-muted-foreground text-center text-base">
                   No people match your search
                 </Text>
               </View>
@@ -328,10 +343,12 @@ function PeopleSearchRoute({
             const rawName = item.name || item.email || '';
             const displayName =
               typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
-            const initial = (displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?').toUpperCase();
+            const initial = (
+              displayName && displayName !== "Name can't be displayed" ? displayName[0] : '?'
+            ).toUpperCase();
             return (
               <Pressable
-                className="mx-5 mb-3 flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 active:opacity-90"
+                className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
                 onPress={() =>
                   router.push(
                     `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
@@ -340,11 +357,11 @@ function PeopleSearchRoute({
                 {item.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                 ) : (
-                  <View className="size-12 items-center justify-center rounded-full bg-primary">
-                    <Text className="text-lg font-semibold text-primary-foreground">{initial}</Text>
+                  <View className="bg-primary size-12 items-center justify-center rounded-full">
+                    <Text className="text-primary-foreground text-lg font-semibold">{initial}</Text>
                   </View>
                 )}
-                <Text className="flex-1 text-lg font-medium text-foreground" numberOfLines={1}>
+                <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
                   {displayName || "Name can't be displayed"}
                 </Text>
               </Pressable>
@@ -355,13 +372,13 @@ function PeopleSearchRoute({
           contentContainerStyle={LIST_PADDING_BOTTOM}
           ListHeaderComponent={
             <View className="px-5 py-3">
-              <Text className="text-lg font-semibold text-foreground">People you may know</Text>
+              <Text className="text-foreground text-lg font-semibold">People you may know</Text>
             </View>
           }
         />
       ) : (
         <View className="items-center px-12 py-12">
-          <Text className="text-center text-base text-muted-foreground">
+          <Text className="text-muted-foreground text-center text-base">
             Search for people to follow and see their profiles!
           </Text>
         </View>
@@ -382,7 +399,6 @@ export default function SearchScreen() {
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
-
 
   useEffect(() => {
     const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
@@ -413,7 +429,8 @@ export default function SearchScreen() {
       if (!servicesEnabled) {
         setLocState({
           status: 'unavailable',
-          message: 'Location Services are off. Turn them on to see distance and sort museums nearest first.',
+          message:
+            'Location Services are off. Turn them on to see distance and sort museums nearest first.',
         });
         return;
       }
@@ -477,7 +494,15 @@ export default function SearchScreen() {
     }
   }, [museumPage, totalMuseumPages]);
 
-  const users = useQuery(api.auth.listUsers) as { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[] | undefined;
+  const users = useQuery(api.auth.listUsers) as
+    | {
+        userId: string;
+        name: string | null;
+        email: string | null;
+        imageUrl: string | null;
+        bannerUrl: string | null;
+      }[]
+    | undefined;
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     if (!peopleSearch.trim()) return [];
@@ -495,18 +520,18 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView
-      className="relative flex-1 bg-background"
+      className="bg-background relative flex-1"
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
       <DecorativeGradientShapes />
 
-      <View className="z-10 flex-row border-b border-border">
+      <View className="border-border z-10 flex-row border-b">
         {tabs.map((tab, tabIndex) => {
           const isActive = tabIndex === index;
           return (
             <Pressable
               key={tab.key}
-              className="flex-1 items-center pb-2 pt-3.5"
+              className="flex-1 items-center pt-3.5 pb-2"
               onPress={() => setIndex(tabIndex)}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}>

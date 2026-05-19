@@ -36,6 +36,7 @@ async function withResolvedImageUrls(
     ...checkIn,
     imageIds,
     imageUrls,
+    attendedEventIds: checkIn.attendedEventIds,
   };
 }
 
@@ -87,6 +88,7 @@ export const createCheckIn = mutation({
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()), // If not provided, use current time
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))), // events/exhibitions attended
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -102,6 +104,7 @@ export const createCheckIn = mutation({
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
     const durationHours = args.durationHours;
+    const attendedEventIds = args.attendedEventIds;
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -114,6 +117,7 @@ export const createCheckIn = mutation({
       friendUserIds,
       durationHours,
       visitDate,
+      attendedEventIds,
       createdAt,
     });
 
@@ -238,7 +242,10 @@ export const getProfileVisits = query({
             review: ci.review,
             editedAt: ci.editedAt,
             durationHours: ci.durationHours,
+            friendUserIds: ci.friendUserIds ?? [],
+            imageIds,
             imageUrls: imageUrls,
+            attendedEventIds: ci.attendedEventIds,
           },
           museum: museum && "name" in museum
             ? {
@@ -356,6 +363,7 @@ export const updateCheckIn = mutation({
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -378,6 +386,7 @@ export const updateCheckIn = mutation({
     if (args.friendUserIds !== undefined)
       updateData.friendUserIds = args.friendUserIds;
     if (args.durationHours !== undefined) updateData.durationHours = args.durationHours;
+    if (args.attendedEventIds !== undefined) updateData.attendedEventIds = args.attendedEventIds;
     // Only mark as edited when something actually changed
     if (Object.keys(updateData).length > 0) {
       updateData.editedAt = Date.now();
@@ -465,6 +474,7 @@ export const createMuseumCheckIn = mutation({
     friendUserIds: v.optional(v.array(v.string())),
     durationHours: v.optional(v.number()),
     visitDate: v.optional(v.number()),
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))),
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -480,6 +490,7 @@ export const createMuseumCheckIn = mutation({
     const imageStorageIds = args.imageStorageIds ?? [];
     const friendUserIds = args.friendUserIds ?? [];
     const durationHours = args.durationHours;
+    const attendedEventIds = args.attendedEventIds;
 
     // Insert the check-in record
     const checkInId = await ctx.db.insert("checkIns", {
@@ -492,6 +503,7 @@ export const createMuseumCheckIn = mutation({
       friendUserIds,
       durationHours,
       visitDate,
+      attendedEventIds,
       createdAt,
     });
 
@@ -770,10 +782,15 @@ export const getFollowingCheckins = query({
           contentName: contentName,
           rating: ci.rating,
           review: ci.review,
+          visitDate: ci.visitDate ?? ci.createdAt,
+          durationHours: ci.durationHours,
+          friendUserIds: ci.friendUserIds ?? [],
+          imageIds,
           imageUrls: imageUrls,
           createdAt: ci.createdAt,
           editedAt: ci.editedAt,
           coVisitors: coVisitors,
+          attendedEventIds: ci.attendedEventIds,
         };
       })
     );

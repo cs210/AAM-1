@@ -20,6 +20,7 @@
     "@expo-google-fonts/playfair-display": "^0.2.3",
     "@packages/backend": "workspace:*",
     "@react-native-async-storage/async-storage": "^3.0.2",
+    "@react-native-async-storage/expo-with-async-storage": "^1.0.0",
     "@react-native-community/datetimepicker": "^8.4.4",
     "@react-navigation/native": "^7.0.0",
     "@rn-primitives/accordion": "^1.2.0",

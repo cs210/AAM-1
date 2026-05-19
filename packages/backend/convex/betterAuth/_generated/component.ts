@@ -1526,7 +1526,21 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       addMemberToOrganization: FunctionReference<
         "mutation",
         "internal",
-        { organizationId: string; role?: string; userId: string },
+        { organizationId: string; role?: "member" | "owner"; userId: string },
+        any,
+        Name
+      >;
+      deleteOrganization: FunctionReference<
+        "mutation",
+        "internal",
+        { organizationId: string },
+        any,
+        Name
+      >;
+      getMember: FunctionReference<
+        "query",
+        "internal",
+        { organizationId: string; userId: string },
         any,
         Name
       >;
@@ -1556,6 +1570,20 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "mutation",
         "internal",
         { organizationId: string; userId: string },
+        any,
+        Name
+      >;
+      setMemberRole: FunctionReference<
+        "mutation",
+        "internal",
+        { organizationId: string; role: "member" | "owner"; userId: string },
+        any,
+        Name
+      >;
+      transferOwnership: FunctionReference<
+        "mutation",
+        "internal",
+        { fromUserId: string; organizationId: string; toUserId: string },
         any,
         Name
       >;

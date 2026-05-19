@@ -18,12 +18,6 @@ export const dashboardTabs = [
     icon: Building2Icon,
   },
   {
-    id: "organizations",
-    path: "organizations",
-    label: "Organizations",
-    icon: LayersIcon,
-  },
-  {
     id: "exhibitions",
     path: "exhibitions",
     label: "Exhibitions",
@@ -44,13 +38,20 @@ export const dashboardTabs = [
 ] as const
 
 /** Path segment -> dashboard tab id for URL routing */
-export const dashboardPathToTabId: Record<string, DashboardTabId> = Object.fromEntries(
+export const dashboardPathToTabId: Partial<Record<string, DashboardTabId>> = Object.fromEntries(
   dashboardTabs.map((t) => [t.path, t.id])
-) as Record<string, DashboardTabId>
+) as Partial<Record<string, DashboardTabId>>
 
 export const workspaceDashboardTabs = [
   { id: "organizations", path: "organizations", label: "Organizations", icon: LayersIcon },
 ] as const
+
+/** Workspace/account path segment -> workspace tab id for URL routing */
+export const workspaceDashboardPathToTabId: Partial<Record<string, WorkspaceDashboardTabId>> =
+  Object.fromEntries(workspaceDashboardTabs.map((t) => [t.path, t.id])) as Partial<Record<
+    string,
+    WorkspaceDashboardTabId
+  >>
 
 export const adminDashboardTabs = [
   { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
@@ -61,14 +62,14 @@ export const adminDashboardTabs = [
 ] as const
 
 /** Admin path segment -> admin tab id for URL routing (/dashboard/admin/...) */
-export const adminPathToTabId: Record<string, AdminDashboardTabId> = Object.fromEntries(
+export const adminPathToTabId: Partial<Record<string, AdminDashboardTabId>> = Object.fromEntries(
   adminDashboardTabs.map((t) => [t.path, t.id])
-) as Record<string, AdminDashboardTabId>
+) as Partial<Record<string, AdminDashboardTabId>>
 
 export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
 export type WorkspaceDashboardTabId = (typeof workspaceDashboardTabs)[number]["id"]
 export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
-export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId
+export type AllDashboardTabId = DashboardTabId | WorkspaceDashboardTabId | AdminDashboardTabId
 export type DashboardTabMessageKey =
   | "museumDetails"
   | "organizations"

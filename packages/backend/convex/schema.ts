@@ -257,6 +257,7 @@ export default defineSchema({
     friendUserIds: v.array(v.string()),
     durationHours: v.optional(v.number()), // broad visit-length bucket in hours
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))), // events/exhibitions attended during museum visit
     createdAt: v.number(), // timestamp of check-in creation
     editedAt: v.optional(v.number()), // set when user edits rating/review
   })

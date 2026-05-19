@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
-import { useMutation } from "convex/react";
-import { api } from "@packages/backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,7 +24,6 @@ export default function SignUpPage() {
   const t = useTranslations("auth.signUp");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const saveProfile = useMutation(api.auth.saveUserProfile);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,17 +46,6 @@ export default function SignUpPage() {
       return;
     }
     if (data) {
-      try {
-        await saveProfile({
-          name: data.user.name || undefined,
-          email: data.user.email || undefined,
-          imageUrl: data.user.image || undefined,
-        });
-      } catch (profileError) {
-        console.error("Failed to save user profile:", profileError);
-        setError(t("profileFailed"));
-        return;
-      }
       router.push("/dashboard");
     }
   }
