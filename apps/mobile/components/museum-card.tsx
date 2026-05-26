@@ -5,6 +5,7 @@ import { Doc } from '@packages/backend/convex/_generated/dataModel';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
+import { CategoryTag } from '@/components/category-tag';
 
 export type MuseumCardData = Doc<"museums"> & {
   averageRating?: number | null;
@@ -92,19 +93,10 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
                   —
                 </Text>
               )}
-              <View
-                className={cn(
-                  'rounded-lg px-2.5 py-1',
-                  hasPrimaryImage ? 'bg-white/20' : 'bg-primary/15'
-                )}>
-                <Text
-                  className={cn(
-                    'text-xs font-semibold capitalize',
-                    hasPrimaryImage ? 'text-white' : 'text-primary'
-                  )}>
-                  {museum.category}
-                </Text>
-              </View>
+              <CategoryTag
+                category={museum.category}
+                variant={hasPrimaryImage ? 'onImage' : 'default'}
+              />
             </View>
           </View>
         </CardHeader>
