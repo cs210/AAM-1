@@ -1,5 +1,6 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import { View, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { AppleMaps, GoogleMaps } from 'expo-maps';
 import * as Location from 'expo-location';
 import { Text } from '@/components/ui/text';
@@ -17,8 +18,16 @@ interface UserLocation {
 }
 
 export function MuseumMapView({ museums, isLoading }: MuseumMapViewProps) {
+  const router = useRouter();
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
+
+  const handleMarkerPress = useCallback(
+    (museumId: string) => {
+      router.push(`/(museums)/${museumId}`);
+    },
+    [router]
+  );
 
   // Request location permissions and get user's current location
   useEffect(() => {
@@ -56,8 +65,8 @@ export function MuseumMapView({ museums, isLoading }: MuseumMapViewProps) {
     const validCount = museums.length;
 
     museums.forEach((museum) => {
-      const lat = museum.latitude;
-      const lng = museum.longitude;
+      const lat = museum.latitude as number;
+      const lng = museum.longitude as number;
       minLat = Math.min(minLat, lat);
       maxLat = Math.max(maxLat, lat);
       minLng = Math.min(minLng, lng);
@@ -115,6 +124,19 @@ export function MuseumMapView({ museums, isLoading }: MuseumMapViewProps) {
     [markersData]
   );
 
+  const handleOnMarkerClick = useCallback(
+    (marker: AppleMaps.Marker | GoogleMaps.Marker) => {
+      if (marker.id) {
+        const museum = markersData.find((m) => m._id === marker.id);
+        if (museum) {
+          console.log(museum)
+          handleMarkerPress(museum._id);
+        }
+      }
+    },
+    [handleMarkerPress, markersData]
+  );
+
   const MapComponent = Platform.OS === 'ios' ? AppleMaps.View : GoogleMaps.View;
   const mapMarkers = Platform.OS === 'ios' ? iosMarkers : androidMarkers;
 
@@ -154,6 +176,7 @@ export function MuseumMapView({ museums, isLoading }: MuseumMapViewProps) {
         style={{ flex: 1 }}
         markers={mapMarkers}
         cameraPosition={initialCamera}
+        onMarkerClick={handleOnMarkerClick}
       />
     </View>
   );
