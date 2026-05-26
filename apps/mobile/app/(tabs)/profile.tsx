@@ -39,6 +39,7 @@ import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
+import { setLastPeopleSearch } from '@/lib/last-people-search';
 import { useUniwind } from 'uniwind';
 import {
   RN_API_FOREGROUND_DARK,
@@ -345,6 +346,12 @@ export default function ProfileScreen() {
   const searchFromParams = Array.isArray(paramSearch) ? paramSearch[0] : paramSearch;
   const returnSearch = typeof searchFromParams === 'string' ? searchFromParams : '';
   const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
+
+  useEffect(() => {
+    if (returnSearch) {
+      setLastPeopleSearch(returnSearch);
+    }
+  }, [returnSearch]);
 
   // Fetch user profile info
   const userProfile = useQuery(api.auth.listUsers, {});

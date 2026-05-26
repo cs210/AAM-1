@@ -5,14 +5,19 @@ import { Tabs, router, useGlobalSearchParams } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon, ScanSearchIcon } from 'lucide-react-native';
 import { useConvexAuth } from 'convex/react';
 import { RN_STYLE } from '@/constants/rn-api-colors';
+import { setLastPeopleSearch } from '@/lib/last-people-search';
 import { useUniwind } from 'uniwind';
 
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { theme: colorScheme } = useUniwind();
   const t = colorScheme === 'dark' ? RN_STYLE.dark : RN_STYLE.light;
-  const { userId } = useGlobalSearchParams<{ userId?: string | string[] }>();
+  const { userId, search } = useGlobalSearchParams<{
+    userId?: string | string[];
+    search?: string | string[];
+  }>();
   const profileUserId = Array.isArray(userId) ? userId[0] : userId;
+  const peopleSearchFromRoute = Array.isArray(search) ? search[0] : search;
   const isViewingSearchProfile = typeof profileUserId === 'string' && profileUserId.length > 0;
 
   React.useEffect(() => {
@@ -63,6 +68,18 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="explore"
+        listeners={{
+          tabPress: (event) => {
+            if (typeof peopleSearchFromRoute !== 'string' || peopleSearchFromRoute === '') {
+              return;
+            }
+            event.preventDefault();
+            setLastPeopleSearch(peopleSearchFromRoute);
+            router.replace(
+              `/(tabs)/explore?tab=people&search=${encodeURIComponent(peopleSearchFromRoute)}`
+            );
+          },
+        }}
         options={{
           title: 'Explore',
           tabBarIcon: ({ color, size }) => (
@@ -84,6 +101,9 @@ export default function TabLayout() {
         listeners={{
           tabPress: (event) => {
             event.preventDefault();
+            if (typeof peopleSearchFromRoute === 'string' && peopleSearchFromRoute !== '') {
+              setLastPeopleSearch(peopleSearchFromRoute);
+            }
             router.replace('/(tabs)/profile');
           },
         }}

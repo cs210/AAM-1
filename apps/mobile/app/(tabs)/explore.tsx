@@ -15,6 +15,7 @@ import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getLastPeopleSearch, setLastPeopleSearch } from '@/lib/last-people-search';
 import appsFlyer from 'react-native-appsflyer';
 
 const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
@@ -398,13 +399,14 @@ export default function SearchScreen() {
     []
   );
 
-  const [peopleSearch, setPeopleSearch] = useState('');
+  const [peopleSearch, setPeopleSearch] = useState(getLastPeopleSearch);
 
   useEffect(() => {
     const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
     const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
     if (typeof searchParam === 'string' && searchParam !== '') {
       setPeopleSearch(searchParam);
+      setLastPeopleSearch(searchParam);
     }
     if (tabParam === 'museums') {
       setIndex(1);
@@ -412,6 +414,10 @@ export default function SearchScreen() {
       setIndex(0);
     }
   }, [params.search, params.tab]);
+
+  useEffect(() => {
+    setLastPeopleSearch(peopleSearch);
+  }, [peopleSearch]);
 
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumPage, setMuseumPage] = useState(1);
