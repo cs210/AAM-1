@@ -49,6 +49,21 @@ const QUESTIONS: Question[] = [
     choices: ['Solo, at My Own Pace', 'With Family or Friends', 'With a Tour or Guide', 'A Mix of Both'],
   },
   {
+    id: 'museum_activities',
+    question: 'How do you like to spend time in museums?',
+    subtext: 'Select all that apply.',
+    type: 'choice',
+    choices: [
+      'Walking Around and Exploring',
+      'Reading Labels and Plaques',
+      'Live Demos or Performances',
+      'Interactive or Hands-on Exhibits',
+      'Guided Tours or Talks',
+      'Sitting and Reflecting',
+    ],
+    multiSelect: true,
+  },
+  {
     id: 'motivation',
     question: 'What usually draws you to a museum?',
     type: 'choice',
