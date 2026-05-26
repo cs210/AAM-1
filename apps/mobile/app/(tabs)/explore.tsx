@@ -3,9 +3,11 @@ import { View, FlatList, Pressable, Linking, Share, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
+import { MapPin, List } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
+import { MuseumMapView } from '../../components/museum-map-view';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
@@ -110,6 +112,8 @@ function MuseumsRoute({
   expectDistanceOnCards,
   locationNote,
   onRetryLocation,
+  viewMode,
+  onToggleViewMode,
 }: {
   museumSearch: string;
   setMuseumSearch: (v: string) => void;
@@ -124,14 +128,31 @@ function MuseumsRoute({
   expectDistanceOnCards: boolean;
   locationNote: string | null;
   onRetryLocation: () => void;
+  viewMode: 'list' | 'map';
+  onToggleViewMode: () => void;
 }) {
   return (
     <View className="flex-1" style={{ flex: 1 }}>
-      <SearchFieldRow
-        value={museumSearch}
-        onChangeText={setMuseumSearch}
-        placeholder="Search museums..."
-      />
+      <View className="flex-row items-center gap-2 px-5 py-3">
+        <View className="flex-1">
+          <SearchFieldRow
+            value={museumSearch}
+            onChangeText={setMuseumSearch}
+            placeholder="Search museums..."
+          />
+        </View>
+        <Pressable
+          onPress={onToggleViewMode}
+          className="bg-primary rounded-lg p-2.5 active:opacity-80"
+          accessibilityLabel={`Switch to ${viewMode === 'list' ? 'map' : 'list'} view`}
+          accessibilityRole="button">
+          {viewMode === 'list' ? (
+            <MapPin size={20} color="white" />
+          ) : (
+            <List size={20} color="white" />
+          )}
+        </Pressable>
+      </View>
       {sortedByDistance ? (
         <Text
           className="text-muted-foreground mx-5 mt-[-2px] mb-2 text-xs"
@@ -155,7 +176,10 @@ function MuseumsRoute({
           </View>
         </View>
       ) : null}
-      {museums === undefined ? (
+
+      {viewMode === 'map' ? (
+        <MuseumMapView museums={filteredMuseums} isLoading={museums === undefined} />
+      ) : museums === undefined ? (
         <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
           <Text variant="muted" className="mt-3 text-base">
@@ -390,6 +414,7 @@ function PeopleSearchRoute({
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
   const [index, setIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const tabs = React.useMemo(
     () => [
       { key: 'people', title: 'People' },
@@ -578,6 +603,8 @@ export default function SearchScreen() {
           expectDistanceOnCards={locState.status === 'ok'}
           locationNote={locState.status === 'unavailable' ? locState.message : null}
           onRetryLocation={() => setLocationRetryKey((k) => k + 1)}
+          viewMode={viewMode}
+          onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
         />
       )}
     </SafeAreaView>

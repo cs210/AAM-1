@@ -66,6 +66,9 @@
         {
           "photosPermission": "$(PRODUCT_NAME) accesses your photos to let you share them with your friends and search for similar images."
         }
+      ],
+      [
+        "expo-maps"
       ]
     ],
     "experiments": {
