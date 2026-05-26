@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { getCategoryTagStyles } from '@/lib/museum-category-tag-styles';
 import { cn } from '@/lib/utils';
 
 type CategoryTagProps = {
@@ -10,24 +11,14 @@ type CategoryTagProps = {
 };
 
 export function CategoryTag({ category, className, variant = 'default' }: CategoryTagProps) {
-  const onImage = variant === 'onImage';
+  const styles = getCategoryTagStyles(category, variant);
 
   return (
     <View
-      className={cn(
-        'rounded-full border px-2.5 py-1',
-        onImage ? 'border-white/30 bg-white/20' : 'border-border bg-muted',
-        className
-      )}
+      className={cn('rounded-full border px-2.5 py-1', styles.container, className)}
       accessibilityRole="text"
       accessibilityLabel={`Museum type: ${category}`}>
-      <Text
-        className={cn(
-          'text-xs font-medium capitalize',
-          onImage ? 'text-white' : 'text-foreground'
-        )}>
-        {category}
-      </Text>
+      <Text className={cn('text-xs font-medium capitalize', styles.text)}>{category}</Text>
     </View>
   );
 }
