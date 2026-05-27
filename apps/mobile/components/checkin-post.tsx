@@ -209,7 +209,7 @@ export const CheckinPost = ({
         </View>
 
         {isCarousel && checkin.rating ? (
-          <View className="mb-0.5">{renderStars(checkin.rating, 14)}</View>
+          <View className="mb-0.5 mt-1.5">{renderStars(checkin.rating, 14)}</View>
         ) : null}
 
         {checkin.review ? (

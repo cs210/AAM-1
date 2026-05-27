@@ -7,7 +7,6 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
 import { BellIcon, InfoIcon, PlusIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { MuseumCheckinPickerModal } from '../../components/museum-checkin-picker-modal';
 import { HomeFeedSection } from '@/components/home-feed-section';
+import { HomeCheckinCta } from '@/components/home-checkin-cta';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useUniwind } from 'uniwind';
@@ -29,7 +29,7 @@ import {
 
 function FriendsEmptyState() {
   return (
-    <View className="border-border/60 bg-card/80 rounded-2xl border px-4 py-6">
+    <View className="items-center py-2">
       <Text className="text-center text-sm text-muted-foreground">
         Follow people to see their museum check-ins here.
       </Text>
@@ -42,7 +42,7 @@ function FriendsEmptyState() {
 
 function NearbyEmptyState({ message }: { message: string }) {
   return (
-    <View className="border-border/60 bg-card/80 rounded-2xl border px-4 py-6">
+    <View className="py-2">
       <Text className="text-center text-sm text-muted-foreground">{message}</Text>
     </View>
   );
@@ -131,7 +131,6 @@ export default function HomeScreen() {
               <Text className="mb-2 text-5xl font-semibold leading-none tracking-tight text-foreground">
                 {firstName}
               </Text>
-              <Separator className="mt-2 max-w-3/5 self-start bg-border" />
             </View>
             <View className="ml-4 mt-1 flex-row items-center gap-3">
               <Pressable
@@ -234,6 +233,8 @@ export default function HomeScreen() {
               ) : null
             }
           />
+
+          <HomeCheckinCta onPress={() => setMuseumCheckinPickerOpen(true)} />
         </View>
       </ScrollView>
 
