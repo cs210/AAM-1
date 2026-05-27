@@ -3,7 +3,52 @@ import { components } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import { authComponent } from "./auth";
+
+type MuseumPoint = { latitude: number; longitude: number } | null;
+
+async function getMuseumPoint(ctx: QueryCtx, museumId: string): Promise<MuseumPoint> {
+  const geospatialDoc = await ctx.runQuery(components.geospatial.document.get, {
+    key: museumId,
+  });
+  return geospatialDoc?.coordinates ?? null;
+}
+
+async function resolvePointForDistance(
+  ctx: QueryCtx,
+  museumId: Id<"museums">,
+  storedLat?: number,
+  storedLon?: number
+): Promise<MuseumPoint> {
+  const fromIndex = await getMuseumPoint(ctx, museumId);
+  if (fromIndex) return fromIndex;
+  if (
+    typeof storedLat === "number" &&
+    typeof storedLon === "number" &&
+    Number.isFinite(storedLat) &&
+    Number.isFinite(storedLon)
+  ) {
+    return { latitude: storedLat, longitude: storedLon };
+  }
+  return null;
+}
+
+function haversineDistanceMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+): number {
+  const earthRadiusMeters = 6371000;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const lat1 = (a.latitude * Math.PI) / 180;
+  const lat2 = (b.latitude * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const h =
+    sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  return 2 * earthRadiusMeters * Math.asin(Math.min(1, Math.sqrt(h)));
+}
 
 // Unified feed: events from museums the user follows and museums followed by people the user follows
 export const getUnifiedFeed = query({
@@ -100,6 +145,121 @@ export const getUnifiedFeed = query({
     );
 
     return feedWithMuseum;
+  },
+});
+
+/** Upcoming events and exhibitions at museums nearest to the viewer. */
+export const getNearbyFeed = query({
+  args: {
+    viewer: v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+    }),
+    museumLimit: v.optional(v.number()),
+    itemLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return [];
+
+    const museumLimit = args.museumLimit ?? 20;
+    const itemLimit = args.itemLimit ?? 40;
+    const now = Date.now();
+    const viewer = args.viewer;
+
+    const museums = await ctx.db.query("museums").collect();
+    const museumsWithDistance: Array<{
+      museumId: Id<"museums">;
+      distanceMeters: number;
+    }> = [];
+
+    for (const museum of museums) {
+      const point = await resolvePointForDistance(
+        ctx,
+        museum._id,
+        museum.latitude,
+        museum.longitude
+      );
+      if (!point) continue;
+      museumsWithDistance.push({
+        museumId: museum._id,
+        distanceMeters: haversineDistanceMeters(viewer, point),
+      });
+    }
+
+    museumsWithDistance.sort((a, b) => a.distanceMeters - b.distanceMeters);
+    const nearestMuseumIds = museumsWithDistance
+      .slice(0, museumLimit)
+      .map((m) => m.museumId);
+    const distanceByMuseumId = new Map(
+      museumsWithDistance.map((m) => [m.museumId, m.distanceMeters])
+    );
+
+    if (nearestMuseumIds.length === 0) return [];
+
+    const eventsArrays = await Promise.all(
+      nearestMuseumIds.map((museumId) =>
+        ctx.db
+          .query("events")
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+          .filter((q) => q.gte(q.field("endDate"), now))
+          .collect()
+      )
+    );
+    const exhibitionsArrays = await Promise.all(
+      nearestMuseumIds.map((museumId) =>
+        ctx.db
+          .query("exhibitions")
+          .withIndex("by_museum", (q) => q.eq("museumId", museumId))
+          .collect()
+      )
+    );
+
+    const normalizedExhibitions = exhibitionsArrays
+      .flat()
+      .filter((exhibition) => exhibition.endDate === undefined || exhibition.endDate >= now)
+      .map((exhibition) => ({
+        _id: exhibition._id,
+        _creationTime: exhibition._creationTime,
+        title: exhibition.name,
+        description: exhibition.description,
+        category: "exhibition",
+        museumId: exhibition.museumId,
+        startDate: exhibition.startDate ?? now,
+        endDate: exhibition.endDate ?? exhibition.startDate ?? now,
+        imageUrl: exhibition.imageUrl,
+        kind: "exhibition" as const,
+      }));
+
+    const normalizedEvents = eventsArrays.flat().map((event) => ({
+      ...event,
+      kind: "event" as const,
+    }));
+
+    const allItems = [...normalizedEvents, ...normalizedExhibitions];
+
+    const feedWithMuseum = await Promise.all(
+      allItems.map(async (item) => {
+        const museum = item.museumId ? await ctx.db.get(item.museumId) : null;
+        const distanceMeters = item.museumId
+          ? distanceByMuseumId.get(item.museumId)
+          : undefined;
+        return {
+          ...item,
+          museum: museum ? { name: museum.name, category: museum.category } : null,
+          distanceMeters,
+        };
+      })
+    );
+
+    feedWithMuseum.sort((a, b) => {
+      const distA = a.distanceMeters ?? Number.POSITIVE_INFINITY;
+      const distB = b.distanceMeters ?? Number.POSITIVE_INFINITY;
+      if (distA !== distB) return distA - distB;
+      return a.startDate - b.startDate;
+    });
+
+    return feedWithMuseum.slice(0, itemLimit);
   },
 });
 

@@ -14,6 +14,7 @@ import {
   RN_API_MUTED_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
 } from '@/constants/rn-api-colors';
+import { HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
 
 export interface CheckinPostData {
   _id: string;
@@ -52,6 +53,7 @@ type CheckinPostProps = {
   isOwnCheckin?: boolean;
   onEditPress?: () => void;
   openOnReviewsTab?: boolean;
+  layout?: 'feed' | 'carousel';
 };
 
 const CARD_SHADOW = {
@@ -68,7 +70,9 @@ export const CheckinPost = ({
   isOwnCheckin,
   onEditPress,
   openOnReviewsTab,
+  layout = 'feed',
 }: CheckinPostProps) => {
+  const isCarousel = layout === 'carousel';
   const brandPrimary = useBrandPrimaryHex();
   const { theme } = useUniwind();
   const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
@@ -97,12 +101,12 @@ export const CheckinPost = ({
     router.push(`/(tabs)/profile?userId=${encodeURIComponent(visitorId)}`);
   };
 
-  const renderStars = (rating: number) => (
+  const renderStars = (rating: number, size = 16) => (
     <View className="flex-row gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
         <StarIcon
           key={star}
-          size={16}
+          size={size}
           color={star <= rating ? brandPrimary : 'rgba(0,0,0,0.15)'}
           fill={star <= rating ? brandPrimary : 'none'}
         />
@@ -112,18 +116,20 @@ export const CheckinPost = ({
 
   return (
     <Pressable
-      className="mb-4 active:opacity-95"
+      className={cn(isCarousel ? 'active:opacity-95' : 'mb-4 active:opacity-95')}
+      style={isCarousel ? { width: HOME_CAROUSEL_CARD_WIDTH } : undefined}
       onPress={handlePress}
       android_ripple={{ color: 'rgba(0,0,0,0.05)' }}>
       <Card
         className={cn(
-          'gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-5 shadow-sm shadow-black/5',
+          'gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm shadow-black/5',
+          isCarousel ? 'min-h-[220px] p-4' : 'p-5',
           variant.border
         )}
         style={CARD_SHADOW}>
-        <View className="mb-3.5 flex-row items-start justify-between">
+        <View className={cn('flex-row items-start justify-between', isCarousel ? 'mb-2.5' : 'mb-3.5')}>
           <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
-            <Avatar className="mr-3 size-11" alt={checkin.userName}>
+            <Avatar className={cn('mr-3', isCarousel ? 'size-9' : 'size-11')} alt={checkin.userName}>
               {checkin.userImage ? (
                 <AvatarImage source={{ uri: checkin.userImage }} />
               ) : null}
@@ -157,7 +163,7 @@ export const CheckinPost = ({
               <Pressable onPress={handleMuseumPress} className="active:opacity-70">
                 <Text className="text-xs font-semibold text-foreground">{checkin.contentName}</Text>
               </Pressable>
-              {checkin.coVisitors && checkin.coVisitors.length > 0 && (
+              {!isCarousel && checkin.coVisitors && checkin.coVisitors.length > 0 ? (
                 <View className="flex-row flex-wrap items-baseline gap-1">
                   <Text className="text-xs font-medium text-muted-foreground">with</Text>
                   {checkin.coVisitors.map((v, idx) => (
@@ -165,56 +171,67 @@ export const CheckinPost = ({
                       <Pressable onPress={(e) => handleCoVisitorPress(v.userId, e)} className="active:opacity-70">
                         <Text className="text-xs font-medium text-foreground">{v.userName}</Text>
                       </Pressable>
-                      {idx < checkin.coVisitors!.length - 1 && (
+                      {idx < checkin.coVisitors!.length - 1 ? (
                         <Text className="text-xs font-medium text-muted-foreground">,</Text>
-                      )}
+                      ) : null}
                     </View>
                   ))}
                 </View>
-              )}
+              ) : null}
             </View>
           </View>
 
           {checkin.rating ? (
-            <View className="items-end gap-1.5">
-              {renderStars(checkin.rating)}
-              <Text className={cn('text-base font-bold', variant.accentText)}>
-                {checkin.rating.toFixed(1)}
-              </Text>
+            <View className="items-end gap-1">
+              {renderStars(checkin.rating, isCarousel ? 14 : 16)}
+              {!isCarousel ? (
+                <Text className={cn('text-base font-bold', variant.accentText)}>
+                  {checkin.rating.toFixed(1)}
+                </Text>
+              ) : null}
             </View>
           ) : null}
         </View>
 
         {checkin.review ? (
-          <Text className="mb-3 text-sm leading-6 text-foreground" numberOfLines={3}>
+          <Text
+            className={cn('text-sm leading-5 text-foreground', isCarousel ? 'mb-2' : 'mb-3 leading-6')}
+            numberOfLines={isCarousel ? 2 : 3}>
             {checkin.review}
           </Text>
         ) : null}
 
-        <View className="relative pb-4">
+        <View className={cn('relative', isCarousel ? 'pb-0' : 'pb-4')}>
           {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
             <View className="mt-0.5 flex-row">
-              {checkin.imageUrls.slice(0, 3).map((url, index) => (
+              {checkin.imageUrls.slice(0, isCarousel ? 1 : 3).map((url, index) => (
                 <Image
                   key={`${checkin._id}-photo-${index}`}
                   source={{ uri: url }}
-                  className={cn('size-18 rounded-lg bg-muted', index > 0 && 'ml-2')}
+                  className={cn(
+                    'rounded-lg bg-muted',
+                    isCarousel ? 'h-24 w-full' : 'size-18',
+                    index > 0 && 'ml-2'
+                  )}
+                  resizeMode="cover"
                 />
               ))}
             </View>
           ) : null}
-          <Pressable
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-            onPress={toggleBookmark}
-            className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
-            <Bookmark
-              size={20}
-              color={isBookmarked ? brandPrimary : mutedHex}
-              fill={isBookmarked ? brandPrimary : 'none'}
-            />
-          </Pressable>
+          {!isCarousel ? (
+            <Pressable
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              onPress={toggleBookmark}
+              className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
+              <Bookmark
+                size={20}
+                color={isBookmarked ? brandPrimary : mutedHex}
+                fill={isBookmarked ? brandPrimary : 'none'}
+              />
+            </Pressable>
+          ) : null}
         </View>
       </Card>
     </Pressable>

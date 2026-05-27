@@ -62,21 +62,11 @@ type SearchStatus = 'uploading' | 'searching' | null;
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return (
-    <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+    <SafeAreaView
+      className="flex-1 bg-background"
+      style={{ flex: 1 }}
+      edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          className="size-10 items-center justify-center"
-          onPress={() => router.back()}>
-          <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
-        </Pressable>
-        <Text className="flex-1 text-center text-base font-semibold text-foreground" numberOfLines={1}>
-          Visual Search
-        </Text>
-        <View className="w-10" />
-      </View>
       <View className="flex-1 items-center justify-center gap-4 p-6">
         <Text className="text-center text-lg font-semibold text-foreground">
           Unable to load visual search.
@@ -432,6 +422,17 @@ export default function VisualSearchScreen() {
         className="flex-1 bg-background"
         contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={preselectedMuseum ? 'Go back' : 'Back to museum list'}
+          className="mb-4 flex-row items-center gap-2 self-start active:opacity-70"
+          onPress={handleBackPress}>
+          <ArrowLeftIcon size={20} color={RN_API_FOREGROUND_LIGHT} />
+          <Text className="text-sm font-medium text-muted-foreground">
+            {preselectedMuseum ? 'Back' : 'All museums'}
+          </Text>
+        </Pressable>
+
         <Card className="gap-5 rounded-2xl py-6">
           <CardHeader className="gap-3">
             <View className="flex-row items-center gap-3">
@@ -710,23 +711,11 @@ export default function VisualSearchScreen() {
       {searchResponse ? (
         renderResults()
       ) : (
-        <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+        <SafeAreaView
+          className="flex-1 bg-background"
+          style={{ flex: 1 }}
+          edges={['top', 'left', 'right']}>
           <Stack.Screen options={{ headerShown: false }} />
-
-          <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-              className="size-10 items-center justify-center"
-              onPress={handleBackPress}>
-              <ArrowLeftIcon size={24} color={RN_API_FOREGROUND_LIGHT} />
-            </Pressable>
-            <Text className="flex-1 text-center text-base font-semibold text-foreground" numberOfLines={1}>
-              Visual Search
-            </Text>
-            <View className="w-10" />
-          </View>
-
           {selectedMuseum ? renderUploadStep() : renderMuseumSelector()}
         </SafeAreaView>
       )}

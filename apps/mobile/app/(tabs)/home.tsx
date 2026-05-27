@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
@@ -10,15 +10,56 @@ import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
-import { FeedEmptyState } from '@/components/feed-empty-state';
+import { Button } from '@/components/ui/button';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { MuseumCheckinPickerModal } from '../../components/museum-checkin-picker-modal';
+import { HomeFeedSection } from '@/components/home-feed-section';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useUniwind } from 'uniwind';
 import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
+
+function FriendsEmptyState() {
+  return (
+    <View className="border-border/60 bg-card/80 rounded-2xl border px-4 py-6">
+      <Text className="text-center text-sm text-muted-foreground">
+        Follow people to see their museum check-ins here.
+      </Text>
+      <Button className="mt-4 self-center" size="sm" onPress={() => router.push('/(tabs)/explore')}>
+        <Text>Find people</Text>
+      </Button>
+    </View>
+  );
+}
+
+function NearbyEmptyState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <View className="border-border/60 bg-card/80 rounded-2xl border px-4 py-6">
+      <Text className="text-center text-sm text-muted-foreground">{message}</Text>
+      {onRetry ? (
+        <View className="mt-4 flex-row justify-center gap-2">
+          <Button size="sm" onPress={onRetry}>
+            <Text>Try again</Text>
+          </Button>
+          <Pressable
+            onPress={() => Linking.openSettings()}
+            className="border-border rounded-lg border px-3 py-2 active:opacity-90">
+            <Text className="text-xs font-semibold">Settings</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const { theme } = useUniwind();
@@ -26,19 +67,24 @@ export default function HomeScreen() {
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
-  const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
   const unreadNotifications = useQuery(api.socialNotifications.unreadCount);
+  const { locState, retry } = useViewerLocation();
+  const nearbyFeed = useQuery(
+    api.events.getNearbyFeed,
+    locState.status === 'ok' ? { viewer: locState.viewer, itemLimit: 24 } : 'skip'
+  );
+
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const [museumCheckinPickerOpen, setMuseumCheckinPickerOpen] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
-  if (
-    events === undefined ||
-    followingCheckins === undefined ||
+  const coreLoading =
     currentUser === undefined ||
-    currentUserProfile === undefined
-  ) {
+    currentUserProfile === undefined ||
+    followingCheckins === undefined;
+
+  if (coreLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center gap-3" style={{ flex: 1 }}>
@@ -54,14 +100,7 @@ export default function HomeScreen() {
   const firstName = currentUser?.name?.split(' ')[0] || 'there';
   const initial = firstName.charAt(0).toUpperCase();
 
-  const feedItems = [
-    ...events.map((e) => ({ type: 'event' as const, data: e })),
-    ...followingCheckins.map((c) => ({ type: 'checkin' as const, data: c })),
-  ].sort((a, b) => {
-    const dateA = a.type === 'event' ? a.data._creationTime : a.data.createdAt;
-    const dateB = b.type === 'event' ? b.data._creationTime : b.data.createdAt;
-    return dateB - dateA;
-  });
+  const nearbyLoading = locState.status === 'pending' || (locState.status === 'ok' && nearbyFeed === undefined);
 
   return (
     <SafeAreaView
@@ -74,7 +113,7 @@ export default function HomeScreen() {
         className="z-10 flex-1"
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}>
-        <View className="pb-3">
+        <View className="pb-8">
           <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
             <View className="min-w-0 flex-1">
               <Text className="mb-0.5 text-sm font-normal text-muted-foreground">Welcome</Text>
@@ -122,41 +161,60 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Text className="mb-4 px-5 text-sm font-normal text-muted-foreground">
-            see what your friends are up to
-          </Text>
+          <HomeFeedSection
+            title="See what your friends are up to"
+            subtitle="Swipe through recent check-ins"
+            data={followingCheckins}
+            keyExtractor={(item) => item._id}
+            onSeeAll={
+              followingCheckins.length > 0
+                ? () => router.push('/home-feed/checkins')
+                : undefined
+            }
+            seeAllAccessibilityLabel="See all friend check-ins"
+            renderItem={({ item, index }) => (
+              <CheckinPost
+                checkin={item as CheckinPostData}
+                cardIndex={index}
+                layout="carousel"
+                isOwnCheckin={currentUserId != null && item.userId === currentUserId}
+                onEditPress={
+                  currentUserId != null && item.userId === currentUserId
+                    ? () => setEditingCheckin(item as CheckinPostData)
+                    : undefined
+                }
+              />
+            )}
+            emptyComponent={<FriendsEmptyState />}
+          />
 
-        <View className="px-5 pb-2">
-          {feedItems.length === 0 ? (
-            <FeedEmptyState />
-          ) : (
-            <View>
-              {feedItems.map((item, index) =>
-                item.type === 'event' ? (
-                  <EventCard
-                    key={`event-${item.data._id}`}
-                    event={item.data as EventCardData}
-                    cardIndex={index}
-                  />
-                ) : (
-                  <CheckinPost
-                    key={`checkin-${item.data._id}`}
-                    checkin={item.data as CheckinPostData}
-                    cardIndex={index}
-                    isOwnCheckin={
-                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                    }
-                    onEditPress={
-                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                        ? () => setEditingCheckin(item.data as CheckinPostData)
-                        : undefined
-                    }
-                  />
-                )
-              )}
-            </View>
-          )}
-        </View>
+          <HomeFeedSection
+            title="See what's around you"
+            subtitle={
+              locState.status === 'ok'
+                ? 'Upcoming events and exhibitions near you'
+                : 'Enable location for nearby picks'
+            }
+            data={nearbyFeed ?? []}
+            keyExtractor={(item) => `${item.kind ?? 'event'}-${item._id}`}
+            loading={nearbyLoading}
+            onSeeAll={
+              locState.status === 'ok' && nearbyFeed && nearbyFeed.length > 0
+                ? () => router.push('/home-feed/nearby')
+                : undefined
+            }
+            seeAllAccessibilityLabel="See all nearby events"
+            renderItem={({ item, index }) => (
+              <EventCard event={item as EventCardData} cardIndex={index} layout="carousel" />
+            )}
+            emptyComponent={
+              locState.status === 'unavailable' ? (
+                <NearbyEmptyState message={locState.message} onRetry={retry} />
+              ) : locState.status === 'ok' && nearbyFeed && nearbyFeed.length === 0 ? (
+                <NearbyEmptyState message="No upcoming events or exhibitions found near you right now." />
+              ) : null
+            }
+          />
         </View>
       </ScrollView>
 
