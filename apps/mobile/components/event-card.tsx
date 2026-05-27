@@ -126,7 +126,7 @@ export function EventCard({
       <Card
         className={cn(
           'relative gap-0 overflow-hidden rounded-2xl border-0 shadow-sm shadow-black/5',
-          isCarousel ? 'min-h-[168px] p-4' : 'p-5',
+          isCarousel ? 'min-h-[200px] p-4' : 'p-5',
           variant.bg
         )}>
         {showImageBackground && (

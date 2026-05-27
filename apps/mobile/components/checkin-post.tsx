@@ -64,6 +64,16 @@ const CARD_SHADOW = {
   shadowColor: '#000000',
 } as const;
 
+const checkinVisitDateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
+
+function formatCheckinVisitDate(timestamp: number): string {
+  return checkinVisitDateFormatter.format(new Date(timestamp));
+}
+
 export const CheckinPost = ({
   checkin,
   cardIndex = 0,
@@ -78,6 +88,7 @@ export const CheckinPost = ({
   const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
   const { isBookmarked, toggleBookmark } = useBookmark(checkin.contentId as Id<'museums'>);
+  const visitDateLabel = formatCheckinVisitDate(checkin.visitDate ?? checkin.createdAt);
 
   const handlePress = () => {
     if (openOnReviewsTab) {
@@ -123,11 +134,11 @@ export const CheckinPost = ({
       <Card
         className={cn(
           'gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm shadow-black/5',
-          isCarousel ? 'min-h-[220px] p-4' : 'p-5',
+          isCarousel ? 'min-h-[252px] flex-col p-3.5' : 'p-5',
           variant.border
         )}
         style={CARD_SHADOW}>
-        <View className={cn('flex-row items-start justify-between', isCarousel ? 'mb-2.5' : 'mb-3.5')}>
+        <View className={cn('flex-row items-start', isCarousel ? 'mb-1.5' : 'mb-3.5 justify-between')}>
           <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
             <Avatar className={cn('mr-3', isCarousel ? 'size-9' : 'size-11')} alt={checkin.userName}>
               {checkin.userImage ? (
@@ -140,29 +151,35 @@ export const CheckinPost = ({
               </AvatarFallback>
             </Avatar>
           </Pressable>
-            <View className="min-w-0 flex-1">
-              <View className="mb-0.5 flex-row items-center gap-1.5">
-                <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
-                  <Text className="text-base font-bold text-foreground" numberOfLines={1}>
-                    {checkin.userName}
+          <View className="min-w-0 flex-1">
+            <View className="mb-0.5 flex-row items-center gap-1.5">
+              <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
+                <Text
+                  className={cn('font-bold text-foreground', isCarousel ? 'text-[15px]' : 'text-base')}
+                  numberOfLines={1}>
+                  {checkin.userName}
+                </Text>
+              </Pressable>
+              {isOwnCheckin && onEditPress ? (
+                <Pressable
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit check-in"
+                  onPress={onEditPress}
+                  className="shrink-0 rounded-md p-1 active:opacity-70">
+                  <PencilIcon size={16} color={brandPrimary} />
+                </Pressable>
+              ) : null}
+            </View>
+            <View className={cn('gap-0.5', isCarousel ? 'flex-col items-start' : 'flex-row flex-wrap items-baseline gap-1')}>
+              <View className="flex-row flex-wrap items-baseline gap-1">
+                <Text className="text-xs font-medium text-muted-foreground">visited</Text>
+                <Pressable onPress={handleMuseumPress} className="active:opacity-70">
+                  <Text className="text-xs font-semibold text-foreground" numberOfLines={isCarousel ? 2 : undefined}>
+                    {checkin.contentName}
                   </Text>
                 </Pressable>
-                {isOwnCheckin && onEditPress && (
-                  <Pressable
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Edit check-in"
-                    onPress={onEditPress}
-                    className="shrink-0 rounded-md p-1 active:opacity-70">
-                    <PencilIcon size={16} color={brandPrimary} />
-                  </Pressable>
-                )}
               </View>
-            <View className="flex-row flex-wrap items-baseline gap-1">
-              <Text className="text-xs font-medium text-muted-foreground">visited</Text>
-              <Pressable onPress={handleMuseumPress} className="active:opacity-70">
-                <Text className="text-xs font-semibold text-foreground">{checkin.contentName}</Text>
-              </Pressable>
               {!isCarousel && checkin.coVisitors && checkin.coVisitors.length > 0 ? (
                 <View className="flex-row flex-wrap items-baseline gap-1">
                   <Text className="text-xs font-medium text-muted-foreground">with</Text>
@@ -181,27 +198,41 @@ export const CheckinPost = ({
             </View>
           </View>
 
-          {checkin.rating ? (
-            <View className="items-end gap-1">
-              {renderStars(checkin.rating, isCarousel ? 14 : 16)}
-              {!isCarousel ? (
-                <Text className={cn('text-base font-bold', variant.accentText)}>
-                  {checkin.rating.toFixed(1)}
-                </Text>
-              ) : null}
+          {!isCarousel && checkin.rating ? (
+            <View className="items-end gap-1.5">
+              {renderStars(checkin.rating)}
+              <Text className={cn('text-base font-bold', variant.accentText)}>
+                {checkin.rating.toFixed(1)}
+              </Text>
             </View>
           ) : null}
         </View>
 
+        {isCarousel && checkin.rating ? (
+          <View className="mb-1.5 flex-row items-center gap-2">
+            {renderStars(checkin.rating, 14)}
+            <Text className={cn('text-sm font-bold', variant.accentText)}>
+              {checkin.rating.toFixed(1)}
+            </Text>
+          </View>
+        ) : null}
+
         {checkin.review ? (
           <Text
-            className={cn('text-sm leading-5 text-foreground', isCarousel ? 'mb-2' : 'mb-3 leading-6')}
-            numberOfLines={isCarousel ? 2 : 3}>
+            className={cn(
+              'text-sm text-foreground',
+              isCarousel ? 'mb-1.5 leading-[18px]' : 'mb-2 leading-6'
+            )}
+            numberOfLines={isCarousel ? 5 : 3}>
             {checkin.review}
           </Text>
         ) : null}
 
-        <View className={cn('relative', isCarousel ? 'pb-0' : 'pb-4')}>
+        {!isCarousel ? (
+          <Text className="mb-3 text-xs font-medium text-muted-foreground">{visitDateLabel}</Text>
+        ) : null}
+
+        <View className={cn('relative', isCarousel ? 'mb-1' : 'pb-4')}>
           {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
             <View className="mt-0.5 flex-row">
               {checkin.imageUrls.slice(0, isCarousel ? 1 : 3).map((url, index) => (
@@ -210,7 +241,7 @@ export const CheckinPost = ({
                   source={{ uri: url }}
                   className={cn(
                     'rounded-lg bg-muted',
-                    isCarousel ? 'h-24 w-full' : 'size-18',
+                    isCarousel ? 'h-16 w-full' : 'size-18',
                     index > 0 && 'ml-2'
                   )}
                   resizeMode="cover"
@@ -233,6 +264,12 @@ export const CheckinPost = ({
             </Pressable>
           ) : null}
         </View>
+
+        {isCarousel ? (
+          <Text className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
+            {visitDateLabel}
+          </Text>
+        ) : null}
       </Card>
     </Pressable>
   );

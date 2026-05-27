@@ -162,8 +162,7 @@ export default function HomeScreen() {
           </View>
 
           <HomeFeedSection
-            title="See what your friends are up to"
-            subtitle="Swipe through recent check-ins"
+            title="From Your Friends"
             data={followingCheckins}
             keyExtractor={(item) => item._id}
             onSeeAll={
