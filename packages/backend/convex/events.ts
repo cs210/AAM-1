@@ -263,6 +263,63 @@ export const getNearbyFeed = query({
   },
 });
 
+/** Upcoming events and exhibitions when viewer location is unavailable. */
+export const getAvailableFeed = query({
+  args: {
+    itemLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) return [];
+
+    const itemLimit = args.itemLimit ?? 24;
+    const now = Date.now();
+
+    const events = await ctx.db
+      .query("events")
+      .filter((q) => q.gte(q.field("endDate"), now))
+      .collect();
+
+    const exhibitions = await ctx.db.query("exhibitions").collect();
+
+    const normalizedExhibitions = exhibitions
+      .filter((exhibition) => exhibition.endDate === undefined || exhibition.endDate >= now)
+      .map((exhibition) => ({
+        _id: exhibition._id,
+        _creationTime: exhibition._creationTime,
+        title: exhibition.name,
+        description: exhibition.description,
+        category: "exhibition",
+        museumId: exhibition.museumId,
+        startDate: exhibition.startDate ?? now,
+        endDate: exhibition.endDate ?? exhibition.startDate ?? now,
+        imageUrl: exhibition.imageUrl,
+        kind: "exhibition" as const,
+      }));
+
+    const normalizedEvents = events.map((event) => ({
+      ...event,
+      kind: "event" as const,
+    }));
+
+    const allItems = [...normalizedEvents, ...normalizedExhibitions];
+
+    const feedWithMuseum = await Promise.all(
+      allItems.map(async (item) => {
+        const museum = item.museumId ? await ctx.db.get(item.museumId) : null;
+        return {
+          ...item,
+          museum: museum ? { name: museum.name, category: museum.category } : null,
+        };
+      })
+    );
+
+    feedWithMuseum.sort((a, b) => b.startDate - a.startDate);
+
+    return feedWithMuseum.slice(0, itemLimit);
+  },
+});
+
 const geospatial = new GeospatialIndex(components.geospatial);
 // Add an event
 export const addEvent = mutation({

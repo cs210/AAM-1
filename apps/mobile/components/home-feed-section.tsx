@@ -13,6 +13,7 @@ import {
 
 type HomeFeedSectionProps<T> = {
   title: string;
+  titleAccessory?: React.ReactNode;
   subtitle?: string;
   onSeeAll?: () => void;
   seeAllAccessibilityLabel?: string;
@@ -26,6 +27,7 @@ type HomeFeedSectionProps<T> = {
 
 export function HomeFeedSection<T>({
   title,
+  titleAccessory,
   subtitle,
   onSeeAll,
   seeAllAccessibilityLabel = 'See all',
@@ -43,7 +45,10 @@ export function HomeFeedSection<T>({
     <View className={cn('mb-8', className)}>
       <View className="mb-3 flex-row items-end justify-between px-5">
         <View className="min-w-0 flex-1 pr-3">
-          <Text className="text-lg font-semibold text-foreground">{title}</Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-lg font-semibold text-foreground">{title}</Text>
+            {titleAccessory}
+          </View>
           {subtitle ? (
             <Text className="mt-0.5 text-sm text-muted-foreground">{subtitle}</Text>
           ) : null}

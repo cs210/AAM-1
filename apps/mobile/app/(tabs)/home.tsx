@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Pressable, Linking } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, ScrollView, Pressable, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { BellIcon, PlusIcon } from 'lucide-react-native';
+import { BellIcon, InfoIcon, PlusIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +20,12 @@ import { HomeFeedSection } from '@/components/home-feed-section';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useUniwind } from 'uniwind';
-import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
+import {
+  RN_API_MUTED_FOREGROUND_DARK,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+  RN_API_PRIMARY_DARK,
+  RN_API_PRIMARY_LIGHT,
+} from '@/constants/rn-api-colors';
 
 function FriendsEmptyState() {
   return (
@@ -35,35 +40,26 @@ function FriendsEmptyState() {
   );
 }
 
-function NearbyEmptyState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
+function NearbyEmptyState({ message }: { message: string }) {
   return (
     <View className="border-border/60 bg-card/80 rounded-2xl border px-4 py-6">
       <Text className="text-center text-sm text-muted-foreground">{message}</Text>
-      {onRetry ? (
-        <View className="mt-4 flex-row justify-center gap-2">
-          <Button size="sm" onPress={onRetry}>
-            <Text>Try again</Text>
-          </Button>
-          <Pressable
-            onPress={() => Linking.openSettings()}
-            className="border-border rounded-lg border px-3 py-2 active:opacity-90">
-            <Text className="text-xs font-semibold">Settings</Text>
-          </Pressable>
-        </View>
-      ) : null}
     </View>
   );
+}
+
+function promptEnableLocation(message: string, onRetry: () => void) {
+  Alert.alert('Turn on location', message, [
+    { text: 'Not now', style: 'cancel' },
+    { text: 'Try again', onPress: onRetry },
+    { text: 'Settings', onPress: () => Linking.openSettings() },
+  ]);
 }
 
 export default function HomeScreen() {
   const { theme } = useUniwind();
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
@@ -74,10 +70,19 @@ export default function HomeScreen() {
     api.events.getNearbyFeed,
     locState.status === 'ok' ? { viewer: locState.viewer, itemLimit: 24 } : 'skip'
   );
+  const availableFeed = useQuery(
+    api.events.getAvailableFeed,
+    locState.status === 'unavailable' ? { itemLimit: 24 } : 'skip'
+  );
 
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const [museumCheckinPickerOpen, setMuseumCheckinPickerOpen] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
+
+  const promptLocation = useCallback(() => {
+    if (locState.status !== 'unavailable') return;
+    promptEnableLocation(locState.message, retry);
+  }, [locState, retry]);
 
   const coreLoading =
     currentUser === undefined ||
@@ -100,7 +105,13 @@ export default function HomeScreen() {
   const firstName = currentUser?.name?.split(' ')[0] || 'there';
   const initial = firstName.charAt(0).toUpperCase();
 
-  const nearbyLoading = locState.status === 'pending' || (locState.status === 'ok' && nearbyFeed === undefined);
+  const aroundYouFeed =
+    locState.status === 'ok' ? (nearbyFeed ?? []) : locState.status === 'unavailable' ? (availableFeed ?? []) : [];
+
+  const aroundYouLoading =
+    locState.status === 'pending' ||
+    (locState.status === 'ok' && nearbyFeed === undefined) ||
+    (locState.status === 'unavailable' && availableFeed === undefined);
 
   return (
     <SafeAreaView
@@ -189,28 +200,37 @@ export default function HomeScreen() {
 
           <HomeFeedSection
             title="See what's around you"
-            subtitle={
-              locState.status === 'ok'
-                ? 'Upcoming events and exhibitions near you'
-                : 'Enable location for nearby picks'
+            titleAccessory={
+              locState.status === 'unavailable' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="About location for nearby picks"
+                  onPress={promptLocation}
+                  hitSlop={8}
+                  className="active:opacity-80">
+                  <InfoIcon size={14} color={mutedHex} />
+                </Pressable>
+              ) : null
             }
-            data={nearbyFeed ?? []}
+            data={aroundYouFeed}
             keyExtractor={(item) => `${item.kind ?? 'event'}-${item._id}`}
-            loading={nearbyLoading}
+            loading={aroundYouLoading}
             onSeeAll={
-              locState.status === 'ok' && nearbyFeed && nearbyFeed.length > 0
-                ? () => router.push('/home-feed/nearby')
-                : undefined
+              aroundYouFeed.length > 0 ? () => router.push('/home-feed/nearby') : undefined
             }
             seeAllAccessibilityLabel="See all nearby events"
             renderItem={({ item, index }) => (
               <EventCard event={item as EventCardData} cardIndex={index} layout="carousel" />
             )}
             emptyComponent={
-              locState.status === 'unavailable' ? (
-                <NearbyEmptyState message={locState.message} onRetry={retry} />
-              ) : locState.status === 'ok' && nearbyFeed && nearbyFeed.length === 0 ? (
-                <NearbyEmptyState message="No upcoming events or exhibitions found near you right now." />
+              !aroundYouLoading && aroundYouFeed.length === 0 ? (
+                <NearbyEmptyState
+                  message={
+                    locState.status === 'ok'
+                      ? 'No upcoming events or exhibitions found near you right now.'
+                      : 'No upcoming events or exhibitions right now.'
+                  }
+                />
               ) : null
             }
           />

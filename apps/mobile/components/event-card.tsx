@@ -5,7 +5,7 @@ import { CalendarIcon, MapPinIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
+import { HOME_CAROUSEL_CARD_HEIGHT, HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
 
 export type EventCardData = {
   _id: string;
@@ -126,9 +126,10 @@ export function EventCard({
       <Card
         className={cn(
           'relative gap-0 overflow-hidden rounded-2xl border-0 shadow-sm shadow-black/5',
-          isCarousel ? 'min-h-[200px] p-4' : 'p-5',
+          isCarousel ? 'flex-col justify-between p-4' : 'p-5',
           variant.bg
-        )}>
+        )}
+        style={isCarousel ? { height: HOME_CAROUSEL_CARD_HEIGHT } : undefined}>
         {showImageBackground && (
           <>
             <Image

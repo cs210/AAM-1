@@ -14,7 +14,7 @@ import {
   RN_API_MUTED_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
 } from '@/constants/rn-api-colors';
-import { HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
+import { HOME_CAROUSEL_CARD_HEIGHT, HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
 
 export interface CheckinPostData {
   _id: string;
@@ -134,13 +134,13 @@ export const CheckinPost = ({
       <Card
         className={cn(
           'gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm shadow-black/5',
-          isCarousel ? 'min-h-[252px] flex-col p-3.5' : 'p-5',
+          isCarousel ? 'flex-col p-3' : 'p-5',
           variant.border
         )}
-        style={CARD_SHADOW}>
-        <View className={cn('flex-row items-start', isCarousel ? 'mb-1.5' : 'mb-3.5 justify-between')}>
+        style={isCarousel ? { ...CARD_SHADOW, height: HOME_CAROUSEL_CARD_HEIGHT } : CARD_SHADOW}>
+        <View className={cn('flex-row items-start', isCarousel ? 'mb-0.5' : 'mb-3.5 justify-between')}>
           <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
-            <Avatar className={cn('mr-3', isCarousel ? 'size-9' : 'size-11')} alt={checkin.userName}>
+            <Avatar className={cn('mr-2.5', isCarousel ? 'size-8' : 'size-11')} alt={checkin.userName}>
               {checkin.userImage ? (
                 <AvatarImage source={{ uri: checkin.userImage }} />
               ) : null}
@@ -175,7 +175,7 @@ export const CheckinPost = ({
               <View className="flex-row flex-wrap items-baseline gap-1">
                 <Text className="text-xs font-medium text-muted-foreground">visited</Text>
                 <Pressable onPress={handleMuseumPress} className="active:opacity-70">
-                  <Text className="text-xs font-semibold text-foreground" numberOfLines={isCarousel ? 2 : undefined}>
+                  <Text className="text-xs font-semibold text-foreground" numberOfLines={isCarousel ? 1 : undefined}>
                     {checkin.contentName}
                   </Text>
                 </Pressable>
@@ -209,21 +209,16 @@ export const CheckinPost = ({
         </View>
 
         {isCarousel && checkin.rating ? (
-          <View className="mb-1.5 flex-row items-center gap-2">
-            {renderStars(checkin.rating, 14)}
-            <Text className={cn('text-sm font-bold', variant.accentText)}>
-              {checkin.rating.toFixed(1)}
-            </Text>
-          </View>
+          <View className="mb-0.5">{renderStars(checkin.rating, 14)}</View>
         ) : null}
 
         {checkin.review ? (
           <Text
             className={cn(
               'text-sm text-foreground',
-              isCarousel ? 'mb-1.5 leading-[18px]' : 'mb-2 leading-6'
+              isCarousel ? 'mb-0.5 shrink leading-[17px]' : 'mb-2 leading-6'
             )}
-            numberOfLines={isCarousel ? 5 : 3}>
+            numberOfLines={3}>
             {checkin.review}
           </Text>
         ) : null}
@@ -232,24 +227,20 @@ export const CheckinPost = ({
           <Text className="mb-3 text-xs font-medium text-muted-foreground">{visitDateLabel}</Text>
         ) : null}
 
-        <View className={cn('relative', isCarousel ? 'mb-1' : 'pb-4')}>
+        {!isCarousel ? (
+        <View className="relative pb-4">
           {checkin.imageUrls && checkin.imageUrls.length > 0 ? (
             <View className="mt-0.5 flex-row">
-              {checkin.imageUrls.slice(0, isCarousel ? 1 : 3).map((url, index) => (
+              {checkin.imageUrls.slice(0, 3).map((url, index) => (
                 <Image
                   key={`${checkin._id}-photo-${index}`}
                   source={{ uri: url }}
-                  className={cn(
-                    'rounded-lg bg-muted',
-                    isCarousel ? 'h-16 w-full' : 'size-18',
-                    index > 0 && 'ml-2'
-                  )}
+                  className={cn('rounded-lg bg-muted size-18', index > 0 && 'ml-2')}
                   resizeMode="cover"
                 />
               ))}
             </View>
           ) : null}
-          {!isCarousel ? (
             <Pressable
               hitSlop={8}
               accessibilityRole="button"
@@ -262,11 +253,11 @@ export const CheckinPost = ({
                 fill={isBookmarked ? brandPrimary : 'none'}
               />
             </Pressable>
-          ) : null}
         </View>
+        ) : null}
 
         {isCarousel ? (
-          <Text className="mt-auto pt-1 text-xs font-medium text-muted-foreground">
+          <Text className="mt-auto text-xs font-medium text-muted-foreground">
             {visitDateLabel}
           </Text>
         ) : null}
