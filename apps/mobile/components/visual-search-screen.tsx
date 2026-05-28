@@ -5,6 +5,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import {
   ArrowLeftIcon,
+  CameraIcon,
   ScanSearchIcon,
   LandmarkIcon,
   ExternalLinkIcon,
@@ -22,11 +23,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import {
-  RN_API_FOREGROUND_LIGHT,
-  RN_API_MUTED_FOREGROUND_LIGHT,
-  RN_API_PRIMARY_LIGHT,
-} from '@/constants/rn-api-colors';
+import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
+import { RN_API_PRIMARY_FOREGROUND_ON_BRAND, RN_STYLE } from '@/constants/rn-api-colors';
+import { useUniwind } from 'uniwind';
 
 const DEFAULT_TOP_K = 5;
 const MAX_SEARCH_IMAGE_SIZE = 1280;
@@ -62,18 +61,14 @@ type SearchStatus = 'uploading' | 'searching' | null;
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return (
-    <SafeAreaView
-      className="flex-1 bg-background"
-      style={{ flex: 1 }}
-      edges={['top', 'left', 'right']}>
+    <SafeAreaView className="bg-background flex-1" style={{ flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
+      <ScreenTitleBar title="Visual Search" onBackPress={() => router.back()} />
       <View className="flex-1 items-center justify-center gap-4 p-6">
-        <Text className="text-center text-lg font-semibold text-foreground">
+        <Text className="text-foreground text-center text-lg font-semibold">
           Unable to load visual search.
         </Text>
-        <Text className="text-center text-sm leading-5 text-muted-foreground">
-          {error.message}
-        </Text>
+        <Text className="text-muted-foreground text-center text-sm leading-5">{error.message}</Text>
         <Button onPress={retry}>
           <Text>Try again</Text>
         </Button>
@@ -91,7 +86,7 @@ function getUserFacingError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
   if (/permission/i.test(message)) {
-    return 'Photo library access is required to choose an image.';
+    return 'Photo or camera access is required to choose an image.';
   }
   if (/upload/i.test(message)) {
     return 'We could not upload the selected image. Please try again.';
@@ -151,13 +146,17 @@ function getResultDetailImageUrl(result: VisualSearchResult) {
 
 export default function VisualSearchScreen() {
   const insets = useSafeAreaInsets();
+  const { theme } = useUniwind();
+  const palette = theme === 'dark' ? RN_STYLE.dark : RN_STYLE.light;
   const params = useLocalSearchParams<{
     museumId?: string | string[];
     museumName?: string | string[];
     museumSlug?: string | string[];
   }>();
   const activeMuseums = useQuery(api.visualSearch.listVisualSearchActiveMuseums);
-  const generateVisualSearchImageUploadUrl = useMutation(api.visualSearch.generateVisualSearchImageUploadUrl);
+  const generateVisualSearchImageUploadUrl = useMutation(
+    api.visualSearch.generateVisualSearchImageUploadUrl
+  );
   const searchArtworkByImage = useAction(api.visualSearch.searchArtworkByImage);
   const [searchText, setSearchText] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -180,8 +179,13 @@ export default function VisualSearchScreen() {
     };
   }, [params.museumId, params.museumName, params.museumSlug]);
 
-  const [selectedMuseum, setSelectedMuseum] = useState<VisualSearchMuseum | null>(preselectedMuseum);
+  const [selectedMuseum, setSelectedMuseum] = useState<VisualSearchMuseum | null>(
+    preselectedMuseum
+  );
   const isWorking = searchStatus !== null;
+  const foregroundIconColor = palette.foreground;
+  const mutedIconColor = palette.mutedForeground;
+  const primaryIconColor = palette.primary;
 
   useEffect(() => {
     if (preselectedMuseum) {
@@ -227,6 +231,12 @@ export default function VisualSearchScreen() {
     setSelectedResultIndex(null);
   }, []);
 
+  const setSearchImage = useCallback((asset: ImagePicker.ImagePickerAsset) => {
+    setSelectedImage(asset);
+    setSearchResponse(null);
+    setSelectedResultIndex(null);
+  }, []);
+
   const pickImage = async () => {
     if (isWorking) return;
 
@@ -252,12 +262,41 @@ export default function VisualSearchScreen() {
         return;
       }
 
-      setSelectedImage(asset);
-      setSearchResponse(null);
-      setSelectedResultIndex(null);
+      setSearchImage(asset);
     } catch (error) {
       console.error('Image selection failed:', error);
       setErrorMessage('Could not open your photo library. Please try again.');
+    }
+  };
+
+  const takePhoto = async () => {
+    if (isWorking) return;
+
+    setErrorMessage(null);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setErrorMessage('Camera access is required to take a photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      if (!asset?.uri) {
+        setErrorMessage('No photo was captured.');
+        return;
+      }
+
+      setSearchImage(asset);
+    } catch (error) {
+      console.error('Camera capture failed:', error);
+      setErrorMessage('Could not open the camera. Please try again.');
     }
   };
 
@@ -325,11 +364,11 @@ export default function VisualSearchScreen() {
     }
   };
 
-  const handleTryAnotherImage = async () => {
+  const handleTryAnotherImage = () => {
     setSearchResponse(null);
     setErrorMessage(null);
     setSelectedResultIndex(null);
-    await pickImage();
+    setSelectedImage(null);
   };
 
   const renderMuseumItem = useCallback(
@@ -342,11 +381,11 @@ export default function VisualSearchScreen() {
         <Card className="gap-3 rounded-2xl py-4">
           <CardHeader className="gap-2 px-4">
             <View className="flex-row items-center gap-3">
-              <View className="size-11 items-center justify-center rounded-full bg-primary/15">
-                <LandmarkIcon size={20} color={RN_API_PRIMARY_LIGHT} />
+              <View className="bg-primary/15 size-11 items-center justify-center rounded-full">
+                <LandmarkIcon size={20} color={primaryIconColor} />
               </View>
               <View className="min-w-0 flex-1 justify-center">
-                <CardTitle className="text-lg leading-6 text-foreground" numberOfLines={2}>
+                <CardTitle className="text-foreground text-lg leading-6" numberOfLines={2}>
                   {item.museumName}
                 </CardTitle>
               </View>
@@ -355,12 +394,12 @@ export default function VisualSearchScreen() {
         </Card>
       </Pressable>
     ),
-    [handleSelectMuseum]
+    [handleSelectMuseum, primaryIconColor]
   );
 
   const renderMuseumSelector = () => (
     <FlatList
-      className="flex-1 bg-background"
+      className="bg-background flex-1"
       data={filteredMuseums}
       keyExtractor={(item) => String(item.museumId)}
       keyboardShouldPersistTaps="handled"
@@ -371,19 +410,19 @@ export default function VisualSearchScreen() {
         <View className="mb-5 gap-4">
           <View>
             <View className="flex-row items-center gap-3">
-              <View className="size-12 items-center justify-center rounded-full bg-primary/15">
-                <ScanSearchIcon size={24} color={RN_API_PRIMARY_LIGHT} />
+              <View className="bg-primary/15 size-12 items-center justify-center rounded-full">
+                <ScanSearchIcon size={24} color={primaryIconColor} />
               </View>
               <View className="min-w-0 flex-1 justify-center">
-                <CardTitle className="text-3xl font-semibold leading-tight text-foreground">
+                <CardTitle className="text-foreground text-3xl leading-tight font-semibold">
                   Visual Search
                 </CardTitle>
               </View>
             </View>
           </View>
 
-          <View className="flex-row items-center rounded-xl border border-border bg-background px-3">
-            <SearchIcon size={18} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+          <View className="border-border bg-background flex-row items-center rounded-xl border px-3">
+            <SearchIcon size={18} color={mutedIconColor} />
             <Input
               value={searchText}
               onChangeText={setSearchText}
@@ -404,9 +443,11 @@ export default function VisualSearchScreen() {
             </Text>
           </View>
         ) : (
-          <View className="flex-1 items-center justify-center rounded-2xl border border-border bg-card p-8">
-            <Text className="text-center text-base font-semibold text-foreground">
-              {normalizedSearch ? 'No museums match your search.' : 'No museums currently support visual search.'}
+          <View className="border-border bg-card flex-1 items-center justify-center rounded-2xl border p-8">
+            <Text className="text-foreground text-center text-base font-semibold">
+              {normalizedSearch
+                ? 'No museums match your search.'
+                : 'No museums currently support visual search.'}
             </Text>
           </View>
         )
@@ -419,61 +460,51 @@ export default function VisualSearchScreen() {
 
     return (
       <ScrollView
-        className="flex-1 bg-background"
+        className="bg-background flex-1"
         contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={preselectedMuseum ? 'Go back' : 'Back to museum list'}
-          className="mb-4 flex-row items-center gap-2 self-start active:opacity-70"
-          onPress={handleBackPress}>
-          <ArrowLeftIcon size={20} color={RN_API_FOREGROUND_LIGHT} />
-          <Text className="text-sm font-medium text-muted-foreground">
-            {preselectedMuseum ? 'Back' : 'All museums'}
-          </Text>
-        </Pressable>
-
         <Card className="gap-5 rounded-2xl py-6">
           <CardHeader className="gap-3">
             <View className="flex-row items-center gap-3">
-              <View className="size-12 items-center justify-center rounded-full bg-primary/15">
-                <ScanSearchIcon size={24} color={RN_API_PRIMARY_LIGHT} />
+              <View className="bg-primary/15 size-12 items-center justify-center rounded-full">
+                <ScanSearchIcon size={24} color={primaryIconColor} />
               </View>
               <View className="min-w-0 flex-1 justify-center">
-                <CardTitle className="text-2xl leading-8 text-foreground">
+                <CardTitle className="text-foreground text-2xl leading-8">
                   {selectedMuseum.museumName}
                 </CardTitle>
               </View>
             </View>
           </CardHeader>
           <CardContent className="gap-5">
-            <Text className="text-base leading-6 text-muted-foreground">
-              Upload a clear photo of an artwork. We'll compare it against this museum's indexed collection.
+            <Text className="text-muted-foreground text-base leading-6">
+              Take or choose a clear photo of an artwork. We'll compare it against this museum's
+              indexed collection.
             </Text>
 
             {selectedImage ? (
               <Image
                 source={{ uri: selectedImage.uri }}
-                className="h-64 w-full rounded-2xl bg-muted"
+                className="bg-muted h-64 w-full rounded-2xl"
                 resizeMode="cover"
               />
             ) : (
-              <View className="h-64 w-full items-center justify-center rounded-2xl border border-dashed border-border bg-muted/40">
-                <ImageIcon size={32} color={RN_API_MUTED_FOREGROUND_LIGHT} />
-                <Text className="mt-3 text-sm text-muted-foreground">No image selected</Text>
+              <View className="border-border bg-muted/40 h-64 w-full items-center justify-center rounded-2xl border border-dashed">
+                <ImageIcon size={32} color={mutedIconColor} />
+                <Text className="text-muted-foreground mt-3 text-sm">No image selected</Text>
               </View>
             )}
 
             {errorMessage ? (
-              <View className="rounded-xl border border-destructive/30 bg-destructive/10 p-3">
-                <Text className="text-sm leading-5 text-destructive">{errorMessage}</Text>
+              <View className="border-destructive/30 bg-destructive/10 rounded-xl border p-3">
+                <Text className="text-destructive text-sm leading-5">{errorMessage}</Text>
               </View>
             ) : null}
 
             {searchStatus ? (
               <View className="flex-row items-center gap-2">
                 <BrandActivityIndicator size="small" />
-                <Text className="text-sm text-muted-foreground">
+                <Text className="text-muted-foreground text-sm">
                   {searchStatus === 'uploading' ? 'Uploading image...' : 'Finding matches...'}
                 </Text>
               </View>
@@ -481,8 +512,13 @@ export default function VisualSearchScreen() {
 
             {selectedImage ? (
               <View className="gap-3">
+                <Button variant="outline" disabled={isWorking} onPress={takePhoto}>
+                  <CameraIcon size={16} color={foregroundIconColor} />
+                  <Text>Take New Photo</Text>
+                </Button>
                 <Button variant="outline" disabled={isWorking} onPress={pickImage}>
-                  <Text>Replace Image</Text>
+                  <ImageIcon size={16} color={foregroundIconColor} />
+                  <Text>Choose Different Image</Text>
                 </Button>
                 <Button disabled={isWorking} onPress={handleFindMatches}>
                   {isWorking ? <BrandActivityIndicator size="small" /> : null}
@@ -490,9 +526,16 @@ export default function VisualSearchScreen() {
                 </Button>
               </View>
             ) : (
-              <Button disabled={isWorking} onPress={pickImage}>
-                <Text>Choose Image</Text>
-              </Button>
+              <View className="gap-3">
+                <Button disabled={isWorking} onPress={takePhoto}>
+                  <CameraIcon size={16} color={RN_API_PRIMARY_FOREGROUND_ON_BRAND} />
+                  <Text>Take Photo</Text>
+                </Button>
+                <Button variant="outline" disabled={isWorking} onPress={pickImage}>
+                  <ImageIcon size={16} color={foregroundIconColor} />
+                  <Text>Choose from Library</Text>
+                </Button>
+              </View>
             )}
           </CardContent>
         </Card>
@@ -504,10 +547,9 @@ export default function VisualSearchScreen() {
     if (!selectedMuseum || !searchResponse) return null;
     const results = searchResponse.results;
     const backgroundUri =
-      selectedImage?.uri ??
-      (results[0] ? getResultDetailImageUrl(results[0]) : null);
+      selectedImage?.uri ?? (results[0] ? getResultDetailImageUrl(results[0]) : null);
     const selectedResult =
-      selectedResultIndex == null ? null : results[selectedResultIndex] ?? null;
+      selectedResultIndex == null ? null : (results[selectedResultIndex] ?? null);
 
     return (
       <View className="flex-1 bg-black">
@@ -525,13 +567,13 @@ export default function VisualSearchScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back to image upload"
-              className="size-11 items-center justify-center rounded-full border border-white/20 bg-black/45 active:opacity-80"
+              className="border-border bg-card/90 size-11 items-center justify-center rounded-full border active:opacity-80"
               onPress={handleBackPress}>
-              <ArrowLeftIcon size={24} color="#ffffff" />
+              <ArrowLeftIcon size={24} color={foregroundIconColor} />
             </Pressable>
             <View className="ml-3 min-w-0 flex-1 items-end">
-              <View className="max-w-full rounded-full border border-white/15 bg-black/45 px-3 py-2">
-                <Text className="text-xs font-semibold text-white" numberOfLines={1}>
+              <View className="border-border bg-card/90 max-w-full rounded-full border px-3 py-2">
+                <Text className="text-foreground text-xs font-semibold" numberOfLines={1}>
                   {selectedMuseum.museumName}
                 </Text>
               </View>
@@ -540,9 +582,9 @@ export default function VisualSearchScreen() {
 
           {results.length === 0 ? (
             <View className="flex-1 items-center justify-center px-6">
-              <Card className="w-full rounded-2xl border-white/20 bg-background/95 py-6">
+              <Card className="border-border bg-card/95 w-full rounded-2xl py-6">
                 <CardHeader>
-                  <CardTitle className="text-center text-2xl text-foreground">
+                  <CardTitle className="text-foreground text-center text-2xl">
                     No matches found
                   </CardTitle>
                   <CardDescription className="mt-2 text-center text-base leading-6">
@@ -563,17 +605,13 @@ export default function VisualSearchScreen() {
         </SafeAreaView>
 
         {results.length > 0 ? (
-          <View
-            className="absolute left-0 right-0"
-            style={{ bottom: Math.max(insets.bottom, 12) }}>
-            <View className="mx-4 rounded-3xl border border-white/15 bg-black/50 py-3 shadow-lg shadow-black/40">
+          <View className="absolute right-0 left-0" style={{ bottom: Math.max(insets.bottom, 12) }}>
+            <View className="border-border bg-card/95 mx-4 rounded-3xl border py-3 shadow-lg shadow-black/20">
               <View className="mb-2 flex-row items-center justify-between px-4">
-                <Text className="text-xs font-semibold uppercase text-white/80">
+                <Text className="text-muted-foreground text-xs font-semibold uppercase">
                   Top Matches
                 </Text>
-                <Text className="text-xs text-white/65">
-                  {results.length} found
-                </Text>
+                <Text className="text-muted-foreground text-xs">{results.length} found</Text>
               </View>
               <ScrollView
                 horizontal
@@ -587,7 +625,7 @@ export default function VisualSearchScreen() {
                       key={`${result.artworkKey || result.objectId || index}`}
                       accessibilityRole="button"
                       accessibilityLabel={`Open match ${index + 1}`}
-                      className="h-24 w-20 overflow-hidden rounded-2xl border border-white/30 bg-black/40 active:opacity-85"
+                      className="border-border bg-muted h-24 w-20 overflow-hidden rounded-2xl border active:opacity-85"
                       onPress={() => setSelectedResultIndex(index)}>
                       {thumbnailUrl ? (
                         <Image
@@ -596,8 +634,8 @@ export default function VisualSearchScreen() {
                           resizeMode="cover"
                         />
                       ) : (
-                        <View className="absolute inset-0 items-center justify-center bg-muted">
-                          <ImageIcon size={24} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+                        <View className="bg-muted absolute inset-0 items-center justify-center">
+                          <ImageIcon size={24} color={mutedIconColor} />
                         </View>
                       )}
                       <View className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1">
@@ -605,8 +643,10 @@ export default function VisualSearchScreen() {
                           Score {formatScore(result.score)}
                         </Text>
                       </View>
-                      <View className="absolute left-1.5 top-1.5 size-6 items-center justify-center rounded-full bg-white">
-                        <Text className="text-xs font-bold text-foreground">{index + 1}</Text>
+                      <View className="bg-primary absolute top-1.5 left-1.5 size-6 items-center justify-center rounded-full">
+                        <Text className="text-primary-foreground text-xs font-bold">
+                          {index + 1}
+                        </Text>
                       </View>
                     </Pressable>
                   );
@@ -626,60 +666,60 @@ export default function VisualSearchScreen() {
             onPress={() => setSelectedResultIndex(null)}>
             {selectedResult ? (
               <Pressable
-                className="max-h-[82%] w-full rounded-[28px] border border-white/15 bg-black/50 p-4 shadow-lg shadow-black/40"
+                className="border-border bg-card max-h-[82%] w-full rounded-[28px] border p-4 shadow-lg shadow-black/30"
                 onPress={(event) => event.stopPropagation()}>
                 <View className="mb-4 flex-row items-center justify-between gap-3">
-                  <Text className="text-sm font-semibold uppercase text-white/70">
+                  <Text className="text-muted-foreground text-sm font-semibold uppercase">
                     Match #{(selectedResultIndex ?? 0) + 1}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Close match details"
-                    className="size-9 items-center justify-center rounded-full bg-white/15 active:opacity-80"
+                    className="bg-muted size-9 items-center justify-center rounded-full active:opacity-80"
                     onPress={() => setSelectedResultIndex(null)}>
-                    <XIcon size={18} color="#ffffff" />
+                    <XIcon size={18} color={foregroundIconColor} />
                   </Pressable>
                 </View>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {getResultDetailImageUrl(selectedResult) ? (
                     <Image
                       source={{ uri: getResultDetailImageUrl(selectedResult)! }}
-                      className="mb-5 h-56 w-full rounded-2xl bg-black/40"
+                      className="bg-muted mb-5 h-56 w-full rounded-2xl"
                       resizeMode="contain"
                     />
                   ) : null}
 
                   <View className="gap-3">
                     <View>
-                      <Text className="text-2xl font-semibold leading-8 text-white">
+                      <Text className="text-foreground text-2xl leading-8 font-semibold">
                         {selectedResult.title || 'Untitled'}
                       </Text>
-                      <Text className="mt-1 text-base text-white/70">
+                      <Text className="text-muted-foreground mt-1 text-base">
                         {selectedResult.artistDisplayName || 'Unknown artist'}
                       </Text>
                     </View>
 
-                    <View className="self-start rounded-full bg-white/15 px-3 py-1.5">
-                      <Text className="text-xs font-semibold text-white">
+                    <View className="bg-primary/15 self-start rounded-full px-3 py-1.5">
+                      <Text className="text-primary text-xs font-semibold">
                         Score {formatScore(selectedResult.score)}
                       </Text>
                     </View>
 
                     {selectedResult.description ? (
-                      <Text className="text-sm leading-6 text-white/90">
+                      <Text className="text-foreground text-sm leading-6">
                         {selectedResult.description}
                       </Text>
                     ) : null}
 
-                    {(selectedResult.objectId || selectedResult.artworkKey) ? (
-                      <View className="gap-1 rounded-2xl bg-white/10 p-3">
+                    {selectedResult.objectId || selectedResult.artworkKey ? (
+                      <View className="bg-muted gap-1 rounded-2xl p-3">
                         {selectedResult.objectId ? (
-                          <Text className="text-xs text-white/65">
+                          <Text className="text-muted-foreground text-xs">
                             Object ID: {selectedResult.objectId}
                           </Text>
                         ) : null}
                         {selectedResult.artworkKey ? (
-                          <Text className="text-xs text-white/65">
+                          <Text className="text-muted-foreground text-xs">
                             Artwork key: {selectedResult.artworkKey}
                           </Text>
                         ) : null}
@@ -690,9 +730,9 @@ export default function VisualSearchScreen() {
                       <Pressable
                         className="mt-1"
                         onPress={() => void Linking.openURL(selectedResult.sourceUrl!)}>
-                        <View className="flex-row items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 active:opacity-80">
-                          <ExternalLinkIcon size={16} color="#ffffff" />
-                          <Text className="font-semibold text-white">Open source</Text>
+                        <View className="border-border bg-muted flex-row items-center justify-center gap-2 rounded-full border px-4 py-3 active:opacity-80">
+                          <ExternalLinkIcon size={16} color={foregroundIconColor} />
+                          <Text className="text-foreground font-semibold">Open source</Text>
                         </View>
                       </Pressable>
                     ) : null}
@@ -711,16 +751,14 @@ export default function VisualSearchScreen() {
       {searchResponse ? (
         renderResults()
       ) : (
-        <SafeAreaView
-          className="flex-1 bg-background"
-          style={{ flex: 1 }}
-          edges={['top', 'left', 'right']}>
+        <SafeAreaView className="bg-background flex-1" style={{ flex: 1 }}>
           <Stack.Screen options={{ headerShown: false }} />
+
+          <ScreenTitleBar title="Visual Search" onBackPress={handleBackPress} />
+
           {selectedMuseum ? renderUploadStep() : renderMuseumSelector()}
         </SafeAreaView>
       )}
     </AuthGuard>
   );
 }
-export { ErrorBoundary } from '@/components/visual-search-screen';
-export { default } from '@/components/visual-search-screen';
