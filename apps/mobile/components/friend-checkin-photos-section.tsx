@@ -7,7 +7,6 @@ import { openCheckinReview } from '@/lib/checkin-navigation';
 
 const SNAPSHOT_PHOTO_COUNT = 3;
 const GRID_GAP = 6;
-const TILE_RADIUS = 12;
 
 export type FriendCheckinPhotoItem = {
   key: string;
@@ -72,8 +71,9 @@ function SnapshotTile({ item, style }: SnapshotTileProps) {
       accessibilityRole="button"
       accessibilityLabel={`View ${item.checkin.userName}'s review at ${item.checkin.contentName}`}
       onPress={() => openCheckinReview(item.checkin)}
-      style={[{ overflow: 'hidden', borderRadius: TILE_RADIUS, borderCurve: 'continuous' }, style]}
-      className="bg-muted active:opacity-90">
+      style={style}
+      className="overflow-hidden rounded-xl bg-muted active:opacity-90"
+    >
       <Image source={{ uri: item.imageUrl }} className="size-full" resizeMode="cover" />
     </Pressable>
   );
@@ -87,9 +87,9 @@ function SnapshotGrid({ photos }: { photos: FriendCheckinPhotoItem[] }) {
   const stackHeight = (leftWidth - GRID_GAP) / 2;
 
   return (
-    <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
+    <View className="flex-row gap-1.5">
       <SnapshotTile item={photos[0]} style={{ width: leftWidth, height: leftWidth }} />
-      <View style={{ gap: GRID_GAP }}>
+      <View className="gap-1.5">
         <SnapshotTile item={photos[1]} style={{ width: rightWidth, height: stackHeight }} />
         <SnapshotTile item={photos[2]} style={{ width: rightWidth, height: stackHeight }} />
       </View>

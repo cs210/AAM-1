@@ -11,22 +11,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
-import { EventCard, EventCardData } from '../../components/event-card';
-import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
-import { EditCheckinModal } from '../../components/edit-checkin-modal';
-import { MuseumCheckinPickerModal } from '../../components/museum-checkin-picker-modal';
+import { EventCard, EventCardData } from '@/components/event-card';
+import { CheckinPost, CheckinPostData } from '@/components/checkin-post';
+import { EditCheckinModal } from '@/components/edit-checkin-modal';
+import { MuseumCheckinPickerModal } from '@/components/museum-checkin-picker-modal';
 import { HomeFeedSection } from '@/components/home-feed-section';
 import { HomeCheckinCta } from '@/components/home-checkin-cta';
 import { FriendCheckinPhotosSection } from '@/components/friend-checkin-photos-section';
-import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { useCheckInActions } from '@/hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
-import { useUniwind } from 'uniwind';
-import {
-  RN_API_MUTED_FOREGROUND_DARK,
-  RN_API_MUTED_FOREGROUND_LIGHT,
-  RN_API_PRIMARY_DARK,
-  RN_API_PRIMARY_LIGHT,
-} from '@/constants/rn-api-colors';
+import { useBrandPrimaryHex, useMutedForegroundHex } from '@/hooks/use-brand-primary';
 
 function FriendsEmptyState() {
   return (
@@ -58,9 +52,8 @@ function promptEnableLocation(message: string, onRetry: () => void) {
 }
 
 export default function HomeScreen() {
-  const { theme } = useUniwind();
-  const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
-  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
+  const brandPrimary = useBrandPrimaryHex();
+  const mutedForeground = useMutedForegroundHex();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
@@ -92,8 +85,8 @@ export default function HomeScreen() {
 
   if (coreLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
-        <View className="flex-1 items-center justify-center gap-3" style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-1 items-center justify-center gap-3">
           <BrandActivityIndicator size="large" />
           <Text variant="muted" className="text-base">
             Loading feed...
@@ -115,16 +108,10 @@ export default function HomeScreen() {
     (locState.status === 'unavailable' && availableFeed === undefined);
 
   return (
-    <SafeAreaView
-      className="relative flex-1 bg-background"
-      style={{ flex: 1 }}
-      edges={['top', 'left', 'right']}>
+    <SafeAreaView className="relative flex-1 bg-background" edges={['top', 'left', 'right']}>
       <DecorativeGradientShapes />
 
-      <ScrollView
-        className="z-10 flex-1"
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}>
+      <ScrollView className="z-10 flex-1" showsVerticalScrollIndicator={false}>
         <View className="pb-8">
           <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
             <View className="min-w-0 flex-1">
@@ -139,14 +126,14 @@ export default function HomeScreen() {
                 accessibilityLabel="Check in at a museum"
                 onPress={() => setMuseumCheckinPickerOpen(true)}
                 className="p-2 active:opacity-80">
-                <PlusIcon size={24} color={primaryHex} />
+                <PlusIcon size={24} color={brandPrimary} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Notifications"
                 onPress={() => router.push('/notifications')}
                 className="relative p-2 active:opacity-80">
-                <BellIcon size={24} color={primaryHex} />
+                <BellIcon size={24} color={brandPrimary} />
                 {unreadNotifications != null && unreadNotifications > 0 ? (
                   <View className="absolute right-1 top-1 min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-destructive px-1">
                     <Text className="text-[10px] font-bold text-white">
@@ -210,7 +197,7 @@ export default function HomeScreen() {
                   onPress={promptLocation}
                   hitSlop={8}
                   className="active:opacity-80">
-                  <InfoIcon size={14} color={mutedHex} />
+                  <InfoIcon size={14} color={mutedForeground} />
                 </Pressable>
               ) : null
             }

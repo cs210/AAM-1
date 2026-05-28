@@ -6,14 +6,9 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
+import { useBrandPrimaryHex, useMutedForegroundHex } from '@/hooks/use-brand-primary';
 import { useBookmark } from '@/hooks/useBookmark';
-import { useUniwind } from 'uniwind';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
-import {
-  RN_API_MUTED_FOREGROUND_DARK,
-  RN_API_MUTED_FOREGROUND_LIGHT,
-} from '@/constants/rn-api-colors';
 import { HOME_CAROUSEL_CARD_HEIGHT, HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
 
 export interface CheckinPostData {
@@ -56,14 +51,6 @@ type CheckinPostProps = {
   layout?: 'feed' | 'carousel';
 };
 
-const CARD_SHADOW = {
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.08,
-  shadowRadius: 8,
-  elevation: 2,
-  shadowColor: '#000000',
-} as const;
-
 const checkinVisitDateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   month: 'short',
@@ -84,8 +71,7 @@ export const CheckinPost = ({
 }: CheckinPostProps) => {
   const isCarousel = layout === 'carousel';
   const brandPrimary = useBrandPrimaryHex();
-  const { theme } = useUniwind();
-  const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
+  const mutedForeground = useMutedForegroundHex();
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
   const { isBookmarked, toggleBookmark } = useBookmark(checkin.contentId as Id<'museums'>);
   const visitDateLabel = formatCheckinVisitDate(checkin.visitDate ?? checkin.createdAt);
@@ -137,7 +123,7 @@ export const CheckinPost = ({
           isCarousel ? 'flex-col p-3' : 'p-5',
           variant.border
         )}
-        style={isCarousel ? { ...CARD_SHADOW, height: HOME_CAROUSEL_CARD_HEIGHT } : CARD_SHADOW}>
+        style={isCarousel ? { height: HOME_CAROUSEL_CARD_HEIGHT } : undefined}>
         <View className={cn('flex-row items-start', isCarousel ? 'mb-0.5' : 'mb-3.5 justify-between')}>
           <Pressable onPress={handleProfilePress} className="flex-row items-start active:opacity-70">
             <Avatar className={cn('mr-2.5', isCarousel ? 'size-8' : 'size-11')} alt={checkin.userName}>
@@ -249,7 +235,7 @@ export const CheckinPost = ({
               className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
               <Bookmark
                 size={20}
-                color={isBookmarked ? brandPrimary : mutedHex}
+                color={isBookmarked ? brandPrimary : mutedForeground}
                 fill={isBookmarked ? brandPrimary : 'none'}
               />
             </Pressable>

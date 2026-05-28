@@ -6,12 +6,8 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { CheckIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
-import { useUniwind } from 'uniwind';
 import { isIosNativeDateTimePickerAvailable } from '@/lib/native-date-time-picker';
-import {
-  RN_API_MUTED_FOREGROUND_DARK,
-  RN_API_MUTED_FOREGROUND_LIGHT,
-} from '@/constants/rn-api-colors';
+import { useMutedForegroundHex } from '@/hooks/use-brand-primary';
 
 type Props = {
   value: Date;
@@ -28,8 +24,7 @@ function formatVisitDate(date: Date): string {
 }
 
 export function VisitDatePickerField({ value, onChange, maximumDate = new Date() }: Props) {
-  const { theme } = useUniwind();
-  const mutedIcon = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
+  const mutedIcon = useMutedForegroundHex();
   const [showPicker, setShowPicker] = useState(false);
   const iosPickerAvailable = isIosNativeDateTimePickerAvailable();
 

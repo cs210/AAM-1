@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { CalendarIcon, MapPinIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 import { HOME_CAROUSEL_CARD_HEIGHT, HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
 
@@ -87,7 +88,6 @@ export function EventCard({
   const showImageBackground = event.kind === 'exhibition' && Boolean(event.imageUrl);
   const textOnSurface = 'text-white';
   const badgeSurface = showImageBackground ? 'bg-white/25' : 'bg-white/20';
-  const iconColor = '#FFFFFF';
   const distanceLabel = formatDistanceMiles(event.distanceMeters);
 
   const isExhibition = event.kind === 'exhibition';
@@ -161,14 +161,14 @@ export function EventCard({
         </Text>
         {showMuseum && event.museum ? (
           <View className="mb-2 flex-row items-center gap-1.5">
-            <MapPinIcon size={14} color={iconColor} style={{ opacity: 0.9 }} />
+            <Icon as={MapPinIcon} size={14} className="text-white opacity-90" />
             <Text className={cn('flex-1 text-sm font-medium opacity-95', textOnSurface)} numberOfLines={1}>
               {event.museum.name}
             </Text>
           </View>
         ) : null}
         <View className="flex-row items-center gap-1.5">
-          <CalendarIcon size={14} color={iconColor} style={{ opacity: 0.9 }} />
+          <Icon as={CalendarIcon} size={14} className="text-white opacity-90" />
           <Text className={cn('text-sm font-medium opacity-95', textOnSurface)}>{dateLabel}</Text>
         </View>
       </Card>

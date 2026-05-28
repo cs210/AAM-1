@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { InfoIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
-import { EventCard, EventCardData } from '../../components/event-card';
+import { EventCard, EventCardData } from '@/components/event-card';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
@@ -48,7 +48,7 @@ export default function NearbyEventsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
         <ScreenTitleBar title="Visit Exhibitions and Events" onBackPress={() => router.back()} />
         {loading ? (
           <View className="flex-1 items-center justify-center gap-3">

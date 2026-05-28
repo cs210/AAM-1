@@ -7,11 +7,11 @@ import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
-import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
-import { EditCheckinModal } from '../../components/edit-checkin-modal';
+import { CheckinPost, CheckinPostData } from '@/components/checkin-post';
+import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { FeedEmptyState } from '@/components/feed-empty-state';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
-import { useCheckInActions } from '../../hooks/useCheckInActions';
+import { useCheckInActions } from '@/hooks/useCheckInActions';
 
 export default function AllCheckinsScreen() {
   const currentUser = useQuery(api.auth.getCurrentUser);
@@ -23,7 +23,7 @@ export default function AllCheckinsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
         <ScreenTitleBar
           title="Where have your friends been?"
           onBackPress={() => router.back()}
