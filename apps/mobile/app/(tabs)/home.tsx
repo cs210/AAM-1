@@ -17,6 +17,7 @@ import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { MuseumCheckinPickerModal } from '../../components/museum-checkin-picker-modal';
 import { HomeFeedSection } from '@/components/home-feed-section';
 import { HomeCheckinCta } from '@/components/home-checkin-cta';
+import { FriendCheckinPhotosSection } from '@/components/friend-checkin-photos-section';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useUniwind } from 'uniwind';
@@ -196,6 +197,8 @@ export default function HomeScreen() {
             )}
             emptyComponent={<FriendsEmptyState />}
           />
+
+          <FriendCheckinPhotosSection checkins={followingCheckins as CheckinPostData[]} />
 
           <HomeFeedSection
             title="See what's around you"
