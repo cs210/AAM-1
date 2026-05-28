@@ -18,9 +18,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "sh.edm.museum",
@@ -64,7 +62,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "$(PRODUCT_NAME) accesses your photos to let you share them with your friends and search for similar images."
+          "photosPermission": "$(PRODUCT_NAME) accesses your photos to let you share them with your friends and search for similar images.",
+          "cameraPermission": "$(PRODUCT_NAME) uses your camera to let you take photos for visual search."
         }
       ]
     ],
