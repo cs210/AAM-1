@@ -13,6 +13,7 @@ When editing `apps/mobile`:
 - **Hex colors for APIs only:** Lucide and other libraries need string colors. Use `useBrandPrimaryHex()` / `useMutedForegroundHex()` from `@/hooks/use-brand-primary`, or `@/constants/rn-api-colors` when hooks are not available. Prefer `@/components/ui/icon` (`<Icon as={…} className="text-muted-foreground" />`) over raw Lucide + `color` when styling icons with tokens.
 - **Reuse feature components:** Prefer existing pieces under `@/components/` (e.g. `ScreenTitleBar`, `FeedEmptyState`, `HomeFeedSection`, `Card`) instead of one-off layouts. Import with `@/` paths, not deep relative `../../`.
 - **ScrollView / FlatList:** Prefer `contentContainerStyle` with a small inline object when padding or `flexGrow` must be reliable; `contentContainerClassName` is not always equivalent on native.
+- **`SafeAreaView` / `ScrollView` flex:** Keep `style={{ flex: 1 }}` alongside `className="flex-1"` — Uniwind does not always apply flex to these wrappers; without it the screen can render blank (only background/decoration visible).
 - **Exceptions:** Inline `style` is fine for values Uniwind cannot express cleanly (e.g. `Animated` interpolated styles, `Dimensions`-based layout, third-party props that only accept `style`).
 
 Refactoring legacy StyleSheet blocks should move styles into `className` and delete the `StyleSheet` block once nothing references it.

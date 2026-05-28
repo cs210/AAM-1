@@ -23,7 +23,7 @@ export default function AllCheckinsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'bottom']}>
         <ScreenTitleBar
           title="Where have your friends been?"
           onBackPress={() => router.back()}
@@ -38,6 +38,7 @@ export default function AllCheckinsScreen() {
         ) : (
           <ScrollView
             className="flex-1"
+            style={{ flex: 1 }}
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}>
             {followingCheckins.length === 0 ? (

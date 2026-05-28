@@ -85,8 +85,8 @@ export default function HomeScreen() {
 
   if (coreLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center gap-3">
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center gap-3" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
           <Text variant="muted" className="text-base">
             Loading feed...
@@ -108,10 +108,13 @@ export default function HomeScreen() {
     (locState.status === 'unavailable' && availableFeed === undefined);
 
   return (
-    <SafeAreaView className="relative flex-1 bg-background" edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      className="relative flex-1 bg-background"
+      style={{ flex: 1 }}
+      edges={['top', 'left', 'right']}>
       <DecorativeGradientShapes />
 
-      <ScrollView className="z-10 flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView className="z-10 flex-1" style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         <View className="pb-8">
           <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
             <View className="min-w-0 flex-1">

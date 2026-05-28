@@ -48,7 +48,7 @@ export default function NearbyEventsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'bottom']}>
         <ScreenTitleBar title="Visit Exhibitions and Events" onBackPress={() => router.back()} />
         {loading ? (
           <View className="flex-1 items-center justify-center gap-3">
@@ -60,6 +60,7 @@ export default function NearbyEventsScreen() {
         ) : (
           <ScrollView
             className="flex-1"
+            style={{ flex: 1 }}
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}>
             {locState.status === 'unavailable' ? (
