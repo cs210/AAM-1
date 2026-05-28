@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
-import { StarIcon, PencilIcon, Bookmark } from 'lucide-react-native';
+import { StarIcon, PencilIcon, Bookmark, Images } from 'lucide-react-native';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
@@ -51,6 +51,8 @@ type CheckinPostProps = {
   layout?: 'feed' | 'carousel';
 };
 
+const CAROUSEL_PHOTO_PREVIEW_COUNT = 3;
+
 const checkinVisitDateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   month: 'short',
@@ -75,17 +77,24 @@ export const CheckinPost = ({
   const variant = CARD_VARIANTS[cardIndex % CARD_VARIANTS.length];
   const { isBookmarked, toggleBookmark } = useBookmark(checkin.contentId as Id<'museums'>);
   const visitDateLabel = formatCheckinVisitDate(checkin.visitDate ?? checkin.createdAt);
-
-  const handlePress = () => {
-    if (openOnReviewsTab) {
-      router.push(`/(museums)/${checkin.contentId}?tab=reviews&highlight=${encodeURIComponent(checkin._id)}`);
-    } else {
-      router.push(`/(museums)/${checkin.contentId}`);
-    }
-  };
+  const hasPhotos =
+    (checkin.imageUrls?.length ?? 0) > 0 || (checkin.imageIds?.length ?? 0) > 0;
+  const reviewText = checkin.review?.trim();
+  const photoUrls = checkin.imageUrls ?? [];
+  const showCarouselPhotos = isCarousel && !reviewText && photoUrls.length > 0;
 
   const handleProfilePress = () => {
     router.push(`/(tabs)/profile?userId=${encodeURIComponent(checkin.userId)}`);
+  };
+
+  const handlePress = () => {
+    if (openOnReviewsTab) {
+      router.push(
+        `/(museums)/${checkin.contentId}?tab=reviews&highlight=${encodeURIComponent(checkin._id)}`
+      );
+      return;
+    }
+    handleProfilePress();
   };
 
   const handleMuseumPress = (e: any) => {
@@ -151,7 +160,10 @@ export const CheckinPost = ({
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="Edit check-in"
-                  onPress={onEditPress}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    onEditPress();
+                  }}
                   className="shrink-0 rounded-md p-1 active:opacity-70">
                   <PencilIcon size={16} color={brandPrimary} />
                 </Pressable>
@@ -198,15 +210,44 @@ export const CheckinPost = ({
           <View className="mb-0.5 mt-1.5">{renderStars(checkin.rating, 14)}</View>
         ) : null}
 
-        {checkin.review ? (
+        {reviewText ? (
           <Text
             className={cn(
               'text-sm text-foreground',
               isCarousel ? 'mb-0.5 shrink leading-[17px]' : 'mb-2 leading-6'
             )}
             numberOfLines={3}>
-            {checkin.review}
+            {reviewText}
           </Text>
+        ) : null}
+
+        {showCarouselPhotos ? (
+          <View className="mb-1 mt-1 flex-row gap-1.5">
+            {photoUrls.slice(0, CAROUSEL_PHOTO_PREVIEW_COUNT).map((url, index) => {
+              const isLastPreview = index === CAROUSEL_PHOTO_PREVIEW_COUNT - 1;
+              const extraPhotoCount = photoUrls.length - CAROUSEL_PHOTO_PREVIEW_COUNT;
+              const showMoreOverlay = isLastPreview && extraPhotoCount > 0;
+
+              return (
+                <View
+                  key={`${checkin._id}-carousel-photo-${index}`}
+                  className="relative size-12 overflow-hidden rounded-lg">
+                  <Image
+                    source={{ uri: url }}
+                    className="size-12 rounded-lg bg-muted"
+                    resizeMode="cover"
+                  />
+                  {showMoreOverlay ? (
+                    <View className="absolute inset-0 items-center justify-center rounded-lg bg-black/50">
+                      <Text className="text-xs font-semibold text-white">
+                        +{extraPhotoCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
         ) : null}
 
         {!isCarousel ? (
@@ -231,7 +272,10 @@ export const CheckinPost = ({
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-              onPress={toggleBookmark}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                toggleBookmark();
+              }}
               className="absolute bottom-0 right-0 rounded-md p-1 active:opacity-70">
               <Bookmark
                 size={20}
@@ -243,9 +287,17 @@ export const CheckinPost = ({
         ) : null}
 
         {isCarousel ? (
-          <Text className="mt-auto text-xs font-medium text-muted-foreground">
-            {visitDateLabel}
-          </Text>
+          <View className="mt-auto flex-row items-center justify-between gap-2">
+            <Text className="text-xs font-medium text-muted-foreground">{visitDateLabel}</Text>
+            {hasPhotos && !showCarouselPhotos ? (
+              <View
+                accessibilityRole="image"
+                accessibilityLabel="Includes photos"
+                importantForAccessibility="yes">
+                <Images size={16} color={mutedForeground} />
+              </View>
+            ) : null}
+          </View>
         ) : null}
       </Card>
     </Pressable>
