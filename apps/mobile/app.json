@@ -25,7 +25,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "sh.edm.museum",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance."
       }
     },
     "android": {
