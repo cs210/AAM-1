@@ -277,3 +277,87 @@ export const getUserProfileByUsername = query({
     return profile ?? null;
   },
 });
+
+type SearchUserResult = {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  imageUrl: string | null;
+};
+
+function toSearchUserResult(profile: {
+  userId: string;
+  name?: string;
+  username?: string;
+  imageUrl?: string;
+}): SearchUserResult {
+  return {
+    userId: profile.userId,
+    name: profile.name ?? null,
+    username: profile.username ?? null,
+    imageUrl: profile.imageUrl ?? null,
+  };
+}
+
+export const searchUsers = query({
+  args: {
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<SearchUserResult[]> => {
+    const raw = args.query.trim();
+    if (raw.length < 2) return [];
+
+    const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
+    const currentUser = await authComponent.safeGetAuthUser(ctx);
+    const excludeUserId = currentUser?._id;
+
+    let usernamePrefix = raw.toLowerCase();
+    if (usernamePrefix.startsWith("@")) {
+      usernamePrefix = usernamePrefix.slice(1);
+    }
+
+    const results: SearchUserResult[] = [];
+    const seen = new Set<string>();
+
+    const addProfile = (profile: {
+      userId: string;
+      name?: string;
+      username?: string;
+      imageUrl?: string;
+    }) => {
+      if (excludeUserId && profile.userId === excludeUserId) return;
+      if (seen.has(profile.userId)) return;
+      if (results.length >= limit) return;
+      seen.add(profile.userId);
+      results.push(toSearchUserResult(profile));
+    };
+
+    if (/^[a-z0-9_]+$/.test(usernamePrefix)) {
+      const usernameMatches = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_username", (q) =>
+          q.gte("username", usernamePrefix).lt("username", usernamePrefix + "\uffff")
+        )
+        .take(limit);
+
+      for (const profile of usernameMatches) {
+        if (profile.username) addProfile(profile);
+      }
+    }
+
+    const lowerQuery = raw.toLowerCase();
+    if (results.length < limit) {
+      const allProfiles = await ctx.db.query("userProfiles").collect();
+      for (const profile of allProfiles) {
+        if (results.length >= limit) break;
+        const name = profile.name?.toLowerCase() ?? "";
+        if (name.includes(lowerQuery)) {
+          addProfile(profile);
+        }
+      }
+    }
+
+    return results;
+  },
+});

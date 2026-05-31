@@ -7,6 +7,7 @@ import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { XIcon, ChevronDownIcon, CheckIcon } from 'lucide-react-native';
+import { CheckInTagFriends } from '@/components/check-in-tag-friends';
 import * as ImagePicker from 'expo-image-picker';
 import { CategoryTag } from '@/components/category-tag';
 import { AuthGuard } from '@/components/AuthGuard';
@@ -68,20 +69,8 @@ export default function CheckInScreen() {
     id ? { museumId: id as Id<'museums'> } : 'skip'
   );
 
-  const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
-  const followingUserIds = useQuery(
-    api.follows.getFollowing,
-    currentUser ? { userId: currentUser._id } : 'skip'
-  );
-
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
-
-  const toggleFriend = (userId: string) => {
-    setSelectedFriends((prev) =>
-      prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
-    );
-  };
 
   const toggleEvent = (eventId: string) => {
     setSelectedEvents((prev) =>
@@ -333,40 +322,13 @@ export default function CheckInScreen() {
             </View>
           )}
 
-          {allUsers && followingUserIds && followingUserIds.length > 0 ? (
-            <View className="mb-6">
-              <Label className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Label>
-              <View className="flex-row flex-wrap gap-2">
-                {allUsers
-                  .filter((user) => followingUserIds.includes(user.userId))
-                  .map((user) => {
-                    const selected = selectedFriends.includes(user.userId);
-                    return (
-                      <Pressable
-                        key={user.userId}
-                        className={cn(
-                          'flex-row items-center gap-1 rounded-full border px-3 py-2 active:opacity-90',
-                          selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
-                        )}
-                        onPress={() => toggleFriend(user.userId)}>
-                        <Text
-                          className={cn('text-sm font-medium', selected ? 'text-primary' : 'text-foreground')}>
-                          {user.name || user.email}
-                        </Text>
-                        {selected ? <XIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} /> : null}
-                      </Pressable>
-                    );
-                  })}
-              </View>
-            </View>
-          ) : (
-            <View className="mb-6">
-              <Label className="mb-3 text-base font-semibold text-foreground">Who visited with you?</Label>
-              <Text className="text-sm text-muted-foreground">
-                Follow your friends to add them to your check-ins!
-              </Text>
-            </View>
-          )}
+          {currentUser ? (
+            <CheckInTagFriends
+              selectedUserIds={selectedFriends}
+              onSelectedUserIdsChange={setSelectedFriends}
+              currentUserId={currentUser._id}
+            />
+          ) : null}
 
           <Button
             size="lg"
