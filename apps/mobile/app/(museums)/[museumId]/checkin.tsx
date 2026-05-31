@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Pressable, Alert, Image } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Pressable,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
@@ -174,16 +182,24 @@ export default function CheckInScreen() {
 
   return (
     <AuthGuard>
-      <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
 
         <ScreenTitleBar title="Check In" onBackPress={() => router.back()} />
 
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerClassName="grow px-4 pt-0"
-          contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+          <ScrollView
+            className="flex-1"
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="px-4 pt-0"
+            contentContainerStyle={{ paddingBottom: 16 + insets.bottom }}>
           <View className="mb-6 rounded-xl border border-border bg-card p-4">
             <Text className="mb-1 text-xl font-bold text-foreground">{museum.name}</Text>
             <CategoryTag category={museum.category} className="self-start" />
@@ -221,14 +237,13 @@ export default function CheckInScreen() {
           <View className="mb-6">
             <View className="mb-3 flex-row items-center justify-between gap-3">
               <Text className="min-w-0 shrink text-base font-semibold text-foreground">Photos</Text>
-              <Pressable
-                className="shrink-0 rounded-lg bg-primary px-4 py-2 active:opacity-90"
+              <Button
+                size="sm"
+                className="shrink-0"
                 onPress={pickImages}
                 disabled={isSubmitting}>
-                <Text className="text-sm font-semibold text-primary-foreground">
-                  {selectedImages.length > 0 ? 'Replace Photos' : 'Add Photos'}
-                </Text>
-              </Pressable>
+                <Text>{selectedImages.length > 0 ? 'Replace Photos' : 'Add Photos'}</Text>
+              </Button>
             </View>
 
             {selectedImages.length > 0 ? (
@@ -332,7 +347,7 @@ export default function CheckInScreen() {
 
           <Button
             size="lg"
-            className="mb-12 min-h-12 w-full rounded-xl active:opacity-90"
+            className="mb-4 min-h-12 w-full rounded-xl active:opacity-90"
             disabled={isSubmitting}
             onPress={handleSubmit}>
             {isSubmitting ? (
@@ -341,7 +356,8 @@ export default function CheckInScreen() {
               <Text className="text-base font-semibold text-primary-foreground">Complete check-in</Text>
             )}
           </Button>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </AuthGuard>
   );

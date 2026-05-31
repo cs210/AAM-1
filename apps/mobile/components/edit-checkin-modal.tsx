@@ -270,14 +270,13 @@ export function EditCheckinModal({
 
             <View className="mb-4 flex-row items-center justify-between gap-3">
               <Text className="min-w-0 shrink text-sm font-medium text-muted-foreground">Photos</Text>
-              <Pressable
-                className="shrink-0 rounded-lg bg-primary px-4 py-2 active:opacity-90"
+              <Button
+                size="sm"
+                className="shrink-0"
                 onPress={pickImages}
                 disabled={isSubmitting}>
-                <Text className="text-sm font-semibold text-primary-foreground">
-                  {totalImageCount > 0 ? 'Replace Photos' : 'Add Photos'}
-                </Text>
-              </Pressable>
+                <Text>{totalImageCount > 0 ? 'Replace Photos' : 'Add Photos'}</Text>
+              </Button>
             </View>
 
             {selectedImages.length > 0 ? (

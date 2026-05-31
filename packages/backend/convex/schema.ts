@@ -199,6 +199,20 @@ export default defineSchema({
     endDate: v.optional(v.number()),
     imageUrl: v.optional(v.string()),
     sortOrder: v.number(),
+    // Legacy field present on some rows; kept optional for schema validation
+    resources: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          kind: v.string(),
+          sortOrder: v.number(),
+          sourceType: v.string(),
+          storageId: v.id("_storage"),
+          title: v.string(),
+          url: v.string(),
+        })
+      )
+    ),
   })
     .index("by_museum", ["museumId"])
     .index("by_museum_sortOrder", ["museumId", "sortOrder"]),

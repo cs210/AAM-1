@@ -155,12 +155,11 @@ export function CheckInTagFriends({
         </View>
         <Button
           variant="secondary"
-          className="h-12 px-4"
+          size="default"
+          className="h-12 min-h-12 px-5"
           disabled={isAdding}
           onPress={() => void handleAddByUsername()}>
-          <Text className="text-sm font-semibold text-secondary-foreground">
-            {isAdding ? 'Adding…' : 'Add'}
-          </Text>
+          <Text>{isAdding ? 'Adding…' : 'Add'}</Text>
         </Button>
       </View>
       {addError ? <Text className="text-destructive mb-3 text-sm">{addError}</Text> : null}

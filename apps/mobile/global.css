@@ -65,8 +65,8 @@
       --color-popover-foreground: oklch(0.985 0.001 106.423);
       --color-primary: oklch(0.75 0.14 30);
       --color-primary-foreground: oklch(0.25 0.02 30);
-      --color-secondary: oklch(0.274 0.006 286.033);
-      --color-secondary-foreground: oklch(0.985 0 0);
+      --color-secondary: oklch(0.36 0.012 56.043);
+      --color-secondary-foreground: oklch(0.985 0.001 106.423);
       --color-muted: oklch(0.268 0.007 34.298);
       --color-muted-foreground: oklch(0.709 0.01 56.259);
       --color-accent: oklch(0.268 0.007 34.298);

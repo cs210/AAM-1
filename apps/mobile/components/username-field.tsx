@@ -16,6 +16,9 @@ type UsernameFieldProps = {
   returnKeyType?: 'next' | 'done' | 'send';
   onSubmitEditing?: () => void;
   inputRef?: React.RefObject<React.ComponentRef<typeof Input> | null>;
+  onAvailabilityChange?: (
+    availability: { available: boolean; reason?: string } | undefined
+  ) => void;
 };
 
 export function UsernameField({
@@ -27,6 +30,7 @@ export function UsernameField({
   returnKeyType = 'next',
   onSubmitEditing,
   inputRef,
+  onAvailabilityChange,
 }: UsernameFieldProps) {
   const formatError = getUsernameFormatError(value);
   const [debouncedUsername, setDebouncedUsername] = React.useState('');
@@ -42,6 +46,10 @@ export function UsernameField({
     api.userProfiles.isUsernameAvailable,
     debouncedUsername.length >= 3 && !formatError ? { username: debouncedUsername } : 'skip'
   );
+
+  React.useEffect(() => {
+    onAvailabilityChange?.(availability);
+  }, [availability, onAvailabilityChange]);
 
   const availabilityMessage = React.useMemo(() => {
     if (!value.trim()) return null;
@@ -62,10 +70,8 @@ export function UsernameField({
   return (
     <View className="gap-2">
       <Label nativeID={nativeID}>{label}</Label>
-      <View className="relative">
-        <Text className="text-muted-foreground absolute top-1/2 left-3 z-10 -translate-y-1/2 text-base">
-          @
-        </Text>
+      <View className="border-input bg-background flex-row items-center overflow-hidden rounded-md border shadow-sm shadow-black/5">
+        <Text className="text-muted-foreground pl-3 text-base">@</Text>
         <Input
           ref={inputRef}
           nativeID={nativeID}
@@ -78,7 +84,7 @@ export function UsernameField({
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           autoFocus={autoFocus}
-          className="pl-8"
+          className="min-h-10 flex-1 border-0 bg-transparent px-2 shadow-none"
         />
       </View>
       {availabilityMessage ? (

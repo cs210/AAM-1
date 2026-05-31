@@ -5,9 +5,7 @@ import { Text } from '@/components/ui/text';
 import { isUsernameReadyForSubmit, UsernameField } from '@/components/username-field';
 import { authClient } from '@/lib/auth-client';
 import { normalizeUsernameInput } from '@/lib/username';
-import { api } from '@packages/backend/convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery } from 'convex/react';
 import { router } from 'expo-router';
 import * as React from 'react';
 import { Pressable, TextInput, View } from 'react-native';
@@ -24,17 +22,9 @@ export function SignUpForm() {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
-
-  const [debouncedUsername, setDebouncedUsername] = React.useState('');
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedUsername(normalizeUsernameInput(username)), 300);
-    return () => clearTimeout(timer);
-  }, [username]);
-
-  const usernameAvailability = useQuery(
-    api.userProfiles.isUsernameAvailable,
-    debouncedUsername.length >= 3 ? { username: debouncedUsername } : 'skip'
-  );
+  const [usernameAvailability, setUsernameAvailability] = React.useState<
+    { available: boolean; reason?: string } | undefined
+  >(undefined);
 
   const canSubmit =
     Boolean(name.trim() && email.trim() && password) &&
@@ -84,7 +74,7 @@ export function SignUpForm() {
   }
 
   return (
-    <>
+    <View className="gap-5">
       {error ? (
         <View className="rounded-xl border border-destructive/25 bg-destructive/10 p-3">
           <Text className="text-center text-sm text-destructive">{error}</Text>
@@ -110,6 +100,7 @@ export function SignUpForm() {
         value={username}
         onChangeText={setUsername}
         onSubmitEditing={onUsernameSubmitEditing}
+        onAvailabilityChange={setUsernameAvailability}
       />
 
       <View className="gap-2">
@@ -160,6 +151,6 @@ export function SignUpForm() {
           <Text className="font-semibold text-foreground underline">Sign in</Text>
         </Text>
       </Pressable>
-    </>
+    </View>
   );
 }
