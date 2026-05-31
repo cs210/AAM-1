@@ -3,12 +3,17 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs, router, useGlobalSearchParams } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon, ScanSearchIcon } from 'lucide-react-native';
-import { useConvexAuth } from 'convex/react';
+import { useConvexAuth, useQuery } from 'convex/react';
+import { api } from '@packages/backend/convex/_generated/api';
 import { RN_STYLE } from '@/constants/rn-api-colors';
 import { useUniwind } from 'uniwind';
 
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const currentProfile = useQuery(
+    api.userProfiles.getCurrentUserProfile,
+    isAuthenticated ? undefined : 'skip'
+  );
   const { theme: colorScheme } = useUniwind();
   const t = colorScheme === 'dark' ? RN_STYLE.dark : RN_STYLE.light;
   const { userId } = useGlobalSearchParams<{ userId?: string | string[] }>();
@@ -23,7 +28,14 @@ export default function TabLayout() {
     }
   }, [isAuthenticated, isLoading]);
 
-  if (isLoading) {
+  React.useEffect(() => {
+    if (isLoading || !isAuthenticated || currentProfile === undefined) return;
+    if (!currentProfile?.username) {
+      router.replace('/username-setup');
+    }
+  }, [isLoading, isAuthenticated, currentProfile]);
+
+  if (isLoading || (isAuthenticated && currentProfile === undefined)) {
     return (
       <SafeAreaView
         style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.background }}>
@@ -33,6 +45,10 @@ export default function TabLayout() {
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  if (!currentProfile?.username) {
     return null;
   }
 

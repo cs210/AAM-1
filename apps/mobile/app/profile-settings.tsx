@@ -5,6 +5,8 @@ import { router, Stack } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { ArrowLeftIcon, ChevronRightIcon, LogOutIcon, Trash2Icon } from 'lucide-react-native';
+import { isUsernameReadyForSubmit, UsernameField } from '@/components/username-field';
+import { normalizeUsernameInput } from '@/lib/username';
 import { useUniwind } from 'uniwind';
 import {
   RN_API_BACKGROUND_DARK,
@@ -42,6 +44,8 @@ export default function ProfileSettingsScreen() {
   const border = isDark ? RN_API_BORDER_DARK : RN_API_BORDER_LIGHT;
 
   const currentUser = useQuery(api.auth.getCurrentUser);
+  const currentProfile = useQuery(api.userProfiles.getCurrentUserProfile);
+  const setUsername = useMutation(api.userProfiles.setUsername);
   const myOrganizations = useQuery(api.admin.listMyOrganizations) as
     | OrganizationMembership[]
     | undefined;
@@ -52,6 +56,33 @@ export default function ProfileSettingsScreen() {
   const [deletePassword, setDeletePassword] = React.useState('');
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = React.useState(false);
+  const [username, setUsernameValue] = React.useState('');
+  const [usernameError, setUsernameError] = React.useState<string | null>(null);
+  const [usernameBusy, setUsernameBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    if (currentProfile?.username) {
+      setUsernameValue(currentProfile.username);
+    }
+  }, [currentProfile?.username]);
+
+  const [debouncedUsername, setDebouncedUsername] = React.useState('');
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUsername(normalizeUsernameInput(username)), 300);
+    return () => clearTimeout(timer);
+  }, [username]);
+
+  const usernameAvailability = useQuery(
+    api.userProfiles.isUsernameAvailable,
+    debouncedUsername.length >= 3 ? { username: debouncedUsername } : 'skip'
+  );
+
+  const usernameChanged =
+    normalizeUsernameInput(username) !== (currentProfile?.username ?? '');
+  const canSaveUsername =
+    usernameChanged &&
+    isUsernameReadyForSubmit(username, usernameAvailability) &&
+    !usernameBusy;
 
   const alertsEnabled = !prefs?.mutedSocial;
   const ownedOrganizations = React.useMemo(
@@ -80,6 +111,20 @@ export default function ProfileSettingsScreen() {
     setDeleteModalOpen(false);
     setDeletePassword('');
     setDeleteError(null);
+  };
+
+  const saveUsername = async () => {
+    if (!canSaveUsername) return;
+
+    setUsernameError(null);
+    setUsernameBusy(true);
+    try {
+      await setUsername({ username: normalizeUsernameInput(username) });
+    } catch (error) {
+      setUsernameError(error instanceof Error ? error.message : 'Could not save username');
+    } finally {
+      setUsernameBusy(false);
+    }
   };
 
   const deleteAccount = async () => {
@@ -176,6 +221,38 @@ export default function ProfileSettingsScreen() {
             When someone @mentions you in a check-in review, or other social alerts, notify me
             (in-app).
           </Text>
+        </View>
+
+        <SectionLabel muted={muted}>Username</SectionLabel>
+        <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+          {currentProfile === undefined ? (
+            <Text style={{ color: muted, fontSize: 14 }}>Loading profile…</Text>
+          ) : (
+            <>
+              <UsernameField value={username} onChangeText={setUsernameValue} />
+              {usernameError ? (
+                <Text style={{ color: destructiveHex, fontSize: 14, marginTop: 8 }}>
+                  {usernameError}
+                </Text>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save username"
+                disabled={!canSaveUsername}
+                onPress={() => void saveUsername()}
+                style={({ pressed }) => [
+                  styles.saveUsernameButton,
+                  {
+                    backgroundColor: canSaveUsername ? primaryHex : `${primaryHex}66`,
+                  },
+                  pressed && canSaveUsername && styles.pressed,
+                ]}>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>
+                  {usernameBusy ? 'Saving…' : 'Save username'}
+                </Text>
+              </Pressable>
+            </>
+          )}
         </View>
 
         <SectionLabel muted={muted}>Account</SectionLabel>
@@ -396,6 +473,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 28,
     width: '100%',
+  },
+  saveUsernameButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   modalActions: {
     flexDirection: 'row',

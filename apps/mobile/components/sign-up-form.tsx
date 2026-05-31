@@ -2,21 +2,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { isUsernameReadyForSubmit, UsernameField } from '@/components/username-field';
 import { authClient } from '@/lib/auth-client';
+import { normalizeUsernameInput } from '@/lib/username';
+import { api } from '@packages/backend/convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from 'convex/react';
 import { router } from 'expo-router';
 import * as React from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
+const PENDING_USERNAME_KEY = 'pendingUsername';
+
 export function SignUpForm() {
+  const usernameInputRef = React.useRef<TextInput>(null);
   const emailInputRef = React.useRef<TextInput>(null);
   const passwordInputRef = React.useRef<TextInput>(null);
   const [name, setName] = React.useState('');
+  const [username, setUsername] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
+  const [debouncedUsername, setDebouncedUsername] = React.useState('');
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUsername(normalizeUsernameInput(username)), 300);
+    return () => clearTimeout(timer);
+  }, [username]);
+
+  const usernameAvailability = useQuery(
+    api.userProfiles.isUsernameAvailable,
+    debouncedUsername.length >= 3 ? { username: debouncedUsername } : 'skip'
+  );
+
+  const canSubmit =
+    Boolean(name.trim() && email.trim() && password) &&
+    isUsernameReadyForSubmit(username, usernameAvailability) &&
+    !isLoading;
+
   function onNameSubmitEditing() {
+    usernameInputRef.current?.focus();
+  }
+
+  function onUsernameSubmitEditing() {
     emailInputRef.current?.focus();
   }
 
@@ -25,25 +54,33 @@ export function SignUpForm() {
   }
 
   async function onSubmit() {
-    if (!name || !email || !password || isLoading) return;
+    if (!canSubmit) return;
 
     setError(null);
     setIsLoading(true);
+    const normalizedUsername = normalizeUsernameInput(username);
     const { data, error: signUpError } = await authClient.signUp.email({
       name: name.trim(),
       email: email.trim(),
       password,
     });
-    setIsLoading(false);
 
     if (signUpError) {
+      setIsLoading(false);
       setError(signUpError.message ?? 'Sign up failed');
       return;
     }
 
     if (data) {
+      try {
+        await AsyncStorage.setItem(PENDING_USERNAME_KEY, normalizedUsername);
+      } catch (storageError) {
+        console.error('Failed to persist pending username:', storageError);
+      }
       router.replace('/post-auth');
     }
+
+    setIsLoading(false);
   }
 
   return (
@@ -66,6 +103,14 @@ export function SignUpForm() {
           onSubmitEditing={onNameSubmitEditing}
         />
       </View>
+
+      <UsernameField
+        inputRef={usernameInputRef}
+        nativeID="sign-up-username"
+        value={username}
+        onChangeText={setUsername}
+        onSubmitEditing={onUsernameSubmitEditing}
+      />
 
       <View className="gap-2">
         <Label nativeID="sign-up-email">Email</Label>
@@ -100,7 +145,7 @@ export function SignUpForm() {
       <Button
         className="mt-1 h-auto min-h-14 w-full py-4 shadow-md shadow-black/10"
         size="lg"
-        disabled={isLoading}
+        disabled={!canSubmit}
         onPress={onSubmit}>
         <Text className="text-base font-semibold text-primary-foreground">
           {isLoading ? 'Creating account...' : 'Continue'}

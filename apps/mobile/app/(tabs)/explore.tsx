@@ -163,13 +163,20 @@ function PeopleSearchRoute({
   filteredUsers: {
     userId: string;
     name?: string | null;
+    username?: string | null;
     email?: string | null;
     imageUrl?: string | null;
   }[];
   currUser: { _id: string } | null | undefined;
   currUserId: string | null;
   recommendedPeople:
-    | { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[]
+    | {
+        userId: string;
+        name?: string | null;
+        username?: string | null;
+        email?: string | null;
+        imageUrl?: string | null;
+      }[]
     | undefined;
 }) {
   const isSearching = peopleSearch.trim().length > 0;
@@ -264,9 +271,16 @@ function PeopleSearchRoute({
                       </Text>
                     </View>
                   )}
-                  <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
-                    {displayName || "Name can't be displayed"}
-                  </Text>
+                  <View className="flex-1">
+                    <Text className="text-foreground text-lg font-medium" numberOfLines={1}>
+                      {displayName || "Name can't be displayed"}
+                    </Text>
+                    {item.username ? (
+                      <Text className="text-muted-foreground text-sm" numberOfLines={1}>
+                        @{item.username}
+                      </Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               );
             }}
@@ -309,9 +323,16 @@ function PeopleSearchRoute({
                     <Text className="text-primary-foreground text-lg font-semibold">{initial}</Text>
                   </View>
                 )}
-                <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
-                  {displayName || "Name can't be displayed"}
-                </Text>
+                <View className="flex-1">
+                  <Text className="text-foreground text-lg font-medium" numberOfLines={1}>
+                    {displayName || "Name can't be displayed"}
+                  </Text>
+                  {item.username ? (
+                    <Text className="text-muted-foreground text-sm" numberOfLines={1}>
+                      @{item.username}
+                    </Text>
+                  ) : null}
+                </View>
               </Pressable>
             );
           }}
@@ -402,6 +423,7 @@ export default function SearchScreen() {
     | {
         userId: string;
         name: string | null;
+        username: string | null;
         email: string | null;
         imageUrl: string | null;
         bannerUrl: string | null;
@@ -412,8 +434,14 @@ export default function SearchScreen() {
     if (!peopleSearch.trim()) return [];
     const lowerSearch = peopleSearch.toLowerCase();
     return users.filter(
-      (user: { name?: string | null; email?: string | null; imageUrl?: string | null }) =>
+      (user: {
+        name?: string | null;
+        username?: string | null;
+        email?: string | null;
+        imageUrl?: string | null;
+      }) =>
         user.name?.toLowerCase().includes(lowerSearch) ||
+        user.username?.toLowerCase().includes(lowerSearch) ||
         user.email?.toLowerCase().includes(lowerSearch)
     );
   }, [users, peopleSearch]);

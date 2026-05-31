@@ -137,6 +137,7 @@
   "dashboard": {
     "tabs": {
       "museumDetails": "Detalles del museo",
+      "account": "Cuenta",
       "organizations": "Organizaciones",
       "exhibitions": "Exposiciones",
       "interactions": "Interacciones",
@@ -219,6 +220,28 @@
       "confirm": "Eliminar cuenta",
       "deleting": "Eliminando…",
       "error": "No se pudo eliminar la cuenta. Revisa tu contraseña e inténtalo de nuevo."
+    },
+    "account": {
+      "title": "Configuración de cuenta",
+      "description": "Administra tu nombre de usuario público en Museum&.",
+      "loading": "Cargando configuración de cuenta…",
+      "currentUsername": "Nombre de usuario actual: @{username}",
+      "emptyState": "Aún no has configurado un nombre de usuario.",
+      "usernameLabel": "Nombre de usuario",
+      "usernamePlaceholder": "tunombre",
+      "usernameHint": "3–30 caracteres. Solo letras, números y guiones bajos.",
+      "checking": "Comprobando disponibilidad…",
+      "available": "Nombre de usuario disponible",
+      "save": "Guardar nombre de usuario",
+      "saving": "Guardando…",
+      "saved": "Nombre de usuario guardado.",
+      "errors": {
+        "tooShort": "El nombre de usuario debe tener al menos 3 caracteres",
+        "tooLong": "El nombre de usuario debe tener como máximo 30 caracteres",
+        "invalidChars": "El nombre de usuario solo puede contener letras, números y guiones bajos",
+        "taken": "Este nombre de usuario ya está en uso",
+        "saveFailed": "No se pudo guardar el nombre de usuario"
+      }
     },
     "organizations": {
       "title": "Tus espacios de trabajo",

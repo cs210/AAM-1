@@ -12,10 +12,9 @@ import * as React from 'react';
 import { View } from 'react-native';
 
 const USER = {
-  fullName: 'Zach Nugent',
-  initials: 'ZN',
-  imgSrc: { uri: 'https://github.com/mrzachnugent.png' },
-  username: 'mrzachnugent',
+  fullName: 'User',
+  initials: 'U',
+  imgSrc: undefined as { uri: string } | undefined,
 };
 
 export function UserMenu() {
@@ -40,11 +39,6 @@ export function UserMenu() {
             <UserAvatar className="size-10" />
             <View className="flex-1">
               <Text className="leading-5 font-medium">{USER.fullName}</Text>
-              {USER.fullName?.length ? (
-                <Text className="text-muted-foreground text-sm leading-4 font-normal">
-                  {USER.username}
-                </Text>
-              ) : null}
             </View>
           </View>
           <View className="flex-row flex-wrap gap-3 py-0.5">

@@ -172,6 +172,7 @@ export default defineSchema({
   userProfiles: defineTable({
     userId: v.string(), // Better Auth user ID
     name: v.optional(v.string()),
+    username: v.optional(v.string()), // stored lowercase; required for mobile via app logic
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     bannerUrl: v.optional(v.string()),
@@ -186,7 +187,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_name", ["name"]),
+    .index("by_name", ["name"])
+    .index("by_username", ["username"]),
 
   // Exhibitions and halls (dashboard-managed, per museum)
   exhibitions: defineTable({

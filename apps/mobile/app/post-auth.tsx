@@ -1,5 +1,7 @@
 import { Text } from '@/components/ui/text';
+import { routeAfterUsernameSetup } from '@/lib/post-auth-routing';
 import { api } from '@packages/backend/convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useConvexAuth } from 'convex/react';
 import { router } from 'expo-router';
 import * as React from 'react';
@@ -7,44 +9,85 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePostHog } from 'posthog-react-native';
 
+const PENDING_USERNAME_KEY = 'pendingUsername';
+
 export default function PostAuthScreen() {
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const posthog = usePostHog();
   const getOrCreateProfile = useMutation(api.userProfiles.getOrCreateUserProfile);
+  const setUsername = useMutation(api.userProfiles.setUsername);
   const currentUser = useQuery(api.auth.getCurrentUser, isAuthenticated ? undefined : 'skip');
+  const currentProfile = useQuery(
+    api.userProfiles.getCurrentUserProfile,
+    isAuthenticated ? undefined : 'skip'
+  );
   const userInterests = useQuery(api.userInterests.getForCurrentAccount, isAuthenticated ? {} : 'skip');
-  const [profileCreated, setProfileCreated] = React.useState(false);
+  const [setupComplete, setSetupComplete] = React.useState(false);
+  const [appliedPendingUsername, setAppliedPendingUsername] = React.useState(false);
 
-  // Wait for Convex auth token to be ready before calling mutations
   React.useEffect(() => {
-    if (!isAuthenticated || profileCreated) return;
-    getOrCreateProfile()
-      .then(() => {
+    if (isAuthLoading || !isAuthenticated || setupComplete) return;
+
+    let cancelled = false;
+
+    async function runPostAuthSetup() {
+      try {
+        await getOrCreateProfile();
+
         if (currentUser) {
           posthog?.identify(currentUser._id, {
             email: currentUser.email,
             name: currentUser.name,
           });
         }
-        setProfileCreated(true);
-      })
-      .catch((error) => {
-        console.error('Failed to create user profile:', error);
-        // Still set to true to allow the flow to continue
-        setProfileCreated(true);
-      });
-  }, [isAuthenticated, profileCreated, getOrCreateProfile, currentUser, posthog]);
 
-  // Then check user interests and redirect
-  React.useEffect(() => {
-    if (!profileCreated || userInterests === undefined) return;
-
-    if (userInterests === null) {
-      router.replace('/intake?redirect=/home');
-    } else {
-      router.replace('/home');
+        let pendingUsername: string | null = null;
+        try {
+          pendingUsername = await AsyncStorage.getItem(PENDING_USERNAME_KEY);
+          if (pendingUsername) {
+            await AsyncStorage.removeItem(PENDING_USERNAME_KEY);
+            await setUsername({ username: pendingUsername });
+            if (!cancelled) {
+              setAppliedPendingUsername(true);
+            }
+          }
+        } catch (storageError) {
+          console.error('Failed to apply pending username:', storageError);
+        }
+      } catch (error) {
+        console.error('Failed to complete post-auth setup:', error);
+      } finally {
+        if (!cancelled) {
+          setSetupComplete(true);
+        }
+      }
     }
-  }, [userInterests, profileCreated]);
+
+    void runPostAuthSetup();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isAuthLoading,
+    isAuthenticated,
+    setupComplete,
+    getOrCreateProfile,
+    setUsername,
+    currentUser,
+    posthog,
+  ]);
+
+  React.useEffect(() => {
+    if (!setupComplete || currentProfile === undefined || userInterests === undefined) return;
+
+    if (!appliedPendingUsername && !currentProfile?.username) {
+      router.replace('/username-setup');
+      return;
+    }
+
+    routeAfterUsernameSetup(userInterests);
+  }, [setupComplete, currentProfile, userInterests, appliedPendingUsername]);
 
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -57,4 +100,3 @@ export default function PostAuthScreen() {
     </SafeAreaView>
   );
 }
-

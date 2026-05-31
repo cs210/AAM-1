@@ -137,6 +137,7 @@
   "dashboard": {
     "tabs": {
       "museumDetails": "Museum Details",
+      "account": "Account",
       "organizations": "Organizations",
       "exhibitions": "Exhibitions",
       "interactions": "Interactions",
@@ -219,6 +220,28 @@
       "confirm": "Delete account",
       "deleting": "Deleting…",
       "error": "Could not delete account. Check your password and try again."
+    },
+    "account": {
+      "title": "Account settings",
+      "description": "Manage your public username for Museum&.",
+      "loading": "Loading account settings…",
+      "currentUsername": "Current username: @{username}",
+      "emptyState": "You have not set a username yet.",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "yourname",
+      "usernameHint": "3–30 characters. Letters, numbers, and underscores only.",
+      "checking": "Checking availability…",
+      "available": "Username is available",
+      "save": "Save username",
+      "saving": "Saving…",
+      "saved": "Username saved.",
+      "errors": {
+        "tooShort": "Username must be at least 3 characters",
+        "tooLong": "Username must be at most 30 characters",
+        "invalidChars": "Username can only contain letters, numbers, and underscores",
+        "taken": "Username is taken",
+        "saveFailed": "Could not save username"
+      }
     },
     "organizations": {
       "title": "Your workspaces",
