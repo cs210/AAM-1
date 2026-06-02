@@ -97,3 +97,16 @@ not configured in the admin dashboard. Set it on the Convex deployment with:
 ```sh
 npx convex env set RUNPOD_API_KEY "rp_..."
 ```
+
+## Expo push (mention notifications)
+
+Mention pushes are sent from `pushNotifications.sendMentionExpoPushes` via the Expo Push API.
+Create an access token at [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens)
+and set it on the Convex deployment the mobile app uses (e.g. `dev:cautious-dogfish-175`):
+
+```sh
+cd packages/backend
+npx convex env set EXPO_ACCESS_TOKEN "your_expo_access_token"
+```
+
+Without this variable, pushes may still be attempted but delivery is less reliable.

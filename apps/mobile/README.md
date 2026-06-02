@@ -68,6 +68,41 @@ npx convex run fakeData:populateFakeEvents
 npx convex run fakeData:populateFakeRatings
 ```
 
+## Run on your iPhone (USB, no App Store)
+
+Prerequisites: Xcode installed, iPhone unlocked on USB, **Trust This Computer**, **Developer Mode** on (Settings → Privacy & Security → Developer Mode).
+
+From the repo root, in one terminal start Convex:
+
+```bash
+cd packages/backend && npx convex dev
+```
+
+In another terminal, build and install on the connected phone:
+
+```bash
+cd apps/mobile
+pnpm ios:device
+```
+
+First run may open Xcode signing prompts — use the Apple ID that has access to team **3X5JXMN7S9** (same as EAS). The app bundle id is `sh.edm.museum`.
+
+If the build fails with **No profiles for 'sh.edm.museum'**, open **Xcode → Settings → Accounts**, sign in with an Apple ID on that developer team, then run `pnpm ios:device` again. Or open `ios/Museum.xcworkspace`, select the **Museum** target → **Signing & Capabilities** → enable **Automatically manage signing** and team **3X5JXMN7S9**.
+
+If no device is found, unplug/replug the cable and run `pnpm ios:device` again.
+
+If the build fails with **"iOS X.X is not installed"**, your iPhone’s iOS version is newer than the device support installed in Xcode. Open **Xcode → Settings → Platforms**, download that iOS version, then run `pnpm ios:device` again.
+
+## Push notifications on a physical device
+
+The mention push flow needs a **development build** (not Expo Go), a registered iPhone, and Convex configured.
+
+1. **Register your iPhone** (once per device): from `apps/mobile`, run `pnpm eas:device` and follow the prompts, or use [expo.dev](https://expo.dev) → project → Devices.
+2. **Install a dev build**: `pnpm eas:build:dev:ios` (or install the latest with `pnpm eas:install:dev:ios`). Rebuild after native changes to `expo-notifications`.
+3. **Convex**: set `EXPO_ACCESS_TOKEN` on your dev deployment — see `packages/backend/README.md`.
+4. **Run Metro**: `pnpm dev`, open the dev client on the phone (same Wi‑Fi), sign in, allow notifications. In Metro logs, confirm `[push] Expo push token (device): ExponentPushToken[...]` and a row in the Convex `expoPushTokens` table.
+5. **Trigger a push**: from a second account, tag this user on a museum check-in (“Who visited with you?”). Social notifications must be enabled in Profile → Notifications.
+
 ## Deploy with EAS
 
 The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).

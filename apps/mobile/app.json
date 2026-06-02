@@ -24,6 +24,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "sh.edm.museum",
+      "appleTeamId": "3X5JXMN7S9",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

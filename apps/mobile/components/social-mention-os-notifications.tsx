@@ -120,6 +120,9 @@ export function SocialMentionOsNotifications() {
         const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
         if (cancelled || !token) return;
         lastTokenRef.current = token;
+        if (__DEV__) {
+          console.log('[push] Expo push token (device):', token);
+        }
         await registerToken({ token });
       } catch (e) {
         console.warn('[push] getExpoPushTokenAsync failed', e);

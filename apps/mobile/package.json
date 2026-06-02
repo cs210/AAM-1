@@ -7,6 +7,12 @@
     "dev": "expo start -c --dev-client",
     "android": "expo start -c --android --dev-client",
     "ios": "expo start -c --ios --dev-client",
+    "ios:device": "bash scripts/run-on-iphone.sh",
+    "prebuild:ios": "expo prebuild --platform ios --clean",
+    "eas:device": "eas device:create",
+    "eas:build:dev:ios": "eas build --profile development --platform ios",
+    "eas:build:dev:android": "eas build --profile development --platform android",
+    "eas:install:dev:ios": "eas build:run --profile development --platform ios --latest",
     "web": "expo start -c --web",
     "clean": "rm -rf .expo node_modules",
     "typecheck": "tsc --noEmit"
