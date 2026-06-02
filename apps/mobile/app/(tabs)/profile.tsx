@@ -13,7 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { Stack, useLocalSearchParams, useNavigation, router } from 'expo-router';
 import {
   ArrowLeftIcon,
   StarIcon,
@@ -39,7 +39,8 @@ import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
-import { setLastPeopleSearch } from '@/lib/last-people-search';
+import { userProfileHref } from '@/lib/user-profile-navigation';
+import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { useUniwind } from 'uniwind';
 import {
   RN_API_FOREGROUND_DARK,
@@ -332,26 +333,46 @@ function MosaicGallery({
   );
 }
 
-export default function ProfileScreen() {
-  const { userId: paramUserId, search: paramSearch } = useLocalSearchParams<{
+type ProfileScreenProps = {
+  presentation?: 'tab' | 'stack';
+  stackUserId?: string;
+};
+
+export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScreenProps) {
+  const isStackPresentation = presentation === 'stack';
+  const { userId: paramUserId } = useLocalSearchParams<{
     userId?: string | string[];
-    search?: string | string[];
   }>();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
-  // When navigating from search, userId is in URL params; otherwise show current user's profile
   const paramUserIdStr = Array.isArray(paramUserId) ? paramUserId[0] : paramUserId;
-  const viewedUserId =
-    (typeof paramUserIdStr === 'string' && paramUserIdStr ? paramUserIdStr : null) || currentUserId;
-  const searchFromParams = Array.isArray(paramSearch) ? paramSearch[0] : paramSearch;
-  const returnSearch = typeof searchFromParams === 'string' ? searchFromParams : '';
+  const viewedUserId = isStackPresentation
+    ? stackUserId ?? null
+    : (typeof paramUserIdStr === 'string' && paramUserIdStr ? paramUserIdStr : null) || currentUserId;
   const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
+  const navigation = useNavigation();
+  const wasViewingOtherProfileRef = React.useRef(false);
 
-  useEffect(() => {
-    if (returnSearch) {
-      setLastPeopleSearch(returnSearch);
-    }
-  }, [returnSearch]);
+  React.useEffect(() => {
+    wasViewingOtherProfileRef.current = Boolean(isViewingOtherProfile);
+  }, [isViewingOtherProfile]);
+
+  /** Legacy tab URLs: open other users on the stack screen (no bottom tabs). */
+  React.useEffect(() => {
+    if (isStackPresentation) return;
+    if (!paramUserIdStr || !currentUserId || paramUserIdStr === currentUserId) return;
+    router.replace(userProfileHref(paramUserIdStr));
+  }, [isStackPresentation, paramUserIdStr, currentUserId]);
+
+  /** Drop ?userId= from the Profile tab when leaving so Home → Explore does not reopen that profile. */
+  React.useEffect(() => {
+    if (isStackPresentation) return;
+    const unsubscribe = navigation.addListener('blur', () => {
+      if (!wasViewingOtherProfileRef.current) return;
+      router.setParams({ userId: '', search: '' });
+    });
+    return unsubscribe;
+  }, [navigation, isStackPresentation]);
 
   // Fetch user profile info
   const userProfile = useQuery(api.auth.listUsers, {});
@@ -541,9 +562,12 @@ export default function ProfileScreen() {
       ? rawDisplayName.replace(/\s+\d+$/, '').trim() || FALLBACK_DISPLAY_NAME
       : FALLBACK_DISPLAY_NAME;
 
-  const handleBackToSearch = () => {
-    const search = encodeURIComponent(returnSearch);
-    router.replace(`/(tabs)/explore?tab=people&search=${search}`);
+  const handleBack = () => {
+    if (isStackPresentation) {
+      router.back();
+      return;
+    }
+    router.replace('/(tabs)/explore?tab=people');
   };
 
   const { theme } = useUniwind();
@@ -562,15 +586,18 @@ export default function ProfileScreen() {
       className="bg-background flex-1"
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
+      {isStackPresentation ? (
+        <ScreenTitleBar title={displayName} onBackPress={handleBack} />
+      ) : null}
       <Pressable
         className="flex-1"
         style={{ flex: 1 }}
         onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
-        {isViewingOtherProfile ? (
+        {isViewingOtherProfile && !isStackPresentation ? (
           <View className="bg-background flex-row items-center px-3 pt-3 pb-2">
             <TouchableOpacity
               className="p-2"
-              onPress={handleBackToSearch}
+              onPress={handleBack}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <ArrowLeftIcon size={24} color={fgHex} />
             </TouchableOpacity>
@@ -941,7 +968,7 @@ export default function ProfileScreen() {
                         className="active:bg-muted flex-row items-center gap-3 px-5 py-3"
                         onPress={() => {
                           setShowFollowModal(null);
-                          router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}`);
+                      router.push(userProfileHref(item.userId));
                         }}>
                         {item.imageUrl ? (
                           <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
@@ -976,5 +1003,14 @@ export default function ProfileScreen() {
         />
       </Pressable>
     </SafeAreaView>
+  );
+}
+
+export default function TabProfileScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ProfileScreen presentation="tab" />
+    </>
   );
 }

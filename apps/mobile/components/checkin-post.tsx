@@ -10,6 +10,7 @@ import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
 import { useBookmark } from '@/hooks/useBookmark';
 import { useUniwind } from 'uniwind';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
+import { userProfileHref } from '@/lib/user-profile-navigation';
 import {
   RN_API_MUTED_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
@@ -84,7 +85,7 @@ export const CheckinPost = ({
   };
 
   const handleProfilePress = () => {
-    router.push(`/(tabs)/profile?userId=${encodeURIComponent(checkin.userId)}`);
+    router.push(userProfileHref(checkin.userId));
   };
 
   const handleMuseumPress = (e: any) => {
@@ -94,7 +95,7 @@ export const CheckinPost = ({
 
   const handleCoVisitorPress = (visitorId: string, e: any) => {
     e.stopPropagation?.();
-    router.push(`/(tabs)/profile?userId=${encodeURIComponent(visitorId)}`);
+    router.push(userProfileHref(visitorId));
   };
 
   const renderStars = (rating: number) => (

@@ -1,10 +1,10 @@
-/** Last People-tab query; survives Explore unmount when switching to Profile. */
-let lastPeopleSearch = '';
+/** Explore sub-tab index; survives switching away from Explore. */
+let lastExploreTabIndex = 0;
 
-export function getLastPeopleSearch(): string {
-  return lastPeopleSearch;
+export function getLastExploreTabIndex(): number {
+  return lastExploreTabIndex;
 }
 
-export function setLastPeopleSearch(query: string): void {
-  lastPeopleSearch = query;
+export function setLastExploreTabIndex(index: number): void {
+  lastExploreTabIndex = index;
 }
