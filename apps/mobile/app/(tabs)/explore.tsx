@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, FlatList, Pressable, Linking, Share, Image, Platform } from 'react-native';
+import { View, FlatList, Pressable, Linking, Share, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -8,8 +8,6 @@ import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
-import { KeyboardScrollHint } from '@/components/keyboard-scroll-hint';
-import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 import { PaginationPill } from '../../components/pagination-pill';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -45,16 +43,6 @@ appsFlyer.setAppInviteOneLinkID('Rz7b');
 const MUSEUMS_PER_PAGE = 10;
 const LIST_PADDING_BOTTOM = 80;
 const FEED_LIST_PADDING = { paddingBottom: 80, paddingHorizontal: 20 } as const;
-
-function useKeyboardAwareListPadding(keyboardHeight: number) {
-  return useMemo(
-    () => ({
-      paddingBottom:
-        LIST_PADDING_BOTTOM + (Platform.OS === 'android' ? keyboardHeight : 0),
-    }),
-    [keyboardHeight]
-  );
-}
 
 async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
   const lastKnown = await Location.getLastKnownPositionAsync({
@@ -238,9 +226,6 @@ function PeopleSearchRoute({
 }) {
   const isSearching = peopleSearch.trim().length > 0;
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
-  const { keyboardHeight, isKeyboardVisible } = useKeyboardInset();
-  const listContentPadding = useKeyboardAwareListPadding(keyboardHeight);
-  const showKeyboardHint = isKeyboardVisible && (isSearching ? filteredUsers.length > 0 : (recommendedPeople?.length ?? 0) > 0);
 
   const handleShareInviteLink = async () => {
     setIsGeneratingLink(true);
@@ -340,9 +325,7 @@ function PeopleSearchRoute({
               }}
               keyExtractor={(item) => item.userId}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={listContentPadding}
-              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-              keyboardDismissMode="on-drag"
+              contentContainerStyle={{ paddingBottom: LIST_PADDING_BOTTOM }}
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <View className="items-center px-12 py-12">
@@ -352,7 +335,6 @@ function PeopleSearchRoute({
                 </View>
               }
             />
-            <KeyboardScrollHint keyboardHeight={keyboardHeight} visible={showKeyboardHint} />
           </View>
         )
       ) : recommendedPeople && recommendedPeople.length > 0 ? (
@@ -390,9 +372,7 @@ function PeopleSearchRoute({
             }}
             keyExtractor={(item) => item.userId}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={listContentPadding}
-            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-            keyboardDismissMode="on-drag"
+            contentContainerStyle={{ paddingBottom: LIST_PADDING_BOTTOM }}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
               <View className="px-5 py-3">
@@ -400,7 +380,6 @@ function PeopleSearchRoute({
               </View>
             }
           />
-          <KeyboardScrollHint keyboardHeight={keyboardHeight} visible={showKeyboardHint} />
         </View>
       ) : (
         <View className="items-center px-12 py-12">
@@ -545,67 +524,69 @@ export default function SearchScreen() {
   const activeTabKey = tabs[index]?.key ?? 'people';
 
   return (
-    <SafeAreaView
-      className="bg-background relative flex-1"
-      style={{ flex: 1 }}
-      edges={['top', 'left', 'right']}>
-      <DecorativeGradientShapes />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView
+        className="bg-background relative flex-1"
+        style={{ flex: 1 }}
+        edges={['top', 'left', 'right']}>
+        <DecorativeGradientShapes />
 
-      <View className="border-border z-10 flex-row border-b">
-        {tabs.map((tab, tabIndex) => {
-          const isActive = tabIndex === index;
-          return (
-            <Pressable
-              key={tab.key}
-              className="flex-1 items-center pt-3.5 pb-2"
-              onPress={() => setIndex(tabIndex)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}>
-              <Text
-                className={cn(
-                  'text-base font-medium',
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
-                )}>
-                {tab.title}
-              </Text>
-              <View
-                className={cn(
-                  'mt-2 h-0.5 w-2/3 rounded-full',
-                  isActive ? 'bg-primary' : 'bg-transparent'
-                )}
-              />
-            </Pressable>
-          );
-        })}
-      </View>
+        <View className="border-border z-10 flex-row border-b">
+          {tabs.map((tab, tabIndex) => {
+            const isActive = tabIndex === index;
+            return (
+              <Pressable
+                key={tab.key}
+                className="flex-1 items-center pt-3.5 pb-2"
+                onPress={() => setIndex(tabIndex)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}>
+                <Text
+                  className={cn(
+                    'text-base font-medium',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )}>
+                  {tab.title}
+                </Text>
+                <View
+                  className={cn(
+                    'mt-2 h-0.5 w-2/3 rounded-full',
+                    isActive ? 'bg-primary' : 'bg-transparent'
+                  )}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
 
-      {activeTabKey === 'people' ? (
-        <PeopleSearchRoute
-          peopleSearch={peopleSearch}
-          setPeopleSearch={setPeopleSearch}
-          users={users}
-          filteredUsers={filteredUsers}
-          currUser={currUser}
-          currUserId={currUser?._id ?? null}
-          recommendedPeople={recommendedPeople}
-        />
-      ) : (
-        <MuseumsRoute
-          museumSearch={museumSearch}
-          setMuseumSearch={setMuseumSearch}
-          museums={museums}
-          pagedMuseums={pagedMuseums}
-          filteredMuseums={filteredMuseums}
-          museumPage={currentMuseumPage}
-          totalMuseumPages={totalMuseumPages}
-          onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
-          onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
-          sortedByDistance={locState.status === 'ok'}
-          expectDistanceOnCards={locState.status === 'ok'}
-          locationNote={locState.status === 'unavailable' ? locState.message : null}
-          onRetryLocation={() => setLocationRetryKey((k) => k + 1)}
-        />
-      )}
-    </SafeAreaView>
+        {activeTabKey === 'people' ? (
+          <PeopleSearchRoute
+            peopleSearch={peopleSearch}
+            setPeopleSearch={setPeopleSearch}
+            users={users}
+            filteredUsers={filteredUsers}
+            currUser={currUser}
+            currUserId={currUser?._id ?? null}
+            recommendedPeople={recommendedPeople}
+          />
+        ) : (
+          <MuseumsRoute
+            museumSearch={museumSearch}
+            setMuseumSearch={setMuseumSearch}
+            museums={museums}
+            pagedMuseums={pagedMuseums}
+            filteredMuseums={filteredMuseums}
+            museumPage={currentMuseumPage}
+            totalMuseumPages={totalMuseumPages}
+            onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
+            onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+            sortedByDistance={locState.status === 'ok'}
+            expectDistanceOnCards={locState.status === 'ok'}
+            locationNote={locState.status === 'unavailable' ? locState.message : null}
+            onRetryLocation={() => setLocationRetryKey((k) => k + 1)}
+          />
+        )}
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
