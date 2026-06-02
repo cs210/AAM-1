@@ -27,6 +27,7 @@ import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
 import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
+import { userProfileHref } from '@/lib/user-profile-navigation';
 import {
   RN_API_BORDER_LIGHT,
   RN_API_FOREGROUND_LIGHT,
@@ -383,26 +384,33 @@ export default function MuseumDetailScreen() {
                   highlightId === item._id ? 'border-2 border-primary' : 'border-border'
                 )}>
                 <View className="mb-2 flex-row items-center">
-                  <Avatar className="mr-3 size-10" alt={item.userName}>
-                    {item.userImage ? (
-                      <AvatarImage source={{ uri: item.userImage }} />
-                    ) : (
-                      <AvatarFallback className="items-center justify-center bg-primary">
-                        <Text className="text-base font-semibold text-primary-foreground">
-                          {item.userName.charAt(0).toUpperCase()}
-                        </Text>
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <View className="mr-2 flex-1">
-                    <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
-                      {item.userName}
-                    </Text>
-                    <Text variant="muted" className="mt-0.5 text-xs">
-                      {new Date(item.createdAt).toLocaleDateString()}
-                      {item.editedAt != null ? ' · Edited' : ''}
-                    </Text>
-                  </View>
+                  <Pressable
+                    className="mr-2 flex-1 flex-row items-center"
+                    onPress={() => {
+                      if (!item.userId) return;
+                      router.push(userProfileHref(item.userId));
+                    }}>
+                    <Avatar className="mr-3 size-10" alt={item.userName}>
+                      {item.userImage ? (
+                        <AvatarImage source={{ uri: item.userImage }} />
+                      ) : (
+                        <AvatarFallback className="items-center justify-center bg-primary">
+                          <Text className="text-base font-semibold text-primary-foreground">
+                            {item.userName.charAt(0).toUpperCase()}
+                          </Text>
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <View className="flex-1">
+                      <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
+                        {item.userName}
+                      </Text>
+                      <Text variant="muted" className="mt-0.5 text-xs">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                        {item.editedAt != null ? ' · Edited' : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
                   {item.rating != null && (
                     <View className="flex-row items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((star) => (
