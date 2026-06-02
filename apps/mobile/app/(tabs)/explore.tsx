@@ -9,11 +9,13 @@ import { CheckinPost, type CheckinPostData } from '../../components/checkin-post
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getLastExploreTabIndex, setLastExploreTabIndex } from '@/lib/last-people-search';
+import { userProfileHref } from '@/lib/user-profile-navigation';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import appsFlyer from 'react-native-appsflyer';
 
@@ -250,11 +252,9 @@ function PeopleSearchRoute({
               return (
                 <Pressable
                   className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
-                  onPress={() =>
-                    router.push(
-                      `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
-                    )
-                  }>
+                  onPress={() => {
+                    router.push(userProfileHref(item.userId));
+                  }}>
                   {item.imageUrl ? (
                     <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                   ) : (
@@ -297,11 +297,9 @@ function PeopleSearchRoute({
             return (
               <Pressable
                 className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
-                onPress={() =>
-                  router.push(
-                    `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
-                  )
-                }>
+                onPress={() => {
+                  router.push(userProfileHref(item.userId));
+                }}>
                 {item.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                 ) : (
@@ -337,7 +335,6 @@ function PeopleSearchRoute({
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
-  const [index, setIndex] = useState(0);
   const tabs = React.useMemo(
     () => [
       { key: 'people', title: 'People' },
@@ -347,19 +344,26 @@ export default function SearchScreen() {
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
+  const [index, setIndexState] = useState(() => getLastExploreTabIndex());
+  const setIndex = useCallback((next: number) => {
+    setIndexState(next);
+    setLastExploreTabIndex(next);
+  }, []);
 
   useEffect(() => {
-    const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
     const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
-    if (typeof searchParam === 'string' && searchParam !== '') {
-      setPeopleSearch(searchParam);
-    }
     if (tabParam === 'museums') {
       setIndex(1);
     } else if (tabParam === 'people') {
       setIndex(0);
     }
-  }, [params.search, params.tab]);
+  }, [params.search, params.tab, setIndex]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIndexState(getLastExploreTabIndex());
+    }, [])
+  );
 
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumPage, setMuseumPage] = useState(1);
