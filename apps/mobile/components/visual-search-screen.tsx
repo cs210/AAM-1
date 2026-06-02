@@ -11,6 +11,7 @@ import {
   ExternalLinkIcon,
   ImageIcon,
   SearchIcon,
+  InfoIcon,
   XIcon,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +27,7 @@ import { Text } from '@/components/ui/text';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { RN_API_PRIMARY_FOREGROUND_ON_BRAND, RN_STYLE } from '@/constants/rn-api-colors';
 import { useUniwind } from 'uniwind';
+import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
 
 const DEFAULT_TOP_K = 5;
 const MAX_SEARCH_IMAGE_SIZE = 1280;
@@ -154,6 +156,7 @@ export default function VisualSearchScreen() {
     museumSlug?: string | string[];
   }>();
   const activeMuseums = useQuery(api.visualSearch.listVisualSearchActiveMuseums);
+  const currentUser = useQuery(api.auth.getCurrentUser);
   const generateVisualSearchImageUploadUrl = useMutation(
     api.visualSearch.generateVisualSearchImageUploadUrl
   );
@@ -164,6 +167,7 @@ export default function VisualSearchScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchResponse, setSearchResponse] = useState<VisualSearchResponse | null>(null);
   const [selectedResultIndex, setSelectedResultIndex] = useState<number | null>(null);
+  const [showVisualSearchHint, setShowVisualSearchHint] = useState(false);
 
   const preselectedMuseum = useMemo<VisualSearchMuseum | null>(() => {
     const museumId = getParamValue(params.museumId);
@@ -192,6 +196,40 @@ export default function VisualSearchScreen() {
       setSelectedMuseum(preselectedMuseum);
     }
   }, [preselectedMuseum]);
+
+  useEffect(() => {
+    const userId = currentUser?._id;
+    if (!userId) return;
+    let isActive = true;
+
+    const run = async () => {
+      try {
+        const shouldShow = await shouldShowFeatureHint(userId, 'visual_search_intro');
+        if (!isActive) return;
+        setShowVisualSearchHint(shouldShow);
+      } catch {
+        if (!isActive) return;
+        setShowVisualSearchHint(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?._id]);
+
+  const dismissVisualSearchHint = useCallback(async () => {
+    const userId = currentUser?._id;
+    if (!userId) return;
+    setShowVisualSearchHint(false);
+    try {
+      await dismissFeatureHint(userId, 'visual_search_intro');
+    } catch {
+      // Non-blocking persistence failure.
+    }
+  }, [currentUser?._id]);
 
   const normalizedSearch = searchText.trim().toLowerCase();
   const filteredMuseums = useMemo(() => {
@@ -420,6 +458,25 @@ export default function VisualSearchScreen() {
               </View>
             </View>
           </View>
+          {showVisualSearchHint ? (
+              <View className="border-primary/50 bg-primary/10 rounded-xl border p-3">
+                <View className="flex-row items-start gap-2">
+                  <View className="mt-0.5">
+                    <InfoIcon size={14} color={primaryIconColor} />
+                  </View>
+                  <Text className="flex-1 text-xs leading-5 text-foreground">
+                    Upload or take a photo to find matching artwork from museum collections.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss visual search hint"
+                    onPress={dismissVisualSearchHint}
+                    className="px-1">
+                    <Text className="text-xs font-semibold text-muted-foreground">Dismiss</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
 
           <View className="border-border bg-background flex-row items-center rounded-xl border px-3">
             <SearchIcon size={18} color={mutedIconColor} />

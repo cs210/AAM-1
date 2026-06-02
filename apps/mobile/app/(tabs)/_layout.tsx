@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs, router, useGlobalSearchParams } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon, ScanSearchIcon } from 'lucide-react-native';
