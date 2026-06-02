@@ -163,6 +163,9 @@ importers:
       expo-blur:
         specifier: ~15.0.8
         version: 15.0.8(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      expo-clipboard:
+        specifier: ^56.0.3
+        version: 56.0.3(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-constants:
         specifier: ~18.0.12
         version: 18.0.13(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
@@ -322,7 +325,7 @@ importers:
         version: 1.1.21
       '@convex-dev/better-auth':
         specifier: latest
-        version: 0.11.1(@standard-schema/spec@1.1.0)(better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(convex@1.35.1(react@19.1.0))(hono@4.12.7)(react@19.1.0)(typescript@5.9.3)
+        version: 0.12.2(@standard-schema/spec@1.1.0)(better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(convex@1.35.1(react@19.1.0))(hono@4.12.7)(react@19.1.0)(typescript@5.9.3)
       '@packages/backend':
         specifier: workspace:*
         version: link:../../packages/backend
@@ -431,7 +434,7 @@ importers:
         version: 1.1.21
       '@convex-dev/better-auth':
         specifier: latest
-        version: 0.11.1(@standard-schema/spec@1.1.0)(better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(convex@1.35.1(react@19.1.0))(hono@4.12.7)(react@19.1.0)(typescript@5.9.3)
+        version: 0.12.2(@standard-schema/spec@1.1.0)(better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(convex@1.35.1(react@19.1.0))(hono@4.12.7)(react@19.1.0)(typescript@5.9.3)
       '@convex-dev/geospatial':
         specifier: ^0.2.1
         version: 0.2.1(convex@1.35.1(react@19.1.0))
@@ -1090,10 +1093,10 @@ packages:
       convex: ^1.25.0
       react: 19.1.0
 
-  '@convex-dev/better-auth@0.11.1':
-    resolution: {integrity: sha512-12EdVfNMeKB8fnGMsW4NEEkOQ0LW672qnFoA0WDfM3qGBrbySaVZ8B5OZZk+8ZRbeyUwXtVg8oFvtLejEwPRpA==}
+  '@convex-dev/better-auth@0.12.2':
+    resolution: {integrity: sha512-6L8LkXCB5rp9XmQplRj2EVNeD6mkG0b5PPQpm9fooEJ/L3ThGN4jRE4oMfWeBs+9E20eBciWVP0HJooemSgS0w==}
     peerDependencies:
-      better-auth: '>=1.5.0 <1.6.0'
+      better-auth: '>=1.6.9 <1.7.0'
       convex: ^1.25.0
       react: 19.1.0
 
@@ -5474,6 +5477,13 @@ packages:
       react: 19.1.0
       react-native: '*'
 
+  expo-clipboard@56.0.3:
+    resolution: {integrity: sha512-8mCdhmAomm0yBIonJFjAhKUXvSkc2avdNh4+rBwoe7DSWF2AC4w3uy+pa419rvVFbTyVxOBmh83UHAbUwD6qAg==}
+    peerDependencies:
+      expo: '*'
+      react: 19.1.0
+      react-native: '*'
+
   expo-constants@18.0.13:
     resolution: {integrity: sha512-FnZn12E1dRYKDHlAdIyNFhBurKTS3F9CrfrBDJI5m3D7U17KBHMQ6JEfYlSj7LG7t+Ulr+IKaj58L1k5gBwTcQ==}
     peerDependencies:
@@ -9653,9 +9663,9 @@ snapshots:
       nanostores: 1.1.1
       zod: 4.3.6
 
-  '@better-auth/telemetry@1.4.9(@better-auth/core@1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@3.25.76))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1))':
+  '@better-auth/telemetry@1.4.9(@better-auth/core@1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.6))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1))':
     dependencies:
-      '@better-auth/core': 1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@3.25.76))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1)
+      '@better-auth/core': 1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.6))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1)
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
 
@@ -9686,7 +9696,7 @@ snapshots:
       - nanostores
       - typescript
 
-  '@convex-dev/better-auth@0.11.1(@standard-schema/spec@1.1.0)(better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(convex@1.35.1(react@19.1.0))(hono@4.12.7)(react@19.1.0)(typescript@5.9.3)':
+  '@convex-dev/better-auth@0.12.2(@standard-schema/spec@1.1.0)(better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(convex@1.35.1(react@19.1.0))(hono@4.12.7)(react@19.1.0)(typescript@5.9.3)':
     dependencies:
       '@better-fetch/fetch': 1.1.21
       better-auth: 1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -9697,7 +9707,7 @@ snapshots:
       react: 19.1.0
       remeda: 2.33.6
       semver: 7.7.4
-      type-fest: 4.41.0
+      type-fest: 5.4.4
       zod: 4.3.6
     transitivePeerDependencies:
       - '@standard-schema/spec'
@@ -13476,8 +13486,8 @@ snapshots:
 
   better-auth@1.4.9(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
-      '@better-auth/core': 1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@3.25.76))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1)
-      '@better-auth/telemetry': 1.4.9(@better-auth/core@1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@3.25.76))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1))
+      '@better-auth/core': 1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.6))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1)
+      '@better-auth/telemetry': 1.4.9(@better-auth/core@1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.3.6))(jose@6.2.1)(kysely@0.28.11)(nanostores@1.1.1))
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
@@ -14198,8 +14208,8 @@ snapshots:
       '@next/eslint-plugin-next': 16.1.6
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1))
-      eslint-plugin-import: 2.32.0(eslint@9.39.4(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-react-hooks: 7.0.1(eslint@9.39.4(jiti@2.6.1))
@@ -14221,7 +14231,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3
@@ -14232,7 +14242,7 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -14246,13 +14256,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1)):
+  eslint-module-utils@2.12.1(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -14285,7 +14295,7 @@ snapshots:
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)):
+  eslint-plugin-import@2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -14296,7 +14306,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
+      eslint-module-utils: 2.12.1(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -14501,6 +14511,12 @@ snapshots:
       - supports-color
 
   expo-blur@15.0.8(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
+    dependencies:
+      expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(graphql@16.13.1)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)
+
+  expo-clipboard@56.0.3(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(graphql@16.13.1)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       react: 19.1.0
