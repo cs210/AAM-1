@@ -19,23 +19,6 @@ const cleanupDeletedUserDataRef = makeFunctionReference<
   { deleted: number; patched: number }
 >("accountDeletion:cleanupDeletedUserData");
 
-// List all users (for search/following) from userProfiles
-export const listUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    // Return all userProfiles (public info only)
-    const profiles = await ctx.db.query("userProfiles").collect();
-    return profiles.map((profile) => ({
-      userId: profile.userId,
-      name: profile.name ?? null,
-      username: profile.username ?? null,
-      email: profile.email ?? null,
-      imageUrl: profile.imageUrl ?? null,
-      bannerUrl: profile.bannerUrl ?? null,
-    }));
-  },
-});
-
 function normalizeUrl(value: string) {
   return value.startsWith("http") ? value : `https://${value}`;
 }

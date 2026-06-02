@@ -37,7 +37,7 @@ async function hasLinkedMuseumAccess(
   return orgIds.has(link.betterAuthOrgId);
 }
 
-async function assertDashboardMuseumAccess(
+export async function assertDashboardMuseumAccess(
   ctx: QueryCtx | MutationCtx,
   user: { _id: string; role?: string | null },
   museumId: Id<"museums">

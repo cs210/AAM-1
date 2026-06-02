@@ -3,20 +3,11 @@ import { makeFunctionReference } from "convex/server";
 import { components } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
-import { action, mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { createAuth } from "./auth";
 
 const PASSWORD = "12345678";
 const HOUR_MS = 60 * 60 * 1000;
-
-/** Anchor focus-group activity to May 26–27, 2026 so feeds and profiles look current. */
-const SEED_MAY_27_MS = Date.UTC(2026, 4, 27, 16, 0, 0);
-const SEED_MAY_26_MS = Date.UTC(2026, 4, 26, 14, 0, 0);
-
-function seedCheckInTime(index: number) {
-  const dayBase = index % 2 === 0 ? SEED_MAY_27_MS : SEED_MAY_26_MS;
-  return dayBase - Math.floor(index / 2) * 3 * HOUR_MS;
-}
 
 const populateProfilesRef = makeFunctionReference<
   "mutation",
@@ -44,6 +35,15 @@ const populateProfilesRef = makeFunctionReference<
     }>;
   }
 >("focusGroup:populateProfiles");
+
+/** Anchor focus-group activity to May 26–27, 2026 so feeds and profiles look current. */
+const SEED_MAY_27_MS = Date.UTC(2026, 4, 27, 16, 0, 0);
+const SEED_MAY_26_MS = Date.UTC(2026, 4, 26, 14, 0, 0);
+
+function seedCheckInTime(index: number) {
+  const dayBase = index % 2 === 0 ? SEED_MAY_27_MS : SEED_MAY_26_MS;
+  return dayBase - Math.floor(index / 2) * 3 * HOUR_MS;
+}
 
 const PROFILES = [
   {
@@ -245,7 +245,7 @@ async function upsertUserProfile(
   });
 }
 
-export const ensureAccounts = action({
+export const ensureAccounts = internalAction({
   args: {},
   handler: async (ctx): Promise<{
     accounts: Array<{
@@ -294,7 +294,7 @@ export const ensureAccounts = action({
   },
 });
 
-export const populateProfiles = mutation({
+export const populateProfiles = internalMutation({
   args: {
     accounts: v.array(v.object({
       key: v.string(),
@@ -384,7 +384,7 @@ export const populateProfiles = mutation({
   },
 });
 
-export const seedProfiles = action({
+export const seedProfiles = internalAction({
   args: {},
   handler: async (ctx) => {
     const auth = createAuth(ctx);
@@ -433,7 +433,7 @@ export const seedProfiles = action({
   },
 });
 
-export const listProfiles = query({
+export const listProfiles = internalQuery({
   args: {},
   handler: async (ctx) => {
     const profiles = [];
@@ -446,7 +446,6 @@ export const listProfiles = query({
         key: profile.key,
         name: profile.name,
         email: profile.email,
-        password: PASSWORD,
         description: profile.description,
         userId: userProfile?.userId ?? null,
       });
@@ -455,7 +454,7 @@ export const listProfiles = query({
   },
 });
 
-export const saveSessionSnapshot = mutation({
+export const saveSessionSnapshot = internalMutation({
   args: {
     label: v.optional(v.string()),
   },
@@ -531,7 +530,7 @@ export const saveSessionSnapshot = mutation({
   },
 });
 
-export const listSnapshots = query({
+export const listSnapshots = internalQuery({
   args: {},
   handler: async (ctx) => {
     const snapshots = await ctx.db
@@ -553,7 +552,7 @@ export const listSnapshots = query({
   },
 });
 
-export const debugProfileState = query({
+export const debugProfileState = internalQuery({
   args: {},
   handler: async (ctx) => {
     const results = [];
@@ -590,7 +589,7 @@ export const debugProfileState = query({
   },
 });
 
-export const restoreSnapshot = mutation({
+export const restoreSnapshot = internalMutation({
   args: {
     snapshotId: v.id("focusGroupSnapshots"),
   },

@@ -5,6 +5,8 @@ import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { authComponent } from "./auth";
+import { assertDashboardMuseumAccess } from "./museums";
+import { requireAuthenticatedUser } from "./permissions";
 
 type MuseumPoint = { latitude: number; longitude: number } | null;
 
@@ -426,7 +428,13 @@ export const addEvent = mutation({
     imageUrl: v.optional(v.string()),
     registrationUrl: v.optional(v.string()),
   },
-  handler: async (ctx, { point, ...args}) => {
+  handler: async (ctx, { point, ...args }) => {
+    const user = await requireAuthenticatedUser(ctx);
+    if (args.museumId) {
+      await assertDashboardMuseumAccess(ctx, user, args.museumId);
+    } else if (user.role !== "admin") {
+      throw new Error("museumId is required to create an event");
+    }
     const id = await ctx.db.insert("events", args);
     await geospatial.insert(ctx, id, point, { category: args.category });
   },

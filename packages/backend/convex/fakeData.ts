@@ -1,7 +1,7 @@
 import { GeospatialIndex } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 const geospatial = new GeospatialIndex(components.geospatial);
 
@@ -33,7 +33,7 @@ const MUSEUM_SEED_POINTS: Record<string, { latitude: number; longitude: number }
 };
 
 // Populate fake museums into Convex database
-export const populateFakeMuseums = mutation({
+export const populateFakeMuseums = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = [
@@ -308,7 +308,7 @@ function randomExhibitionRange(now: number) {
 }
 
 // Populate fake events for museums (nearby / upcoming feeds)
-export const populateFakeEvents = mutation({
+export const populateFakeEvents = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = await ctx.db.query("museums").collect();
@@ -374,7 +374,7 @@ export const populateFakeEvents = mutation({
 });
 
 // Populate fake exhibitions for museums (nearby / upcoming feeds)
-export const populateFakeExhibitions = mutation({
+export const populateFakeExhibitions = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = await ctx.db.query("museums").collect();
@@ -424,7 +424,7 @@ export const populateFakeExhibitions = mutation({
 });
 
 // Populate fake ratings for museums
-export const populateFakeRatings = mutation({
+export const populateFakeRatings = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = await ctx.db.query("museums").collect();

@@ -346,13 +346,10 @@ export default function ProfileScreen() {
   const returnSearch = typeof searchFromParams === 'string' ? searchFromParams : '';
   const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
 
-  // Fetch user profile info
-  const userProfile = useQuery(api.auth.listUsers, {});
-  // Removed redundant saveUserProfile call. Profile upsert now only happens after sign-up.
-  const profile = React.useMemo(() => {
-    if (!userProfile || !viewedUserId) return null;
-    return userProfile.find((u: any) => u.userId === viewedUserId);
-  }, [userProfile, viewedUserId]);
+  const profile = useQuery(
+    api.userProfiles.getUserProfile,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
 
   const posthog = usePostHog();
 
@@ -372,16 +369,29 @@ export default function ProfileScreen() {
       : 'skip'
   );
 
-  // Fetch follower/following user profiles
+  const followerFollowingUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    followers?.forEach((id) => ids.add(id));
+    following?.forEach((id) => ids.add(id));
+    return [...ids];
+  }, [followers, following]);
+
+  const followerFollowingProfiles = useQuery(
+    api.userProfiles.getProfilesByUserIds,
+    followerFollowingUserIds.length > 0 ? { userIds: followerFollowingUserIds } : 'skip'
+  );
+
   const followersData = useMemo(() => {
-    if (!followers || followers.length === 0) return [];
-    return followers.map((id) => userProfile?.find((u: any) => u.userId === id)).filter(Boolean);
-  }, [followers, userProfile]);
+    if (!followers || followers.length === 0 || !followerFollowingProfiles) return [];
+    const byUserId = new Map(followerFollowingProfiles.map((p) => [p.userId, p]));
+    return followers.map((id) => byUserId.get(id)).filter(Boolean);
+  }, [followers, followerFollowingProfiles]);
 
   const followingData = useMemo(() => {
-    if (!following || following.length === 0) return [];
-    return following.map((id) => userProfile?.find((u: any) => u.userId === id)).filter(Boolean);
-  }, [following, userProfile]);
+    if (!following || following.length === 0 || !followerFollowingProfiles) return [];
+    const byUserId = new Map(followerFollowingProfiles.map((p) => [p.userId, p]));
+    return following.map((id) => byUserId.get(id)).filter(Boolean);
+  }, [following, followerFollowingProfiles]);
 
   // Cultural passport: visits for the profile being viewed
   const profileVisits = useQuery(
