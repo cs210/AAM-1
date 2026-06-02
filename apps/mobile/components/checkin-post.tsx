@@ -9,6 +9,11 @@ import { cn } from '@/lib/utils';
 import { useBrandPrimaryHex, useMutedForegroundHex } from '@/hooks/use-brand-primary';
 import { useBookmark } from '@/hooks/useBookmark';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
+import { userProfileHref } from '@/lib/user-profile-navigation';
+import {
+  RN_API_MUTED_FOREGROUND_DARK,
+  RN_API_MUTED_FOREGROUND_LIGHT,
+} from '@/constants/rn-api-colors';
 import { HOME_CAROUSEL_CARD_HEIGHT, HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
 
 export interface CheckinPostData {
@@ -84,7 +89,7 @@ export const CheckinPost = ({
   const showCarouselPhotos = isCarousel && !reviewText && photoUrls.length > 0;
 
   const handleProfilePress = () => {
-    router.push(`/(tabs)/profile?userId=${encodeURIComponent(checkin.userId)}`);
+    router.push(userProfileHref(checkin.userId));
   };
 
   const handlePress = () => {
@@ -104,7 +109,7 @@ export const CheckinPost = ({
 
   const handleCoVisitorPress = (visitorId: string, e: any) => {
     e.stopPropagation?.();
-    router.push(`/(tabs)/profile?userId=${encodeURIComponent(visitorId)}`);
+    router.push(userProfileHref(visitorId));
   };
 
   const renderStars = (rating: number, size = 16) => (
