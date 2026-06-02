@@ -16,6 +16,7 @@ import {
   StarIcon,
   BookmarkIcon,
 } from 'lucide-react-native';
+import { CategoryTag } from '../../components/category-tag';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
@@ -459,9 +460,7 @@ export default function MuseumDetailScreen() {
               <View className="flex-row items-center gap-2">
                 <MapPinIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} />
                 <Text className="flex-1 text-sm text-muted-foreground">{address}</Text>
-                <View className="rounded-lg bg-primary/15 px-3 py-1.5">
-                  <Text className="text-xs font-semibold capitalize text-primary">{museum.category}</Text>
-                </View>
+                <CategoryTag category={museum.category} />
               </View>
 
               {showMoreDetails && (

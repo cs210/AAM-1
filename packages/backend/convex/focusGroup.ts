@@ -7,7 +7,16 @@ import { action, mutation, query } from "./_generated/server";
 import { createAuth } from "./auth";
 
 const PASSWORD = "12345678";
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+/** Anchor focus-group activity to May 26–27, 2026 so feeds and profiles look current. */
+const SEED_MAY_27_MS = Date.UTC(2026, 4, 27, 16, 0, 0);
+const SEED_MAY_26_MS = Date.UTC(2026, 4, 26, 14, 0, 0);
+
+function seedCheckInTime(index: number) {
+  const dayBase = index % 2 === 0 ? SEED_MAY_27_MS : SEED_MAY_26_MS;
+  return dayBase - Math.floor(index / 2) * 3 * HOUR_MS;
+}
 
 const populateProfilesRef = makeFunctionReference<
   "mutation",
@@ -222,7 +231,7 @@ async function upsertUserProfile(
       totalMuseums: 0,
       checkIns: {},
     },
-    updatedAt: Date.now(),
+    updatedAt: SEED_MAY_27_MS,
   };
 
   if (existing) {
@@ -304,7 +313,7 @@ export const populateProfiles = mutation({
 
     const seededProfiles = [];
     const focusUserIds = args.accounts.map((account) => account.userId);
-    const now = Date.now();
+    const seedNow = SEED_MAY_27_MS;
 
     for (const account of args.accounts) {
       const profile = profileByEmail(account.email);
@@ -315,7 +324,7 @@ export const populateProfiles = mutation({
         await ctx.db.insert("userFollows", {
           userId: account.userId,
           museumId: museum._id,
-          followedAt: now,
+          followedAt: seedNow,
         });
       }
 
@@ -324,7 +333,7 @@ export const populateProfiles = mutation({
         await ctx.db.insert("userUserFollows", {
           followerId: account.userId,
           followingId,
-          followedAt: now,
+          followedAt: seedNow,
         });
       }
 
@@ -341,8 +350,8 @@ export const populateProfiles = mutation({
           imageIds: [],
           friendUserIds: otherUsers.slice(0, index % 2),
           durationHours: getDuration(index),
-          visitDate: now - (index + 1) * DAY_MS,
-          createdAt: now - index * DAY_MS,
+          visitDate: seedCheckInTime(index),
+          createdAt: seedCheckInTime(index),
         });
 
         const key = museum._id;
@@ -360,7 +369,7 @@ export const populateProfiles = mutation({
           totalMuseums,
           checkIns: checkInIdsByMuseum,
         },
-        updatedAt: now,
+        updatedAt: seedNow,
       });
 
       seededProfiles.push({

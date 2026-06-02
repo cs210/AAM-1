@@ -11,6 +11,7 @@ import { useQuery } from 'convex/react';
 import { CalendarIcon, Building2Icon, MapPinIcon } from 'lucide-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
+import { CategoryTag } from '@/components/category-tag';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
@@ -148,9 +149,7 @@ export default function ExhibitionDetailScreen() {
             <Text className="text-xs font-bold uppercase tracking-[0.4px] text-muted-foreground">Hosted By</Text>
             <Text className="text-xl font-bold text-foreground">{hostMuseum?.name ?? 'Unknown museum'}</Text>
             {hostMuseum?.category ? (
-              <Text className="self-start rounded-lg bg-primary/15 px-2.5 py-1 text-xs font-semibold capitalize text-primary">
-                {hostMuseum.category}
-              </Text>
+              <CategoryTag category={hostMuseum.category} className="self-start" />
             ) : null}
             {hostLocation ? (
               <View className="flex-row items-center gap-2">
