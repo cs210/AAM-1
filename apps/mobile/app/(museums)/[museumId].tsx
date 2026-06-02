@@ -323,9 +323,10 @@ export default function MuseumDetailScreen() {
     (museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0) ||
     museum.accessibilityNotes
   );
-  const encodedAddress = encodeURIComponent(address);
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-  const appleMapsUrl = `http://maps.apple.com/?q=${encodedAddress}`;
+  const mapDestination = [museum.name, ...addressParts].join(', ');
+  const encodedDestination = encodeURIComponent(mapDestination);
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedDestination}`;
+  const appleMapsUrl = `http://maps.apple.com/?daddr=${encodedDestination}&dirflg=d`;
 
   const openMapUrl = async (url: string) => {
     try {
@@ -348,8 +349,8 @@ export default function MuseumDetailScreen() {
       { text: 'Open in Apple Maps', onPress: () => void openMapUrl(appleMapsUrl) },
       {
         text: 'Copy Address',
-        onPress: () => {
-          void Clipboard.setStringAsync(address);
+        onPress: async () => {
+          await Clipboard.setStringAsync(address);
           Alert.alert('Address copied');
         },
       },
