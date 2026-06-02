@@ -7,8 +7,8 @@ import { usePostHog } from 'posthog-react-native';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { XIcon, ChevronDownIcon, CheckIcon } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { CategoryTag } from '@/components/category-tag';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Text } from '@/components/ui/text';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { CheckInStarRating } from '@/components/check-in-star-rating';
 import { CheckInDurationSelect } from '@/components/check-in-duration-select';
+import { VisitDatePickerField } from '@/components/visit-date-picker-field';
 import { cn } from '@/lib/utils';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { uploadCheckInPickerAssets } from '@/lib/check-in-image-upload';
@@ -42,7 +43,6 @@ export default function CheckInScreen() {
   const [review, setReview] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [visitDate, setVisitDate] = useState(new Date());
   const [durationHours, setDurationHours] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,13 +76,6 @@ export default function CheckInScreen() {
 
   const createCheckIn = useMutation(api.checkIns.createCheckIn);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
-
-  const handleDateChange = (event: unknown, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setVisitDate(selectedDate);
-    }
-  };
 
   const toggleFriend = (userId: string) => {
     setSelectedFriends((prev) =>
@@ -204,7 +197,7 @@ export default function CheckInScreen() {
           contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}>
           <View className="mb-6 rounded-xl border border-border bg-card p-4">
             <Text className="mb-1 text-xl font-bold text-foreground">{museum.name}</Text>
-            <Text className="text-sm capitalize text-muted-foreground">{museum.category}</Text>
+            <CategoryTag category={museum.category} className="self-start" />
           </View>
 
           <View className="mb-6">
@@ -284,28 +277,8 @@ export default function CheckInScreen() {
 
           <View className="mb-6">
             <Label className="mb-3 text-base font-semibold text-foreground">Date of visit</Label>
-            <Pressable
-              className="rounded-xl border border-border bg-card px-4 py-3.5 active:opacity-90"
-              onPress={() => setShowDatePicker(true)}>
-              <Text className="text-base font-medium text-foreground">
-                {visitDate.toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-            </Pressable>
+            <VisitDatePickerField value={visitDate} onChange={setVisitDate} maximumDate={new Date()} />
           </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={visitDate}
-              mode="date"
-              display="spinner"
-              onChange={handleDateChange}
-              maximumDate={new Date()}
-            />
-          )}
 
           {museumEvents && museumEvents.length > 0 && (
             <View className="mb-6">

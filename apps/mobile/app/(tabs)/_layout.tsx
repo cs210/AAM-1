@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs, router, useGlobalSearchParams } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon, ScanSearchIcon } from 'lucide-react-native';
@@ -11,7 +11,9 @@ export default function TabLayout() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { theme: colorScheme } = useUniwind();
   const t = colorScheme === 'dark' ? RN_STYLE.dark : RN_STYLE.light;
-  const { userId } = useGlobalSearchParams<{ userId?: string | string[] }>();
+  const { userId } = useGlobalSearchParams<{
+    userId?: string | string[];
+  }>();
   const profileUserId = Array.isArray(userId) ? userId[0] : userId;
   const isViewingSearchProfile = typeof profileUserId === 'string' && profileUserId.length > 0;
 
@@ -81,12 +83,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="profile"
-        listeners={{
-          tabPress: (event) => {
-            event.preventDefault();
-            router.replace('/(tabs)/profile');
-          },
-        }}
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (

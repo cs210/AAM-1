@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking } from 'react-native';
+import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { usePostHog } from 'posthog-react-native';
 import { useUniwind } from 'uniwind';
+import * as Clipboard from 'expo-clipboard';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import {
@@ -16,6 +17,7 @@ import {
   StarIcon,
   BookmarkIcon,
 } from 'lucide-react-native';
+import { CategoryTag } from '../../components/category-tag';
 import { EventCard, EventCardData } from '../../components/event-card';
 import { EditCheckinModal } from '../../components/edit-checkin-modal';
 import { useCheckInActions } from '../../hooks/useCheckInActions';
@@ -27,6 +29,7 @@ import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
 import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
+import { userProfileHref } from '@/lib/user-profile-navigation';
 import {
   RN_API_BORDER_LIGHT,
   RN_API_FOREGROUND_LIGHT,
@@ -304,9 +307,15 @@ export default function MuseumDetailScreen() {
     );
   }
 
-  const address = museum.location 
-    ? `${museum.location.address || ''}, ${museum.location.city || ''}, ${museum.location.state || ''}`
-    : 'Address not available';
+  const addressParts = [
+    museum.location?.address,
+    museum.location?.city,
+    museum.location?.state,
+    museum.location?.country,
+    museum.location?.postalCode,
+  ].filter((value): value is string => Boolean(value?.trim()));
+  const address = addressParts.length > 0 ? addressParts.join(', ') : 'Address not available';
+  const hasAddress = addressParts.length > 0;
   const hasExpandedDetails = Boolean(
     museum.website ||
     museum.phone ||
@@ -314,6 +323,42 @@ export default function MuseumDetailScreen() {
     (museum.accessibilityFeatures && museum.accessibilityFeatures.length > 0) ||
     museum.accessibilityNotes
   );
+  const mapDestination = [museum.name, ...addressParts].join(', ');
+  const encodedDestination = encodeURIComponent(mapDestination);
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedDestination}`;
+  const appleMapsUrl = `http://maps.apple.com/?daddr=${encodedDestination}&dirflg=d`;
+
+  const openMapUrl = async (url: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert('Unable to open maps', 'This maps app is not available on your device.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Unable to open maps', 'Please try again.');
+    }
+  };
+
+  const handleAddressPress = () => {
+    if (!hasAddress) return;
+
+    const options = [
+      { text: 'Open in Google Maps', onPress: () => void openMapUrl(googleMapsUrl) },
+      { text: 'Open in Apple Maps', onPress: () => void openMapUrl(appleMapsUrl) },
+      {
+        text: 'Copy Address',
+        onPress: async () => {
+          await Clipboard.setStringAsync(address);
+          Alert.alert('Address copied');
+        },
+      },
+      { text: 'Cancel', style: 'cancel' as const },
+    ];
+
+    Alert.alert('Address actions', address, options);
+  };
 
   return (
     <AuthGuard>
@@ -383,26 +428,33 @@ export default function MuseumDetailScreen() {
                   highlightId === item._id ? 'border-2 border-primary' : 'border-border'
                 )}>
                 <View className="mb-2 flex-row items-center">
-                  <Avatar className="mr-3 size-10" alt={item.userName}>
-                    {item.userImage ? (
-                      <AvatarImage source={{ uri: item.userImage }} />
-                    ) : (
-                      <AvatarFallback className="items-center justify-center bg-primary">
-                        <Text className="text-base font-semibold text-primary-foreground">
-                          {item.userName.charAt(0).toUpperCase()}
-                        </Text>
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <View className="mr-2 flex-1">
-                    <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
-                      {item.userName}
-                    </Text>
-                    <Text variant="muted" className="mt-0.5 text-xs">
-                      {new Date(item.createdAt).toLocaleDateString()}
-                      {item.editedAt != null ? ' · Edited' : ''}
-                    </Text>
-                  </View>
+                  <Pressable
+                    className="mr-2 flex-1 flex-row items-center"
+                    onPress={() => {
+                      if (!item.userId) return;
+                      router.push(userProfileHref(item.userId));
+                    }}>
+                    <Avatar className="mr-3 size-10" alt={item.userName}>
+                      {item.userImage ? (
+                        <AvatarImage source={{ uri: item.userImage }} />
+                      ) : (
+                        <AvatarFallback className="items-center justify-center bg-primary">
+                          <Text className="text-base font-semibold text-primary-foreground">
+                            {item.userName.charAt(0).toUpperCase()}
+                          </Text>
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <View className="flex-1">
+                      <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
+                        {item.userName}
+                      </Text>
+                      <Text variant="muted" className="mt-0.5 text-xs">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                        {item.editedAt != null ? ' · Edited' : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
                   {item.rating != null && (
                     <View className="flex-row items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -448,13 +500,14 @@ export default function MuseumDetailScreen() {
                 {museum.description || 'No description available.'}
               </Text>
 
-              <View className="flex-row items-center gap-2">
+              <Pressable
+                className={cn('flex-row items-center gap-2 rounded-md', hasAddress ? 'active:opacity-80' : '')}
+                disabled={!hasAddress}
+                onPress={handleAddressPress}>
                 <MapPinIcon size={16} color={RN_API_MUTED_FOREGROUND_LIGHT} />
                 <Text className="flex-1 text-sm text-muted-foreground">{address}</Text>
-                <View className="rounded-lg bg-primary/15 px-3 py-1.5">
-                  <Text className="text-xs font-semibold capitalize text-primary">{museum.category}</Text>
-                </View>
-              </View>
+                <CategoryTag category={museum.category} />
+              </Pressable>
 
               {showMoreDetails && (
                 <View className="mt-3.5 gap-2.5 border-t border-border pt-3.5">
