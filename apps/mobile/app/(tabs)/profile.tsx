@@ -46,6 +46,8 @@ import { useUniwind } from 'uniwind';
 import {
   RN_API_FOREGROUND_DARK,
   RN_API_FOREGROUND_LIGHT,
+  RN_API_INFO_DARK,
+  RN_API_INFO_LIGHT,
   RN_API_MUTED_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_DARK,
@@ -612,6 +614,7 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
   const { theme } = useUniwind();
   const fgHex = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const infoHex = theme === 'dark' ? RN_API_INFO_DARK : RN_API_INFO_LIGHT;
   const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const insets = useSafeAreaInsets();
   /** Own profile: bleed banner under status bar / Dynamic Island; other profile: back row sits in safe area. */
@@ -772,39 +775,38 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
                   </TouchableOpacity>
                 ) : null}
                 {isWrappedEligible ? (
-                  <View className="items-start gap-1.5">
-                    <TouchableOpacity
-                      className="bg-primary flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5 active:opacity-90"
-                      onPress={() => {
-                        posthog?.capture('wrapped_click', {});
-                        if (showWrappedHint) void dismissWrappedHint();
-                        router.push('/wrapped');
-                      }}
-                      activeOpacity={0.8}>
-                      <Sparkles size={14} color="#FFFFFF" />
-                      <Text className="text-primary-foreground text-sm font-bold">Wrapped</Text>
-                    </TouchableOpacity>
-                    {showWrappedHint ? (
-                      <View className="border-primary/50 bg-primary/10 rounded-lg border px-2.5 py-2">
-                        <View className="flex-row items-start gap-2">
-                          <View className="mt-0.5">
-                            <InfoIcon size={14} color={primaryHex} />
-                          </View>
-                          <Text className="flex-1 text-xs text-foreground">
-                            Wrapped is ready. Tap to see your highlights.
-                          </Text>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Dismiss wrapped hint"
-                            onPress={() => void dismissWrappedHint()}>
-                            <Text className="text-xs font-semibold text-muted-foreground">Dismiss</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    ) : null}
-                  </View>
+                  <TouchableOpacity
+                    className="bg-primary flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5 active:opacity-90"
+                    onPress={() => {
+                      posthog?.capture('wrapped_click', {});
+                      if (showWrappedHint) void dismissWrappedHint();
+                      router.push('/wrapped');
+                    }}
+                    activeOpacity={0.8}>
+                    <Sparkles size={14} color="#FFFFFF" />
+                    <Text className="text-primary-foreground text-sm font-bold">Wrapped</Text>
+                  </TouchableOpacity>
                 ) : null}
               </View>
+              {showWrappedHint ? (
+                <View className="mt-3 mb-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-3 dark:border-blue-800/70 dark:bg-blue-950/40">
+                  <View className="flex-row items-start gap-2">
+                    <View className="mt-0.5">
+                      <InfoIcon size={14} color={infoHex} />
+                    </View>
+                    <Text className="flex-1 text-xs leading-5 text-blue-900 dark:text-blue-100">
+                      Your Wrapped has been curated. Tap in to see your highlights!
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss wrapped hint"
+                      onPress={() => void dismissWrappedHint()}
+                      className="shrink-0">
+                      <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Dismiss</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
               {viewedUserId === currentUserId && (currentUser?.email || profile?.email) && (
                 <Text className="text-muted-foreground mb-2 text-sm">
                   {currentUser?.email ?? profile?.email}

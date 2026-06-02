@@ -25,7 +25,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
-import { RN_API_PRIMARY_FOREGROUND_ON_BRAND, RN_STYLE } from '@/constants/rn-api-colors';
+import {
+  RN_API_INFO_DARK,
+  RN_API_INFO_LIGHT,
+  RN_API_PRIMARY_FOREGROUND_ON_BRAND,
+  RN_STYLE,
+} from '@/constants/rn-api-colors';
 import { useUniwind } from 'uniwind';
 import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
 
@@ -190,6 +195,7 @@ export default function VisualSearchScreen() {
   const foregroundIconColor = palette.foreground;
   const mutedIconColor = palette.mutedForeground;
   const primaryIconColor = palette.primary;
+  const infoIconColor = theme === 'dark' ? RN_API_INFO_DARK : RN_API_INFO_LIGHT;
 
   useEffect(() => {
     if (preselectedMuseum) {
@@ -459,12 +465,12 @@ export default function VisualSearchScreen() {
             </View>
           </View>
           {showVisualSearchHint ? (
-              <View className="border-primary/50 bg-primary/10 rounded-xl border p-3">
+              <View className="rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-800/70 dark:bg-blue-950/40">
                 <View className="flex-row items-start gap-2">
                   <View className="mt-0.5">
-                    <InfoIcon size={14} color={primaryIconColor} />
+                    <InfoIcon size={14} color={infoIconColor} />
                   </View>
-                  <Text className="flex-1 text-xs leading-5 text-foreground">
+                  <Text className="flex-1 text-xs leading-5 text-blue-900 dark:text-blue-100">
                     Upload or take a photo to find matching artwork from museum collections.
                   </Text>
                   <Pressable
@@ -472,7 +478,7 @@ export default function VisualSearchScreen() {
                     accessibilityLabel="Dismiss visual search hint"
                     onPress={dismissVisualSearchHint}
                     className="px-1">
-                    <Text className="text-xs font-semibold text-muted-foreground">Dismiss</Text>
+                    <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Dismiss</Text>
                   </Pressable>
                 </View>
               </View>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function hintStorageKey(userId: string, hintId: string) {
-  return `feature_hint_dismissed_v2_${hintId}_${userId}`;
+  return `feature_hint_dismissed_${hintId}_${userId}`;
 }
 
 export async function shouldShowFeatureHint(userId: string, hintId: string) {

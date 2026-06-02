@@ -4,6 +4,7 @@ import { InfoIcon, PlusIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { HomeSectionShell } from '@/components/home-feed-section';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
+import { RN_API_INFO_LIGHT } from '@/constants/rn-api-colors';
 
 type Props = {
   onPress: () => void;
@@ -30,12 +31,12 @@ export function HomeCheckinCta({ onPress, showHint = false, onDismissHint }: Pro
             </Pressable>
           </View>
           {showHint ? (
-            <View className="border-primary/50 bg-primary/10 rounded-lg border p-3">
+            <View className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800/70 dark:bg-blue-950/40">
               <View className="flex-row items-start gap-2">
                 <View className="mt-0.5">
-                  <InfoIcon size={14} color={brandPrimary} />
+                  <InfoIcon size={14} color={RN_API_INFO_LIGHT} />
                 </View>
-                <Text className="flex-1 text-xs leading-5 text-foreground">
+                <Text className="flex-1 text-xs leading-5 text-blue-900 dark:text-blue-100">
                   Tap + to log your latest museum visit.
                 </Text>
                 {onDismissHint ? (
@@ -44,7 +45,7 @@ export function HomeCheckinCta({ onPress, showHint = false, onDismissHint }: Pro
                     accessibilityLabel="Dismiss check-in hint"
                     onPress={onDismissHint}
                     className="px-1">
-                    <Text className="text-xs font-semibold text-muted-foreground">Dismiss</Text>
+                    <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Dismiss</Text>
                   </Pressable>
                 ) : null}
               </View>
