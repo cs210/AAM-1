@@ -360,7 +360,6 @@ function PeopleSearchRoute({
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
-  const [index, setIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const tabs = React.useMemo(
     () => [
@@ -513,11 +512,12 @@ export default function SearchScreen() {
           sortedByDistance={locState.status === 'ok'}
           expectDistanceOnCards={locState.status === 'ok'}
           locationNote={locState.status === 'unavailable' ? locState.message : null}
-          onRetryLocation={() => setLocationRetryKey((k) => k + 1)}
+          onRetryLocation={retry}
           viewMode={viewMode}
           onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
         />
       )}
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
