@@ -43,17 +43,23 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Publish iOS preview update
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          UPDATE_MESSAGE="PR #${{ github.event.pull_request.number }}: ${PR_TITLE}"
           eas update \
             --branch pr-${{ github.event.pull_request.number }} \
             --platform ios \
-            --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" \
+            --message "$UPDATE_MESSAGE" \
             --non-interactive
 
       - name: Publish Android preview update
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
+          UPDATE_MESSAGE="PR #${{ github.event.pull_request.number }}: ${PR_TITLE}"
           eas update \
             --branch pr-${{ github.event.pull_request.number }} \
             --platform android \
-            --message "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" \
+            --message "$UPDATE_MESSAGE" \
             --non-interactive
