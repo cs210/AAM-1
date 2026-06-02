@@ -25,6 +25,7 @@ import {
   Grid3x3Icon,
   ListIcon,
   BookmarkIcon,
+  InfoIcon,
 } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
@@ -45,12 +46,15 @@ import { useUniwind } from 'uniwind';
 import {
   RN_API_FOREGROUND_DARK,
   RN_API_FOREGROUND_LIGHT,
+  RN_API_INFO_DARK,
+  RN_API_INFO_LIGHT,
   RN_API_MUTED_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_DARK,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
 import { usePostHog } from 'posthog-react-native';
+import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
 
 const { width } = Dimensions.get('window');
 /** Matches `h-30` banner (30 × 4px). */
@@ -442,7 +446,44 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
   const [activeTab, setActiveTab] = useState<TabType>('visits');
   const [showFollowModal, setShowFollowModal] = useState<'followers' | 'following' | null>(null);
   const [showTasteProfileModal, setShowTasteProfileModal] = useState(false);
+  const [showWrappedHint, setShowWrappedHint] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
+  const isWrappedEligible = !isViewingOtherProfile && !!profileVisits && profileVisits.length >= 3;
+
+  useEffect(() => {
+    if (!currentUserId || !isWrappedEligible) {
+      setShowWrappedHint(false);
+      return;
+    }
+    let isActive = true;
+
+    const run = async () => {
+      try {
+        const shouldShow = await shouldShowFeatureHint(currentUserId, 'profile_wrapped');
+        if (!isActive) return;
+        setShowWrappedHint(shouldShow);
+      } catch {
+        if (!isActive) return;
+        setShowWrappedHint(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUserId, isWrappedEligible]);
+
+  const dismissWrappedHint = React.useCallback(async () => {
+    if (!currentUserId) return;
+    setShowWrappedHint(false);
+    try {
+      await dismissFeatureHint(currentUserId, 'profile_wrapped');
+    } catch {
+      // Non-blocking persistence failure.
+    }
+  }, [currentUserId]);
 
   const MAX_AVATAR_DIMENSION = 512;
   const MAX_BANNER_WIDTH = 1200;
@@ -573,6 +614,7 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
   const { theme } = useUniwind();
   const fgHex = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const infoHex = theme === 'dark' ? RN_API_INFO_DARK : RN_API_INFO_LIGHT;
   const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const insets = useSafeAreaInsets();
   /** Own profile: bleed banner under status bar / Dynamic Island; other profile: back row sits in safe area. */
@@ -732,19 +774,39 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
                     </Text>
                   </TouchableOpacity>
                 ) : null}
-                {!isViewingOtherProfile && profileVisits && profileVisits.length >= 3 && (
+                {isWrappedEligible ? (
                   <TouchableOpacity
                     className="bg-primary flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5 active:opacity-90"
                     onPress={() => {
                       posthog?.capture('wrapped_click', {});
+                      if (showWrappedHint) void dismissWrappedHint();
                       router.push('/wrapped');
                     }}
                     activeOpacity={0.8}>
                     <Sparkles size={14} color="#FFFFFF" />
                     <Text className="text-primary-foreground text-sm font-bold">Wrapped</Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
               </View>
+              {showWrappedHint ? (
+                <View className="mt-3 mb-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-3 dark:border-blue-800/70 dark:bg-blue-950/40">
+                  <View className="flex-row items-start gap-2">
+                    <View className="mt-0.5">
+                      <InfoIcon size={14} color={infoHex} />
+                    </View>
+                    <Text className="flex-1 text-xs leading-5 text-blue-900 dark:text-blue-100">
+                      Your Wrapped has been curated. Tap in to see your highlights!
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss wrapped hint"
+                      onPress={() => void dismissWrappedHint()}
+                      className="shrink-0">
+                      <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Dismiss</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
               {viewedUserId === currentUserId && (currentUser?.email || profile?.email) && (
                 <Text className="text-muted-foreground mb-2 text-sm">
                   {currentUser?.email ?? profile?.email}
