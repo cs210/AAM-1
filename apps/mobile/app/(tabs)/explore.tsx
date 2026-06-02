@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, FlatList, Pressable, Linking, Share, Image } from 'react-native';
+import { View, FlatList, Pressable, Linking, Share, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from 'convex/react';
@@ -427,67 +427,69 @@ export default function SearchScreen() {
   const activeTabKey = tabs[index]?.key ?? 'people';
 
   return (
-    <SafeAreaView
-      className="bg-background relative flex-1"
-      style={{ flex: 1 }}
-      edges={['top', 'left', 'right']}>
-      <DecorativeGradientShapes />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView
+        className="bg-background relative flex-1"
+        style={{ flex: 1 }}
+        edges={['top', 'left', 'right']}>
+        <DecorativeGradientShapes />
 
-      <View className="border-border z-10 flex-row border-b">
-        {tabs.map((tab, tabIndex) => {
-          const isActive = tabIndex === index;
-          return (
-            <Pressable
-              key={tab.key}
-              className="flex-1 items-center pt-3.5 pb-2"
-              onPress={() => setIndex(tabIndex)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}>
-              <Text
-                className={cn(
-                  'text-base font-medium',
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
-                )}>
-                {tab.title}
-              </Text>
-              <View
-                className={cn(
-                  'mt-2 h-0.5 w-2/3 rounded-full',
-                  isActive ? 'bg-primary' : 'bg-transparent'
-                )}
-              />
-            </Pressable>
-          );
-        })}
-      </View>
+        <View className="border-border z-10 flex-row border-b">
+          {tabs.map((tab, tabIndex) => {
+            const isActive = tabIndex === index;
+            return (
+              <Pressable
+                key={tab.key}
+                className="flex-1 items-center pt-3.5 pb-2"
+                onPress={() => setIndex(tabIndex)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}>
+                <Text
+                  className={cn(
+                    'text-base font-medium',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )}>
+                  {tab.title}
+                </Text>
+                <View
+                  className={cn(
+                    'mt-2 h-0.5 w-2/3 rounded-full',
+                    isActive ? 'bg-primary' : 'bg-transparent'
+                  )}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
 
-      {activeTabKey === 'people' ? (
-        <PeopleSearchRoute
-          peopleSearch={peopleSearch}
-          setPeopleSearch={setPeopleSearch}
-          users={users}
-          filteredUsers={filteredUsers}
-          currUser={currUser}
-          currUserId={currUser?._id ?? null}
-          recommendedPeople={recommendedPeople}
-        />
-      ) : (
-        <MuseumsRoute
-          museumSearch={museumSearch}
-          setMuseumSearch={setMuseumSearch}
-          museums={museums}
-          pagedMuseums={pagedMuseums}
-          filteredMuseums={filteredMuseums}
-          museumPage={currentMuseumPage}
-          totalMuseumPages={totalMuseumPages}
-          onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
-          onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
-          sortedByDistance={locState.status === 'ok'}
-          expectDistanceOnCards={locState.status === 'ok'}
-          locationNote={locState.status === 'unavailable' ? locState.message : null}
-          onRetryLocation={retry}
-        />
-      )}
-    </SafeAreaView>
+        {activeTabKey === 'people' ? (
+          <PeopleSearchRoute
+            peopleSearch={peopleSearch}
+            setPeopleSearch={setPeopleSearch}
+            users={users}
+            filteredUsers={filteredUsers}
+            currUser={currUser}
+            currUserId={currUser?._id ?? null}
+            recommendedPeople={recommendedPeople}
+          />
+        ) : (
+          <MuseumsRoute
+            museumSearch={museumSearch}
+            setMuseumSearch={setMuseumSearch}
+            museums={museums}
+            pagedMuseums={pagedMuseums}
+            filteredMuseums={filteredMuseums}
+            museumPage={currentMuseumPage}
+            totalMuseumPages={totalMuseumPages}
+            onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
+            onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+            sortedByDistance={locState.status === 'ok'}
+            expectDistanceOnCards={locState.status === 'ok'}
+            locationNote={locState.status === 'unavailable' ? locState.message : null}
+            onRetryLocation={retry}
+          />
+        )}
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
