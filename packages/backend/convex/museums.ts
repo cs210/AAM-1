@@ -115,6 +115,12 @@ const operatingHourValidator = v.object({
   closeTime: v.string(),
 });
 
+const analyticsBucketValidator = v.union(v.literal("day"), v.literal("week"));
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+const MAX_ANALYTICS_BUCKETS = 60;
+
 const museumSnapshotValidator = v.object({
   name: v.string(),
   description: v.optional(v.string()),
@@ -166,6 +172,104 @@ function stringArrayEqual(left?: string[], right?: string[]) {
   if (!left || !right) return false;
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
+}
+
+function formatMonthDay(timestamp: number) {
+  const date = new Date(timestamp);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function getCheckInTimestamp(checkIn: { visitDate?: number; createdAt: number }) {
+  return checkIn.visitDate ?? checkIn.createdAt;
+}
+
+function getAllTimeStart(
+  checkIns: { visitDate?: number; createdAt: number }[],
+  follows: { followedAt: number }[],
+  fallbackTo: number
+) {
+  const timestamps = [
+    ...checkIns.map(getCheckInTimestamp),
+    ...follows.map((follow) => follow.followedAt),
+  ].filter((timestamp) => Number.isFinite(timestamp));
+
+  if (timestamps.length === 0) {
+    return fallbackTo - 12 * WEEK_MS;
+  }
+  return Math.min(...timestamps);
+}
+
+function buildCheckInSeries(
+  checkIns: { visitDate?: number; createdAt: number }[],
+  from: number,
+  to: number,
+  bucketMs: number,
+  bucketCount: number
+) {
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const bucketStart = from + index * bucketMs;
+    return {
+      bucketStart,
+      label: formatMonthDay(bucketStart),
+      checkins: 0,
+    };
+  });
+
+  for (const checkIn of checkIns) {
+    const timestamp = getCheckInTimestamp(checkIn);
+    if (timestamp < from || timestamp >= to) continue;
+    const index = Math.floor((timestamp - from) / bucketMs);
+    if (index >= 0 && index < buckets.length) {
+      buckets[index]!.checkins += 1;
+    }
+  }
+
+  return buckets;
+}
+
+function getCheckInsInRange<T extends { visitDate?: number; createdAt: number }>(
+  checkIns: T[],
+  from: number,
+  to: number
+) {
+  return checkIns.filter((checkIn) => {
+    const timestamp = getCheckInTimestamp(checkIn);
+    return timestamp >= from && timestamp < to;
+  });
+}
+
+function getRatingsDistribution(
+  checkIns: { visitDate?: number; createdAt: number; rating?: number }[],
+  from: number,
+  to: number
+) {
+  const periodCheckIns = getCheckInsInRange(checkIns, from, to);
+  return [1, 2, 3, 4, 5].map((stars) => ({
+    stars: String(stars),
+    count: periodCheckIns.filter((checkIn) => checkIn.rating === stars).length,
+  }));
+}
+
+function getPeriodStats(
+  checkIns: { visitDate?: number; createdAt: number; rating?: number }[],
+  follows: { followedAt: number }[],
+  from: number,
+  to: number
+) {
+  const periodCheckIns = getCheckInsInRange(checkIns, from, to);
+  const ratedCheckIns = periodCheckIns.filter((checkIn) => checkIn.rating !== undefined);
+  const averageRating =
+    ratedCheckIns.length > 0
+      ? ratedCheckIns.reduce((sum, checkIn) => sum + (checkIn.rating ?? 0), 0) / ratedCheckIns.length
+      : null;
+  const newFollowers = follows.filter((follow) => follow.followedAt >= from && follow.followedAt < to).length;
+
+  return {
+    totalCheckIns: periodCheckIns.length,
+    totalRatings: ratedCheckIns.length,
+    averageRating: averageRating === null ? null : Math.round(averageRating * 10) / 10,
+    newFollowers,
+  };
 }
 
 function museumMatchesSnapshot(
@@ -380,6 +484,84 @@ export const getMuseumDetailsForDashboard = query({
         accessibilityNotes: museum.accessibilityNotes,
         point: point ?? undefined,
       },
+    };
+  },
+});
+
+export const getMuseumAnalyticsForDashboard = query({
+  args: {
+    museumId: v.id("museums"),
+    range: v.object({
+      from: v.number(),
+      to: v.number(),
+      bucket: analyticsBucketValidator,
+      allTime: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) return null;
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+
+    const checkIns = await ctx.db
+      .query("checkIns")
+      .withIndex("by_content", (q) =>
+        q.eq("contentType", "museum").eq("contentId", args.museumId)
+      )
+      .collect();
+    const follows = await ctx.db
+      .query("userFollows")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+
+    const requestedTo = Math.floor(args.range.to);
+    const requestedFrom = Math.floor(args.range.from);
+    const to = requestedTo;
+    const from = args.range.allTime ? getAllTimeStart(checkIns, follows, to) : requestedFrom;
+    const requestedBucketMs = args.range.bucket === "week" ? WEEK_MS : DAY_MS;
+    const durationMs = to - from;
+    if (!Number.isFinite(from) || !Number.isFinite(to) || durationMs <= 0) {
+      throw new Error("Invalid analytics date range");
+    }
+
+    const bucketMs = args.range.allTime
+      ? Math.max(DAY_MS, Math.ceil(durationMs / MAX_ANALYTICS_BUCKETS))
+      : requestedBucketMs;
+    const bucketCount = Math.min(
+      MAX_ANALYTICS_BUCKETS,
+      Math.max(1, Math.ceil(durationMs / bucketMs))
+    );
+    const previousFrom = args.range.allTime ? from : from - bucketCount * bucketMs;
+    const previousTo = args.range.allTime ? from : from;
+
+    const currentStats = getPeriodStats(checkIns, follows, from, to);
+    const previousStats = getPeriodStats(checkIns, follows, previousFrom, previousTo);
+
+    return {
+      totals: {
+        totalCheckIns: currentStats.totalCheckIns,
+        totalRatings: currentStats.totalRatings,
+        averageRating: currentStats.averageRating,
+        museumFollowers: currentStats.newFollowers,
+      },
+      currentPeriod: {
+        from,
+        to,
+        series: buildCheckInSeries(checkIns, from, to, bucketMs, bucketCount),
+        stats: currentStats,
+      },
+      previousPeriod: {
+        from: previousFrom,
+        to: previousTo,
+        series: buildCheckInSeries(checkIns, previousFrom, previousTo, bucketMs, bucketCount),
+        stats: previousStats,
+      },
+      ratingsDistribution: getRatingsDistribution(checkIns, from, to),
     };
   },
 });
