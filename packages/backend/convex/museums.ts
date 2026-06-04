@@ -854,3 +854,40 @@ export const reorderMuseumImagesForDashboard = mutation({
     }
   },
 });
+
+// Migration/utility function to populate museum latitude/longitude from geospatial index
+export const populateMuseumCoordinatesFromGeospatial = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    
+    const museums = await ctx.db.query("museums").collect();
+    let updated = 0;
+    let skipped = 0;
+
+    for (const museum of museums) {
+      // Skip if already has valid coordinates
+      if (
+        typeof museum.latitude === "number" &&
+        typeof museum.longitude === "number" &&
+        Number.isFinite(museum.latitude) &&
+        Number.isFinite(museum.longitude)
+      ) {
+        skipped++;
+        continue;
+      }
+
+      // Get coordinates from geospatial index
+      const point = await getMuseumPoint(ctx, museum._id);
+      if (point) {
+        await ctx.db.patch(museum._id, {
+          latitude: point.latitude,
+          longitude: point.longitude,
+        });
+        updated++;
+      }
+    }
+
+    return { updated, skipped, total: museums.length };
+  },
+});

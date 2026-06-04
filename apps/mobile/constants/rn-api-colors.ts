@@ -29,6 +29,8 @@ export const RN_API_CARD_DARK = '#2c2c28';
 
 export const RN_API_DESTRUCTIVE_LIGHT = '#e5484d';
 export const RN_API_DESTRUCTIVE_DARK = '#f87168';
+export const RN_API_INFO_LIGHT = '#60A5FA';
+export const RN_API_INFO_DARK = '#93C5FD';
 
 /** Primary button / on-primary text — web --color-primary-foreground #1a0f0e */
 export const RN_API_PRIMARY_FOREGROUND_ON_BRAND = '#1a0f0e';
