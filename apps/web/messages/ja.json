@@ -137,6 +137,7 @@
   "dashboard": {
     "tabs": {
       "museumDetails": "ミュージアム詳細",
+      "account": "アカウント",
       "organizations": "組織",
       "exhibitions": "展覧会",
       "interactions": "インタラクション",
@@ -219,6 +220,28 @@
       "confirm": "アカウントを削除",
       "deleting": "削除中…",
       "error": "アカウントを削除できませんでした。パスワードを確認してもう一度お試しください。"
+    },
+    "account": {
+      "title": "アカウント設定",
+      "description": "Museum& の公開ユーザー名を管理します。",
+      "loading": "アカウント設定を読み込み中…",
+      "currentUsername": "現在のユーザー名: @{username}",
+      "emptyState": "ユーザー名がまだ設定されていません。",
+      "usernameLabel": "ユーザー名",
+      "usernamePlaceholder": "yourname",
+      "usernameHint": "3〜30文字。英数字とアンダースコアのみ使用できます。",
+      "checking": "利用可能か確認中…",
+      "available": "このユーザー名は利用できます",
+      "save": "ユーザー名を保存",
+      "saving": "保存中…",
+      "saved": "ユーザー名を保存しました。",
+      "errors": {
+        "tooShort": "ユーザー名は3文字以上必要です",
+        "tooLong": "ユーザー名は30文字以内にしてください",
+        "invalidChars": "ユーザー名には英数字とアンダースコアのみ使用できます",
+        "taken": "このユーザー名は使用されています",
+        "saveFailed": "ユーザー名を保存できませんでした"
+      }
     },
     "organizations": {
       "title": "あなたのワークスペース",

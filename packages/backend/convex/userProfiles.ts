@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { validateUsername } from "./usernameValidation";
 
 // Generate a short-lived upload URL for Convex file storage
 export const generateUploadUrl = mutation({
@@ -185,5 +186,178 @@ export const updateUserProfile = mutation({
     await ctx.db.patch(profile._id, updateData);
 
     return { ...profile, ...updateData };
+  },
+});
+
+export const isUsernameAvailable = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const validation = validateUsername(args.username);
+    if (!validation.ok) {
+      return { available: false, reason: validation.error };
+    }
+
+    const user = await authComponent.safeGetAuthUser(ctx);
+    const existing = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", validation.normalized))
+      .first();
+
+    if (existing) {
+      if (user && existing.userId === user._id) {
+        return { available: true };
+      }
+      return { available: false, reason: "Username is taken" };
+    }
+
+    return { available: true };
+  },
+});
+
+export const setUsername = mutation({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const validation = validateUsername(args.username);
+    if (!validation.ok) throw new Error(validation.error);
+
+    const existing = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", validation.normalized))
+      .first();
+
+    if (existing && existing.userId !== user._id) {
+      throw new Error("Username is taken");
+    }
+
+    let profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (profile?.username === validation.normalized) {
+      return profile;
+    }
+
+    if (!profile) {
+      const profileId = await ctx.db.insert("userProfiles", {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        username: validation.normalized,
+        updatedAt: Date.now(),
+      });
+      const created = await ctx.db.get(profileId);
+      if (!created) throw new Error("Failed to create profile");
+      return created;
+    }
+
+    await ctx.db.patch(profile._id, {
+      username: validation.normalized,
+      updatedAt: Date.now(),
+    });
+
+    return { ...profile, username: validation.normalized, updatedAt: Date.now() };
+  },
+});
+
+export const getUserProfileByUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const validation = validateUsername(args.username);
+    if (!validation.ok) return null;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", validation.normalized))
+      .first();
+
+    return profile ?? null;
+  },
+});
+
+type SearchUserResult = {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  imageUrl: string | null;
+};
+
+function toSearchUserResult(profile: {
+  userId: string;
+  name?: string;
+  username?: string;
+  imageUrl?: string;
+}): SearchUserResult {
+  return {
+    userId: profile.userId,
+    name: profile.name ?? null,
+    username: profile.username ?? null,
+    imageUrl: profile.imageUrl ?? null,
+  };
+}
+
+export const searchUsers = query({
+  args: {
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<SearchUserResult[]> => {
+    const raw = args.query.trim();
+    if (raw.length < 2) return [];
+
+    const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
+    const currentUser = await authComponent.safeGetAuthUser(ctx);
+    const excludeUserId = currentUser?._id;
+
+    let usernamePrefix = raw.toLowerCase();
+    if (usernamePrefix.startsWith("@")) {
+      usernamePrefix = usernamePrefix.slice(1);
+    }
+
+    const results: SearchUserResult[] = [];
+    const seen = new Set<string>();
+
+    const addProfile = (profile: {
+      userId: string;
+      name?: string;
+      username?: string;
+      imageUrl?: string;
+    }) => {
+      if (excludeUserId && profile.userId === excludeUserId) return;
+      if (seen.has(profile.userId)) return;
+      if (results.length >= limit) return;
+      seen.add(profile.userId);
+      results.push(toSearchUserResult(profile));
+    };
+
+    if (/^[a-z0-9_]+$/.test(usernamePrefix)) {
+      const usernameMatches = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_username", (q) =>
+          q.gte("username", usernamePrefix).lt("username", usernamePrefix + "\uffff")
+        )
+        .take(limit);
+
+      for (const profile of usernameMatches) {
+        if (profile.username) addProfile(profile);
+      }
+    }
+
+    const lowerQuery = raw.toLowerCase();
+    if (results.length < limit) {
+      const allProfiles = await ctx.db.query("userProfiles").collect();
+      for (const profile of allProfiles) {
+        if (results.length >= limit) break;
+        const name = profile.name?.toLowerCase() ?? "";
+        if (name.includes(lowerQuery)) {
+          addProfile(profile);
+        }
+      }
+    }
+
+    return results;
   },
 });

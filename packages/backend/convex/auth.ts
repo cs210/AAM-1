@@ -28,6 +28,7 @@ export const listUsers = query({
     return profiles.map((profile) => ({
       userId: profile.userId,
       name: profile.name ?? null,
+      username: profile.username ?? null,
       email: profile.email ?? null,
       imageUrl: profile.imageUrl ?? null,
       bannerUrl: profile.bannerUrl ?? null,

@@ -788,6 +788,9 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
                   </TouchableOpacity>
                 ) : null}
               </View>
+              {profile?.username ? (
+                <Text className="text-muted-foreground mb-1 text-sm">@{profile.username}</Text>
+              ) : null}
               {showWrappedHint ? (
                 <View className="mt-3 mb-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-3 dark:border-blue-800/70 dark:bg-blue-950/40">
                   <View className="flex-row items-start gap-2">

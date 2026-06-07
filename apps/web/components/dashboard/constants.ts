@@ -8,6 +8,7 @@ import {
   MailIcon,
   LayersIcon,
   SearchIcon,
+  UserCircleIcon,
 } from "lucide-react"
 
 export const dashboardTabs = [
@@ -43,6 +44,7 @@ export const dashboardPathToTabId: Partial<Record<string, DashboardTabId>> = Obj
 ) as Partial<Record<string, DashboardTabId>>
 
 export const workspaceDashboardTabs = [
+  { id: "account", path: "account", label: "Account", icon: UserCircleIcon },
   { id: "organizations", path: "organizations", label: "Organizations", icon: LayersIcon },
 ] as const
 
@@ -72,6 +74,7 @@ export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
 export type AllDashboardTabId = DashboardTabId | WorkspaceDashboardTabId | AdminDashboardTabId
 export type DashboardTabMessageKey =
   | "museumDetails"
+  | "account"
   | "organizations"
   | "exhibitions"
   | "interactions"
@@ -84,6 +87,7 @@ export type DashboardTabMessageKey =
 
 export const dashboardTabMessageKeys: Record<AllDashboardTabId, DashboardTabMessageKey> = {
   "museum-details": "museumDetails",
+  account: "account",
   organizations: "organizations",
   exhibitions: "exhibitions",
   interactions: "interactions",

@@ -172,6 +172,7 @@ export default defineSchema({
   userProfiles: defineTable({
     userId: v.string(), // Better Auth user ID
     name: v.optional(v.string()),
+    username: v.optional(v.string()), // stored lowercase; required for mobile via app logic
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     bannerUrl: v.optional(v.string()),
@@ -186,7 +187,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_name", ["name"]),
+    .index("by_name", ["name"])
+    .index("by_username", ["username"]),
 
   // Exhibitions and halls (dashboard-managed, per museum)
   exhibitions: defineTable({
@@ -197,6 +199,20 @@ export default defineSchema({
     endDate: v.optional(v.number()),
     imageUrl: v.optional(v.string()),
     sortOrder: v.number(),
+    // Legacy field present on some rows; kept optional for schema validation
+    resources: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          kind: v.string(),
+          sortOrder: v.number(),
+          sourceType: v.string(),
+          storageId: v.id("_storage"),
+          title: v.string(),
+          url: v.string(),
+        })
+      )
+    ),
   })
     .index("by_museum", ["museumId"])
     .index("by_museum_sortOrder", ["museumId", "sortOrder"]),

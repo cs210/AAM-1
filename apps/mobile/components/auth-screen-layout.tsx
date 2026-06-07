@@ -10,9 +10,16 @@ type AuthScreenLayoutProps = {
   subtitle: string;
   /** Optional supporting line (e.g. sign-up welcome copy) */
   description?: string;
+  /** Tighter header for longer forms (e.g. sign-up) */
+  compact?: boolean;
 };
 
-export function AuthScreenLayout({ children, subtitle, description }: AuthScreenLayoutProps) {
+export function AuthScreenLayout({
+  children,
+  subtitle,
+  description,
+  compact = false,
+}: AuthScreenLayoutProps) {
   return (
     <View className="relative flex-1 bg-background" style={{ flex: 1 }}>
       <AuthBackdrop />
@@ -31,9 +38,18 @@ export function AuthScreenLayout({ children, subtitle, description }: AuthScreen
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 28 }}>
-            <View className="items-center pb-8 pt-6">
-              <View className="mb-5 flex-row items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5">
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingTop: compact ? 4 : 8,
+              paddingBottom: 28,
+            }}>
+            <View className={compact ? 'items-center pb-4 pt-2' : 'items-center pb-8 pt-6'}>
+              <View
+                className={
+                  compact
+                    ? 'mb-3 flex-row items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1'
+                    : 'mb-5 flex-row items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5'
+                }>
                 <View className="h-1.5 w-1.5 rounded-full bg-primary" />
                 <Text className="text-xs font-semibold uppercase tracking-widest text-primary">
                   Cultural Passport
@@ -41,19 +57,29 @@ export function AuthScreenLayout({ children, subtitle, description }: AuthScreen
               </View>
 
               <View className="flex-row items-baseline justify-center">
-                <Text className="text-center text-5xl font-bold tracking-tight text-foreground">
+                <Text
+                  className={
+                    compact
+                      ? 'text-center text-4xl font-bold tracking-tight text-foreground'
+                      : 'text-center text-5xl font-bold tracking-tight text-foreground'
+                  }>
                   Museum
                 </Text>
-                <Text className="text-center text-5xl font-bold tracking-tight text-primary">
+                <Text
+                  className={
+                    compact
+                      ? 'text-center text-4xl font-bold tracking-tight text-primary'
+                      : 'text-center text-5xl font-bold tracking-tight text-primary'
+                  }>
                   &
                 </Text>
               </View>
 
-              <Text className="mt-3 text-center text-base leading-snug text-muted-foreground">
+              <Text className="mt-2 text-center text-base leading-snug text-muted-foreground">
                 {subtitle}
               </Text>
               {description ? (
-                <Text className="mt-2.5 px-2 text-center text-sm leading-snug text-muted-foreground">
+                <Text className="mt-2 px-2 text-center text-sm leading-snug text-muted-foreground">
                   {description}
                 </Text>
               ) : null}

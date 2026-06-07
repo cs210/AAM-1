@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CheckInStarRating } from '@/components/check-in-star-rating';
 import { CheckInDurationSelect } from '@/components/check-in-duration-select';
+import { CheckInTagFriends } from '@/components/check-in-tag-friends';
 import { cn } from '@/lib/utils';
 import { zipCheckInImageUrlsAndIds } from '@/lib/check-in-shared';
 import { uploadCheckInPickerAssets } from '@/lib/check-in-image-upload';
@@ -92,7 +93,7 @@ export function EditCheckinModal({
   );
   const [eventsDropdownOpen, setEventsDropdownOpen] = useState(false);
 
-  const allUsers = useQuery(api.userProfiles.listAllProfiles, {});
+  const currentUser = useQuery(api.auth.getCurrentUser);
   const generateCheckInImageUploadUrl = useMutation(api.checkIns.generateCheckInImageUploadUrl);
   const museumEvents = useQuery(
     api.events.getEventsByMuseum,
@@ -124,12 +125,6 @@ export function EditCheckinModal({
     initialDurationHours,
     initialAttendedEventIds,
   ]);
-
-  const toggleFriend = (userId: string) => {
-    setSelectedFriends((prev) =>
-      prev.includes(userId) ? prev.filter((fid) => fid !== userId) : [...prev, userId]
-    );
-  };
 
   const toggleEvent = (eventId: string) => {
     setSelectedEvents((prev) =>
@@ -275,14 +270,13 @@ export function EditCheckinModal({
 
             <View className="mb-4 flex-row items-center justify-between gap-3">
               <Text className="min-w-0 shrink text-sm font-medium text-muted-foreground">Photos</Text>
-              <Pressable
-                className="shrink-0 rounded-lg bg-primary px-4 py-2 active:opacity-90"
+              <Button
+                size="sm"
+                className="shrink-0"
                 onPress={pickImages}
                 disabled={isSubmitting}>
-                <Text className="text-sm font-semibold text-primary-foreground">
-                  {totalImageCount > 0 ? 'Replace Photos' : 'Add Photos'}
-                </Text>
-              </Pressable>
+                <Text>{totalImageCount > 0 ? 'Replace Photos' : 'Add Photos'}</Text>
+              </Button>
             </View>
 
             {selectedImages.length > 0 ? (
@@ -393,32 +387,13 @@ export function EditCheckinModal({
               </View>
             )}
 
-            {allUsers && allUsers.length > 0 ? (
-              <View className="mb-4">
-                <Label className="mb-2 text-muted-foreground">Tag Friends (optional)</Label>
-                <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} className="-mx-1">
-                  {allUsers.map((user) => {
-                    const isSelected = selectedFriends.includes(user.userId);
-                    return (
-                      <Pressable
-                        key={user.userId}
-                        className={cn(
-                          'mx-1 rounded-full border px-4 py-2 active:opacity-90',
-                          isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card'
-                        )}
-                        onPress={() => toggleFriend(user.userId)}>
-                        <Text
-                          className={cn(
-                            'text-sm font-medium',
-                            isSelected ? 'text-primary' : 'text-foreground'
-                          )}>
-                          {user.name || 'Unknown'}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+            {currentUser ? (
+              <CheckInTagFriends
+                selectedUserIds={selectedFriends}
+                onSelectedUserIdsChange={setSelectedFriends}
+                currentUserId={currentUser._id}
+                labelClassName="mb-2 text-muted-foreground"
+              />
             ) : null}
           </ScrollView>
 

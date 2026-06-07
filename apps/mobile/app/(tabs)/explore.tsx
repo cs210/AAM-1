@@ -175,28 +175,36 @@ function MuseumsRoute({
   );
 }
 
+type PeopleSearchResult = {
+  userId: string;
+  name?: string | null;
+  username?: string | null;
+  imageUrl?: string | null;
+};
+
 function PeopleSearchRoute({
   peopleSearch,
   setPeopleSearch,
-  users,
-  filteredUsers,
+  searchResults,
+  searchLoading,
   currUser,
   currUserId,
   recommendedPeople,
 }: {
   peopleSearch: string;
   setPeopleSearch: (v: string) => void;
-  users: ReturnType<typeof useQuery<typeof api.auth.listUsers>>;
-  filteredUsers: {
-    userId: string;
-    name?: string | null;
-    email?: string | null;
-    imageUrl?: string | null;
-  }[];
+  searchResults: PeopleSearchResult[];
+  searchLoading: boolean;
   currUser: { _id: string } | null | undefined;
   currUserId: string | null;
   recommendedPeople:
-    | { userId: string; name?: string | null; email?: string | null; imageUrl?: string | null }[]
+    | {
+        userId: string;
+        name?: string | null;
+        username?: string | null;
+        email?: string | null;
+        imageUrl?: string | null;
+      }[]
     | undefined;
 }) {
   const isSearching = peopleSearch.trim().length > 0;
@@ -242,7 +250,7 @@ function PeopleSearchRoute({
           <SearchFieldRow
             value={peopleSearch}
             onChangeText={setPeopleSearch}
-            placeholder="Search for a person..."
+            placeholder="Search by name or @username"
           />
         </View>
         <Button
@@ -256,7 +264,7 @@ function PeopleSearchRoute({
         </Button>
       </View>
       {isSearching ? (
-        users === undefined ? (
+        searchLoading ? (
           <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
             <BrandActivityIndicator size="large" />
             <Text variant="muted" className="mt-3 text-base">
@@ -265,10 +273,10 @@ function PeopleSearchRoute({
           </View>
         ) : (
           <FlatList
-            data={filteredUsers}
+            data={searchResults}
             renderItem={({ item }) => {
               if (currUser && item.userId === currUser._id) return null;
-              const rawName = item.name || item.email || '';
+              const rawName = item.name || '';
               const displayName =
                 typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
               const initial = (
@@ -289,9 +297,16 @@ function PeopleSearchRoute({
                       </Text>
                     </View>
                   )}
-                  <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
-                    {displayName || "Name can't be displayed"}
-                  </Text>
+                  <View className="flex-1">
+                    <Text className="text-foreground text-lg font-medium" numberOfLines={1}>
+                      {displayName || "Name can't be displayed"}
+                    </Text>
+                    {item.username ? (
+                      <Text className="text-muted-foreground text-sm" numberOfLines={1}>
+                        @{item.username}
+                      </Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               );
             }}
@@ -313,7 +328,7 @@ function PeopleSearchRoute({
           data={recommendedPeople}
           renderItem={({ item }) => {
             if (currUser && item.userId === currUser._id) return null;
-            const rawName = item.name || item.email || '';
+            const rawName = item.name || '';
             const displayName =
               typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
             const initial = (
@@ -332,9 +347,16 @@ function PeopleSearchRoute({
                     <Text className="text-primary-foreground text-lg font-semibold">{initial}</Text>
                   </View>
                 )}
-                <Text className="text-foreground flex-1 text-lg font-medium" numberOfLines={1}>
-                  {displayName || "Name can't be displayed"}
-                </Text>
+                <View className="flex-1">
+                  <Text className="text-foreground text-lg font-medium" numberOfLines={1}>
+                    {displayName || "Name can't be displayed"}
+                  </Text>
+                  {item.username ? (
+                    <Text className="text-muted-foreground text-sm" numberOfLines={1}>
+                      @{item.username}
+                    </Text>
+                  ) : null}
+                </View>
               </Pressable>
             );
           }}
@@ -428,27 +450,46 @@ export default function SearchScreen() {
     }
   }, [museumPage, totalMuseumPages]);
 
-  const users = useQuery(api.auth.listUsers) as
-    | {
-        userId: string;
-        name: string | null;
-        email: string | null;
-        imageUrl: string | null;
-        bannerUrl: string | null;
-      }[]
-    | undefined;
-  const filteredUsers = useMemo(() => {
-    if (!users) return [];
-    if (!peopleSearch.trim()) return [];
-    const lowerSearch = peopleSearch.toLowerCase();
-    return users.filter(
-      (user: { name?: string | null; email?: string | null; imageUrl?: string | null }) =>
-        user.name?.toLowerCase().includes(lowerSearch) ||
-        user.email?.toLowerCase().includes(lowerSearch)
-    );
-  }, [users, peopleSearch]);
+  const [debouncedPeopleSearch, setDebouncedPeopleSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedPeopleSearch(peopleSearch.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [peopleSearch]);
 
   const currUser = useQuery(api.auth.getCurrentUser);
+
+  const searchQueryArgs =
+    debouncedPeopleSearch.length >= 2 ? { query: debouncedPeopleSearch } : 'skip';
+  const searchUsersResult = useQuery(api.userProfiles.searchUsers, searchQueryArgs);
+  const normalizedExactUsername = debouncedPeopleSearch.replace(/^@+/, '').toLowerCase();
+  const exactUsernameMatch = useQuery(
+    api.userProfiles.getUserProfileByUsername,
+    normalizedExactUsername.length >= 3 && /^[a-z0-9_]+$/.test(normalizedExactUsername)
+      ? { username: normalizedExactUsername }
+      : 'skip'
+  );
+
+  const searchResults = useMemo((): PeopleSearchResult[] => {
+    if (debouncedPeopleSearch.length < 2) return [];
+    const base = searchUsersResult ?? [];
+    if (!exactUsernameMatch || exactUsernameMatch === null) return base;
+    if (currUser && exactUsernameMatch.userId === currUser._id) return base;
+    const exact: PeopleSearchResult = {
+      userId: exactUsernameMatch.userId,
+      name: exactUsernameMatch.name ?? null,
+      username: exactUsernameMatch.username ?? null,
+      imageUrl: exactUsernameMatch.imageUrl ?? null,
+    };
+    const rest = base.filter((u) => u.userId !== exact.userId);
+    return [exact, ...rest];
+  }, [debouncedPeopleSearch, searchUsersResult, exactUsernameMatch, currUser]);
+
+  const searchLoading =
+    debouncedPeopleSearch.length >= 2 &&
+    (searchUsersResult === undefined ||
+      (normalizedExactUsername.length >= 3 &&
+        /^[a-z0-9_]+$/.test(normalizedExactUsername) &&
+        exactUsernameMatch === undefined));
   const recommendedPeople = useQuery(api.follows.getPeopleYouMayKnow);
   const activeTabKey = tabs[index]?.key ?? 'people';
 
@@ -492,8 +533,8 @@ export default function SearchScreen() {
         <PeopleSearchRoute
           peopleSearch={peopleSearch}
           setPeopleSearch={setPeopleSearch}
-          users={users}
-          filteredUsers={filteredUsers}
+          searchResults={searchResults}
+          searchLoading={searchLoading}
           currUser={currUser}
           currUserId={currUser?._id ?? null}
           recommendedPeople={recommendedPeople}

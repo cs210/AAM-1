@@ -9,6 +9,7 @@ import {
   workspaceDashboardPathToTabId,
 } from "@/components/dashboard/constants"
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics"
+import { DashboardAccountSettings } from "@/components/dashboard/dashboard-account-settings"
 import { DashboardExhibitions } from "@/components/dashboard/dashboard-exhibitions"
 import { DashboardInteractions } from "@/components/dashboard/dashboard-interactions"
 import { DashboardOrganizations } from "@/components/dashboard/dashboard-organizations"
@@ -41,6 +42,9 @@ export default async function DashboardSectionPage({
   }
   if (tabId === "organizations") {
     return <DashboardOrganizations />
+  }
+  if (tabId === "account") {
+    return <DashboardAccountSettings />
   }
   if (tabId === "exhibitions") {
     return <DashboardExhibitions />
