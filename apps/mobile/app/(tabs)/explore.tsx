@@ -1,19 +1,24 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, FlatList, Pressable, Linking, Share, Image } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, FlatList, Pressable, Linking, Share, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
+import { MapPin, List } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
+import { MuseumMapView } from '../../components/museum-map-view';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getLastExploreTabIndex, setLastExploreTabIndex } from '@/lib/last-people-search';
+import { userProfileHref } from '@/lib/user-profile-navigation';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import appsFlyer from 'react-native-appsflyer';
 
@@ -58,6 +63,8 @@ function MuseumsRoute({
   expectDistanceOnCards,
   locationNote,
   onRetryLocation,
+  viewMode,
+  onToggleViewMode,
 }: {
   museumSearch: string;
   setMuseumSearch: (v: string) => void;
@@ -72,14 +79,31 @@ function MuseumsRoute({
   expectDistanceOnCards: boolean;
   locationNote: string | null;
   onRetryLocation: () => void;
+  viewMode: 'list' | 'map';
+  onToggleViewMode: () => void;
 }) {
   return (
     <View className="flex-1" style={{ flex: 1 }}>
-      <SearchFieldRow
-        value={museumSearch}
-        onChangeText={setMuseumSearch}
-        placeholder="Search museums..."
-      />
+      <View className="flex-row items-center gap-2 px-5 py-3">
+        <View className="flex-1">
+          <SearchFieldRow
+            value={museumSearch}
+            onChangeText={setMuseumSearch}
+            placeholder="Search museums..."
+          />
+        </View>
+        <Pressable
+          onPress={onToggleViewMode}
+          className="bg-primary rounded-lg p-2.5 active:opacity-80"
+          accessibilityLabel={`Switch to ${viewMode === 'list' ? 'map' : 'list'} view`}
+          accessibilityRole="button">
+          {viewMode === 'list' ? (
+            <MapPin size={20} color="white" />
+          ) : (
+            <List size={20} color="white" />
+          )}
+        </Pressable>
+      </View>
       {sortedByDistance ? (
         <Text
           className="text-muted-foreground mx-5 mt-[-2px] mb-2 text-xs"
@@ -103,7 +127,10 @@ function MuseumsRoute({
           </View>
         </View>
       ) : null}
-      {museums === undefined ? (
+
+      {viewMode === 'map' ? (
+        <MuseumMapView museums={filteredMuseums} isLoading={museums === undefined} />
+      ) : museums === undefined ? (
         <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
           <Text variant="muted" className="mt-3 text-base">
@@ -258,11 +285,9 @@ function PeopleSearchRoute({
               return (
                 <Pressable
                   className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
-                  onPress={() =>
-                    router.push(
-                      `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
-                    )
-                  }>
+                  onPress={() => {
+                    router.push(userProfileHref(item.userId));
+                  }}>
                   {item.imageUrl ? (
                     <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                   ) : (
@@ -312,11 +337,9 @@ function PeopleSearchRoute({
             return (
               <Pressable
                 className="border-border bg-card mx-5 mb-3 flex-row items-center gap-3 rounded-xl border p-4 active:opacity-90"
-                onPress={() =>
-                  router.push(
-                    `/(tabs)/profile?userId=${encodeURIComponent(item.userId)}&search=${encodeURIComponent(peopleSearch)}`
-                  )
-                }>
+                onPress={() => {
+                  router.push(userProfileHref(item.userId));
+                }}>
                 {item.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                 ) : (
@@ -359,7 +382,7 @@ function PeopleSearchRoute({
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
-  const [index, setIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const tabs = React.useMemo(
     () => [
       { key: 'people', title: 'People' },
@@ -369,19 +392,26 @@ export default function SearchScreen() {
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
+  const [index, setIndexState] = useState(() => getLastExploreTabIndex());
+  const setIndex = useCallback((next: number) => {
+    setIndexState(next);
+    setLastExploreTabIndex(next);
+  }, []);
 
   useEffect(() => {
-    const searchParam = Array.isArray(params.search) ? params.search[0] : params.search;
     const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
-    if (typeof searchParam === 'string' && searchParam !== '') {
-      setPeopleSearch(searchParam);
-    }
     if (tabParam === 'museums') {
       setIndex(1);
     } else if (tabParam === 'people') {
       setIndex(0);
     }
-  }, [params.search, params.tab]);
+  }, [params.search, params.tab, setIndex]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIndexState(getLastExploreTabIndex());
+    }, [])
+  );
 
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumPage, setMuseumPage] = useState(1);
@@ -464,39 +494,40 @@ export default function SearchScreen() {
   const activeTabKey = tabs[index]?.key ?? 'people';
 
   return (
-    <SafeAreaView
-      className="bg-background relative flex-1"
-      style={{ flex: 1 }}
-      edges={['top', 'left', 'right']}>
-      <DecorativeGradientShapes />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView
+        className="bg-background relative flex-1"
+        style={{ flex: 1 }}
+        edges={['top', 'left', 'right']}>
+        <DecorativeGradientShapes />
 
-      <View className="border-border z-10 flex-row border-b">
-        {tabs.map((tab, tabIndex) => {
-          const isActive = tabIndex === index;
-          return (
-            <Pressable
-              key={tab.key}
-              className="flex-1 items-center pt-3.5 pb-2"
-              onPress={() => setIndex(tabIndex)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}>
-              <Text
-                className={cn(
-                  'text-base font-medium',
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
-                )}>
-                {tab.title}
-              </Text>
-              <View
-                className={cn(
-                  'mt-2 h-0.5 w-2/3 rounded-full',
-                  isActive ? 'bg-primary' : 'bg-transparent'
-                )}
-              />
-            </Pressable>
-          );
-        })}
-      </View>
+        <View className="border-border z-10 flex-row border-b">
+          {tabs.map((tab, tabIndex) => {
+            const isActive = tabIndex === index;
+            return (
+              <Pressable
+                key={tab.key}
+                className="flex-1 items-center pt-3.5 pb-2"
+                onPress={() => setIndex(tabIndex)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}>
+                <Text
+                  className={cn(
+                    'text-base font-medium',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )}>
+                  {tab.title}
+                </Text>
+                <View
+                  className={cn(
+                    'mt-2 h-0.5 w-2/3 rounded-full',
+                    isActive ? 'bg-primary' : 'bg-transparent'
+                  )}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
 
       {activeTabKey === 'people' ? (
         <PeopleSearchRoute
@@ -523,8 +554,11 @@ export default function SearchScreen() {
           expectDistanceOnCards={locState.status === 'ok'}
           locationNote={locState.status === 'unavailable' ? locState.message : null}
           onRetryLocation={retry}
+          viewMode={viewMode}
+          onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
         />
       )}
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }

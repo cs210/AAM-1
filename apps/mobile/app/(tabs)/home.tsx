@@ -21,6 +21,7 @@ import { FriendCheckinPhotosSection } from '@/components/friend-checkin-photos-s
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useBrandPrimaryHex, useMutedForegroundHex } from '@/hooks/use-brand-primary';
+import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
 
 function FriendsEmptyState() {
   return (
@@ -71,7 +72,40 @@ export default function HomeScreen() {
 
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
   const [museumCheckinPickerOpen, setMuseumCheckinPickerOpen] = useState(false);
+  const [showCheckInHint, setShowCheckInHint] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
+
+  React.useEffect(() => {
+    if (!currentUserId) return;
+    let isActive = true;
+
+    const run = async () => {
+      try {
+        const shouldShow = await shouldShowFeatureHint(currentUserId, 'home_checkin');
+        if (!isActive) return;
+        setShowCheckInHint(shouldShow);
+      } catch {
+        if (!isActive) return;
+        setShowCheckInHint(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUserId]);
+
+  const dismissCheckInHint = useCallback(async () => {
+    if (!currentUserId) return;
+    setShowCheckInHint(false);
+    try {
+      await dismissFeatureHint(currentUserId, 'home_checkin');
+    } catch {
+      // Non-blocking persistence failure.
+    }
+  }, [currentUserId]);
 
   const promptLocation = useCallback(() => {
     if (locState.status !== 'unavailable') return;
@@ -227,7 +261,11 @@ export default function HomeScreen() {
             }
           />
 
-          <HomeCheckinCta onPress={() => setMuseumCheckinPickerOpen(true)} />
+          <HomeCheckinCta
+            onPress={() => setMuseumCheckinPickerOpen(true)}
+            showHint={showCheckInHint}
+            onDismissHint={dismissCheckInHint}
+          />
         </View>
       </ScrollView>
 
