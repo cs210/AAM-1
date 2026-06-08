@@ -1,7 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { requireAuthenticatedUser } from "./permissions";
+import { toProfileView, type ProfileView } from "./profileViews";
 import { validateUsername } from "./usernameValidation";
+
+const MAX_PROFILES_BY_USER_IDS = 100;
 
 // Generate a short-lived upload URL for Convex file storage
 export const generateUploadUrl = mutation({
@@ -108,23 +112,45 @@ export const getOrCreateUserProfile = mutation({
   },
 });
 
-// Get user profile by ID
+// Get user profile by ID (public view; email only for the profile owner)
 export const getUserProfile = query({
   args: { userId: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ProfileView | null> => {
+    const viewer = await requireAuthenticatedUser(ctx);
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
-    return profile ?? null;
+    return profile ? toProfileView(profile, viewer._id) : null;
+  },
+});
+
+export const getProfilesByUserIds = query({
+  args: { userIds: v.array(v.string()) },
+  handler: async (ctx, args): Promise<ProfileView[]> => {
+    const viewer = await requireAuthenticatedUser(ctx);
+    const uniqueIds = [...new Set(args.userIds)].slice(0, MAX_PROFILES_BY_USER_IDS);
+    const profiles: ProfileView[] = [];
+
+    for (const userId of uniqueIds) {
+      const profile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (profile) {
+        profiles.push(toProfileView(profile, viewer._id));
+      }
+    }
+
+    return profiles;
   },
 });
 
 // Get current user's profile
 export const getCurrentUserProfile = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<ProfileView | null> => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) return null;
 
@@ -133,16 +159,7 @@ export const getCurrentUserProfile = query({
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .first();
 
-    return profile ?? null;
-  },
-});
-
-// List all user profiles (for friend selection, etc.)
-export const listAllProfiles = query({
-  args: {},
-  handler: async (ctx) => {
-    const profiles = await ctx.db.query("userProfiles").collect();
-    return profiles;
+    return profile ? toProfileView(profile, user._id) : null;
   },
 });
 
@@ -265,7 +282,8 @@ export const setUsername = mutation({
 
 export const getUserProfileByUsername = query({
   args: { username: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ProfileView | null> => {
+    const viewer = await requireAuthenticatedUser(ctx);
     const validation = validateUsername(args.username);
     if (!validation.ok) return null;
 
@@ -274,7 +292,7 @@ export const getUserProfileByUsername = query({
       .withIndex("by_username", (q) => q.eq("username", validation.normalized))
       .first();
 
-    return profile ?? null;
+    return profile ? toProfileView(profile, viewer._id) : null;
   },
 });
 
@@ -305,12 +323,12 @@ export const searchUsers = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<SearchUserResult[]> => {
+    const currentUser = await requireAuthenticatedUser(ctx);
     const raw = args.query.trim();
     if (raw.length < 2) return [];
 
     const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
-    const currentUser = await authComponent.safeGetAuthUser(ctx);
-    const excludeUserId = currentUser?._id;
+    const excludeUserId = currentUser._id;
 
     let usernamePrefix = raw.toLowerCase();
     if (usernamePrefix.startsWith("@")) {
@@ -343,18 +361,6 @@ export const searchUsers = query({
 
       for (const profile of usernameMatches) {
         if (profile.username) addProfile(profile);
-      }
-    }
-
-    const lowerQuery = raw.toLowerCase();
-    if (results.length < limit) {
-      const allProfiles = await ctx.db.query("userProfiles").collect();
-      for (const profile of allProfiles) {
-        if (results.length >= limit) break;
-        const name = profile.name?.toLowerCase() ?? "";
-        if (name.includes(lowerQuery)) {
-          addProfile(profile);
-        }
       }
     }
 

@@ -3,6 +3,7 @@ import { mutation, query, internalQuery, internalMutation } from "./_generated/s
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { components } from "./_generated/api";
+import { requireAuthenticatedUser } from "./permissions";
 
 /** Id of an organization in the Better Auth component. Resolve via resolveOrganization or component getOrganization. */
 export type BetterAuthOrgId = string;
@@ -81,6 +82,7 @@ export const getMyRequest = query({
 export const resolveOrganization = query({
   args: { betterAuthOrgId: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAuthenticatedUser(ctx);
     if (!args.betterAuthOrgId) return null;
     return await ctx.runQuery((components.betterAuth as any).getOrganization.getOrganization, {
       id: args.betterAuthOrgId,

@@ -44,21 +44,31 @@ export function CheckInTagFriends({
   const [taggedUsers, setTaggedUsers] = React.useState<Record<string, TaggedUserInfo>>({});
 
   const followingUserIds = useQuery(api.follows.getFollowing, { userId: currentUserId });
-  const allProfiles = useQuery(api.auth.listUsers, {});
+
+  const profileUserIds = React.useMemo(() => {
+    const ids = new Set<string>(selectedUserIds);
+    followingUserIds?.forEach((id) => ids.add(id));
+    return [...ids];
+  }, [selectedUserIds, followingUserIds]);
+
+  const profiles = useQuery(
+    api.userProfiles.getProfilesByUserIds,
+    profileUserIds.length > 0 ? { userIds: profileUserIds } : 'skip'
+  );
 
   const followingProfiles = React.useMemo(() => {
-    if (!allProfiles || !followingUserIds) return [];
+    if (!profiles || !followingUserIds) return [];
     const followingSet = new Set(followingUserIds);
-    return allProfiles.filter((user) => followingSet.has(user.userId));
-  }, [allProfiles, followingUserIds]);
+    return profiles.filter((user) => followingSet.has(user.userId));
+  }, [profiles, followingUserIds]);
 
   React.useEffect(() => {
-    if (!allProfiles) return;
+    if (!profiles) return;
     setTaggedUsers((prev) => {
       const next = { ...prev };
       for (const userId of selectedUserIds) {
         if (next[userId]) continue;
-        const profile = allProfiles.find((u) => u.userId === userId);
+        const profile = profiles.find((u) => u.userId === userId);
         if (profile) {
           next[userId] = {
             userId: profile.userId,
@@ -69,7 +79,7 @@ export function CheckInTagFriends({
       }
       return next;
     });
-  }, [allProfiles, selectedUserIds]);
+  }, [profiles, selectedUserIds]);
 
   const toggleFriend = (userId: string, info?: TaggedUserInfo) => {
     if (selectedUserIds.includes(userId)) {
