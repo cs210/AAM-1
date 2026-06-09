@@ -8,6 +8,7 @@ import { action } from "./_generated/server";
 const firecrawlImageLimit = 5;
 const firecrawlFallbackAdditionalImageLimit = 2;
 const googlePhotoLimit = 3;
+const googleReviewLimit = 5;
 const firecrawlRequestRetryCount = 3;
 const googleRequestRetryCount = 2;
 const defaultGooglePlacesApiUrl = "https://places.googleapis.com";
@@ -27,6 +28,15 @@ const googlePlacesFieldMask = [
   "places.regularOpeningHours",
   "places.accessibilityOptions",
 ].join(",");
+const googlePlacesReviewDetailsFieldMask = [
+  "id",
+  "name",
+  "googleMapsUri",
+  "rating",
+  "userRatingCount",
+  "reviews",
+].join(",");
+const googlePlacesReviewSearchFieldMask = "places.name";
 const prefillKeysForFallback = [
   "tagline",
   "description",
@@ -96,6 +106,37 @@ type PrefillActionResult = {
 };
 
 type PrefillFormData = PrefillActionResult["prefill"];
+
+type GoogleReviewCacheInput = {
+  googleReviewName: string;
+  authorName?: string;
+  authorUri?: string;
+  authorPhotoUri?: string;
+  rating: number;
+  text?: string;
+  originalText?: string;
+  languageCode?: string;
+  relativePublishTimeDescription?: string;
+  publishTime?: string;
+  googleMapsUri?: string;
+  visitDate?: {
+    year?: number;
+    month?: number;
+    day?: number;
+  };
+};
+
+type GoogleReviewsActionResult = {
+  searchQuery: string;
+  placesFound: boolean;
+  googlePlaceId?: string;
+  googleMapsUri?: string;
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  googleReviewsLastFetchedAt: number;
+  reviewCount: number;
+  reviews: GoogleReviewCacheInput[];
+};
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
@@ -292,6 +333,78 @@ function normalizeGoogleAccessibilityFeatures(value: unknown): string[] | undefi
   return features.size > 0 ? Array.from(features) : undefined;
 }
 
+function normalizeGoogleReviewText(value: unknown): { text?: string; languageCode?: string } {
+  const root = asRecord(value);
+  if (!root) {
+    return { text: asTrimmedString(value) };
+  }
+  return {
+    text: asTrimmedString(root.text),
+    languageCode: asTrimmedString(root.languageCode),
+  };
+}
+
+function normalizeGoogleReviewVisitDate(value: unknown) {
+  const root = asRecord(value);
+  if (!root) return undefined;
+  const year = asNumber(root.year);
+  const month = asNumber(root.month);
+  const day = asNumber(root.day);
+  if (year === undefined && month === undefined && day === undefined) return undefined;
+  return {
+    year: year === undefined ? undefined : Math.floor(year),
+    month: month === undefined ? undefined : Math.floor(month),
+    day: day === undefined ? undefined : Math.floor(day),
+  };
+}
+
+function fallbackGoogleReviewName(review: Record<string, unknown>, index: number) {
+  const publishTime = asTrimmedString(review.publishTime)?.replace(/[^a-zA-Z0-9]/g, "-") ?? "undated";
+  return `google-review-${index}-${publishTime}`;
+}
+
+function normalizeGoogleReview(value: unknown, index: number): GoogleReviewCacheInput | null {
+  const review = asRecord(value);
+  if (!review) return null;
+  const rating = asNumber(review.rating);
+  if (rating === undefined) return null;
+
+  const author = asRecord(review.authorAttribution);
+  const text = normalizeGoogleReviewText(review.text);
+  const originalText = normalizeGoogleReviewText(review.originalText);
+  const reviewText = text.text ?? originalText.text;
+
+  return {
+    googleReviewName: asTrimmedString(review.name) ?? fallbackGoogleReviewName(review, index),
+    authorName: asTrimmedString(author?.displayName),
+    authorUri: asHttpUrl(author?.uri),
+    authorPhotoUri: asHttpUrl(author?.photoUri),
+    rating,
+    text: reviewText,
+    originalText: originalText.text,
+    languageCode: text.languageCode ?? originalText.languageCode,
+    relativePublishTimeDescription: asTrimmedString(review.relativePublishTimeDescription),
+    publishTime: asTrimmedString(review.publishTime),
+    googleMapsUri: asHttpUrl(review.googleMapsUri),
+    visitDate: normalizeGoogleReviewVisitDate(review.visitDate),
+  };
+}
+
+function normalizeGoogleReviews(value: unknown): GoogleReviewCacheInput[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(normalizeGoogleReview)
+    .filter((entry): entry is GoogleReviewCacheInput => Boolean(entry))
+    .slice(0, googleReviewLimit);
+}
+
+function placeIdFromPlaceName(value: unknown): string | undefined {
+  const placeName = asTrimmedString(value);
+  if (!placeName) return undefined;
+  const parts = placeName.split("/");
+  return parts[0] === "places" ? parts[1] : undefined;
+}
+
 function getAddressComponent(
   componentsValue: unknown,
   type: string,
@@ -407,7 +520,8 @@ async function fetchJsonResponse(
 async function fetchGooglePlacesTopResult(
   searchQuery: string,
   apiKey: string,
-  apiBaseUrl: string
+  apiBaseUrl: string,
+  fieldMask = googlePlacesFieldMask
 ): Promise<Record<string, unknown> | null> {
   const url = `${apiBaseUrl.replace(/\/$/, "")}/v1/places:searchText`;
   const payload = {
@@ -425,7 +539,7 @@ async function fetchGooglePlacesTopResult(
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": googlePlacesFieldMask,
+            "X-Goog-FieldMask": fieldMask,
           },
           body: JSON.stringify(payload),
         },
@@ -436,6 +550,34 @@ async function fetchGooglePlacesTopResult(
 
   const places = Array.isArray(root.places) ? root.places : [];
   return asRecord(places[0]) ?? null;
+}
+
+async function fetchGooglePlaceDetails(
+  placeName: string,
+  apiKey: string,
+  apiBaseUrl: string
+): Promise<Record<string, unknown>> {
+  const encodedPlacePath = placeName
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const url = `${apiBaseUrl.replace(/\/$/, "")}/v1/${encodedPlacePath}`;
+
+  return await withRetries(
+    () =>
+      fetchJsonResponse(
+        url,
+        {
+          method: "GET",
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": googlePlacesReviewDetailsFieldMask,
+          },
+        },
+        "Google Places Details"
+      ),
+    googleRequestRetryCount
+  );
 }
 
 async function fetchGooglePlacePhotoUris(
@@ -624,7 +766,12 @@ export const prefillMuseumDetailsWithFirecrawl = action({
 
       const googlePlacesApiUrl = process.env.GOOGLE_PLACES_API_URL?.trim() || defaultGooglePlacesApiUrl;
       const searchQuery = buildGoogleSearchQuery(museumName, details, args);
-      const topPlace = await fetchGooglePlacesTopResult(searchQuery, googlePlacesApiKey, googlePlacesApiUrl);
+      const topPlace = await fetchGooglePlacesTopResult(
+        searchQuery,
+        googlePlacesApiKey,
+        googlePlacesApiUrl,
+        googlePlacesReviewSearchFieldMask
+      );
       const placesFound = Boolean(topPlace);
 
       const prefillFromPlaces = createBasePrefill(museumName, details);
@@ -757,6 +904,91 @@ export const prefillMuseumDetailsWithFirecrawl = action({
         throw new Error(
           "Unable to reach Firecrawl API from Convex runtime. Check FIRECRAWL_API_KEY and optional FIRECRAWL_API_URL."
         );
+      }
+      throw error;
+    }
+  },
+});
+
+export const refreshGoogleReviewsForDashboard = action({
+  args: {
+    museumId: v.id("museums"),
+    museumName: v.string(),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    country: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<GoogleReviewsActionResult> => {
+    try {
+      const details = (await ctx.runQuery(api.museums.getMuseumDetailsForDashboard, {
+        id: args.museumId,
+      })) as MuseumDetailsForPrefill | null;
+      if (!details) {
+        throw new Error("Museum not found");
+      }
+
+      const museumName = args.museumName.trim() || details.name;
+      if (!museumName) {
+        throw new Error("Museum name is required to refresh Google reviews");
+      }
+
+      const googlePlacesApiKey =
+        process.env.GOOGLE_PLACES_API_KEY?.trim() ?? process.env.GOOGLE_MAPS_API_KEY?.trim();
+      if (!googlePlacesApiKey) {
+        throw new Error("Missing GOOGLE_PLACES_API_KEY (or GOOGLE_MAPS_API_KEY) environment variable");
+      }
+
+      const googlePlacesApiUrl = process.env.GOOGLE_PLACES_API_URL?.trim() || defaultGooglePlacesApiUrl;
+      const searchQuery = buildGoogleSearchQuery(museumName, details, args);
+      const topPlace = await fetchGooglePlacesTopResult(searchQuery, googlePlacesApiKey, googlePlacesApiUrl);
+      if (!topPlace) {
+        throw new Error("Google Places did not find a matching museum.");
+      }
+
+      const placeName = asTrimmedString(topPlace.name);
+      if (!placeName) {
+        throw new Error("Google Places returned a result without a place resource name.");
+      }
+
+      const placeDetails = await fetchGooglePlaceDetails(
+        placeName,
+        googlePlacesApiKey,
+        googlePlacesApiUrl
+      );
+      const reviews = normalizeGoogleReviews(placeDetails.reviews);
+      const googlePlaceId = asTrimmedString(placeDetails.id) ?? placeIdFromPlaceName(placeDetails.name) ?? placeIdFromPlaceName(placeName);
+      const googleMapsUri = asHttpUrl(placeDetails.googleMapsUri);
+      const googleRating = asNumber(placeDetails.rating);
+      const googleUserRatingCount = asNumber(placeDetails.userRatingCount);
+
+      const cached = (await ctx.runMutation(api.museums.replaceGoogleReviewsForDashboard, {
+        museumId: args.museumId,
+        googleReviewsEnabled: true,
+        googlePlaceId,
+        googleMapsUri,
+        googleRating,
+        googleUserRatingCount,
+        reviews,
+      })) as {
+        reviewCount: number;
+        googleReviewsLastFetchedAt: number;
+      };
+
+      return {
+        searchQuery,
+        placesFound: true,
+        googlePlaceId,
+        googleMapsUri,
+        googleRating,
+        googleUserRatingCount,
+        googleReviewsLastFetchedAt: cached.googleReviewsLastFetchedAt,
+        reviewCount: cached.reviewCount,
+        reviews,
+      };
+    } catch (error) {
+      const message = toErrorMessage(error);
+      if (message.includes("ECONNREFUSED") || message.includes("ENOTFOUND")) {
+        throw new Error("Unable to reach Google Places API from Convex runtime. Check Google Places configuration.");
       }
       throw error;
     }

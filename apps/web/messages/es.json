@@ -357,6 +357,22 @@
         "websitePromptCta": "Ejecutar con sitio web",
         "imagesImported": "{count, plural, one {Se importó # imagen a la galería.} other {Se importaron # imágenes a la galería.}}"
       },
+      "googleReviews": {
+        "enableLabel": "Mostrar reseñas de Google Maps en la app móvil",
+        "enableDescription": "Las reseñas se almacenan desde Google Places, se etiquetan por separado y no afectan la calificación de Museum&.",
+        "refresh": "Actualizar reseñas",
+        "enableAndFetch": "Activar y obtener",
+        "refreshing": "Obteniendo reseñas...",
+        "cachedSummary": "{count, plural, one {# reseña almacenada} other {# reseñas almacenadas}}",
+        "ratingSummary": "Calificación de Google {rating} de {count, plural, one {# valoración} other {# valoraciones}}",
+        "notFetched": "Aún no hay reseñas de Google Maps almacenadas.",
+        "lastFetched": "Última actualización: {date}",
+        "refreshSuccess": "{count, plural, one {Se almacenó # reseña de Google Maps.} other {Se almacenaron # reseñas de Google Maps.}}",
+        "refreshFailed": "No se pudieron actualizar las reseñas de Google Maps.",
+        "refreshFailedAfterSave": "Los detalles del museo se guardaron, pero no se pudieron actualizar las reseñas de Google Maps: {message}",
+        "sourceLabel": "Google Maps",
+        "anonymousAuthor": "Usuario de Google Maps"
+      },
       "fields": {
         "name": "Nombre del museo",
         "tagline": "Eslogan",

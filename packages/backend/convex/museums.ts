@@ -100,6 +100,13 @@ async function listMuseumImagesBySort(ctx: QueryCtx | MutationCtx, museumId: Id<
     .collect();
 }
 
+async function listGoogleReviewsBySort(ctx: QueryCtx | MutationCtx, museumId: Id<"museums">) {
+  return await ctx.db
+    .query("museumGoogleReviews")
+    .withIndex("by_museum_sortOrder", (q) => q.eq("museumId", museumId))
+    .collect();
+}
+
 const museumLocationValidator = v.object({
   address: v.optional(v.string()),
   city: v.optional(v.string()),
@@ -113,6 +120,27 @@ const operatingHourValidator = v.object({
   isOpen: v.boolean(),
   openTime: v.string(),
   closeTime: v.string(),
+});
+
+const googleReviewVisitDateValidator = v.object({
+  year: v.optional(v.number()),
+  month: v.optional(v.number()),
+  day: v.optional(v.number()),
+});
+
+const googleReviewCacheInputValidator = v.object({
+  googleReviewName: v.string(),
+  authorName: v.optional(v.string()),
+  authorUri: v.optional(v.string()),
+  authorPhotoUri: v.optional(v.string()),
+  rating: v.number(),
+  text: v.optional(v.string()),
+  originalText: v.optional(v.string()),
+  languageCode: v.optional(v.string()),
+  relativePublishTimeDescription: v.optional(v.string()),
+  publishTime: v.optional(v.string()),
+  googleMapsUri: v.optional(v.string()),
+  visitDate: v.optional(googleReviewVisitDateValidator),
 });
 
 const analyticsBucketValidator = v.union(v.literal("day"), v.literal("week"));
@@ -133,6 +161,7 @@ const museumSnapshotValidator = v.object({
   imageUrl: v.optional(v.string()),
   website: v.optional(v.string()),
   phone: v.optional(v.string()),
+  googleReviewsEnabled: v.optional(v.boolean()),
   operatingHours: v.optional(v.array(operatingHourValidator)),
   accessibilityFeatures: v.optional(v.array(v.string())),
   accessibilityNotes: v.optional(v.string()),
@@ -285,6 +314,7 @@ function museumMatchesSnapshot(
     imageUrl?: string;
     website?: string;
     phone?: string;
+    googleReviewsEnabled?: boolean;
     operatingHours?: { day: string; isOpen: boolean; openTime: string; closeTime: string }[];
     accessibilityFeatures?: string[];
     accessibilityNotes?: string;
@@ -302,6 +332,7 @@ function museumMatchesSnapshot(
     imageUrl?: string;
     website?: string;
     phone?: string;
+    googleReviewsEnabled?: boolean;
     operatingHours?: { day: string; isOpen: boolean; openTime: string; closeTime: string }[];
     accessibilityFeatures?: string[];
     accessibilityNotes?: string;
@@ -324,6 +355,7 @@ function museumMatchesSnapshot(
     valuesEqual(museum.imageUrl, snapshot.imageUrl) &&
     valuesEqual(museum.website, snapshot.website) &&
     valuesEqual(museum.phone, snapshot.phone) &&
+    (museum.googleReviewsEnabled ?? false) === (snapshot.googleReviewsEnabled ?? false) &&
     operatingHoursEqual(museum.operatingHours, snapshot.operatingHours) &&
     stringArrayEqual(museum.accessibilityFeatures, snapshot.accessibilityFeatures) &&
     valuesEqual(museum.accessibilityNotes, snapshot.accessibilityNotes) &&
@@ -479,6 +511,7 @@ export const getMuseumDetailsForDashboard = query({
         imageUrl: museum.imageUrl,
         website: museum.website,
         phone: museum.phone,
+        googleReviewsEnabled: museum.googleReviewsEnabled ?? false,
         operatingHours: museum.operatingHours,
         accessibilityFeatures: museum.accessibilityFeatures,
         accessibilityNotes: museum.accessibilityNotes,
@@ -583,6 +616,7 @@ export const updateMuseumDetailsForDashboard = mutation({
       imageUrl: v.optional(v.string()),
       website: v.optional(v.string()),
       phone: v.optional(v.string()),
+      googleReviewsEnabled: v.optional(v.boolean()),
       operatingHours: v.optional(v.array(operatingHourValidator)),
       accessibilityFeatures: v.optional(v.array(v.string())),
       accessibilityNotes: v.optional(v.string()),
@@ -624,6 +658,7 @@ export const updateMuseumDetailsForDashboard = mutation({
       imageUrl: args.next.imageUrl,
       website: args.next.website,
       phone: args.next.phone,
+      googleReviewsEnabled: args.next.googleReviewsEnabled ?? false,
       operatingHours: args.next.operatingHours,
       accessibilityFeatures: args.next.accessibilityFeatures,
       accessibilityNotes: args.next.accessibilityNotes,
@@ -662,6 +697,109 @@ export const listMuseumImagesForDashboard = query({
     );
 
     return await listMuseumImagesBySort(ctx, args.museumId);
+  },
+});
+
+export const listGoogleReviewsForDashboard = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) return null;
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+
+    const reviews = await listGoogleReviewsBySort(ctx, args.museumId);
+    return {
+      googleReviewsEnabled: museum.googleReviewsEnabled ?? false,
+      googlePlaceId: museum.googlePlaceId,
+      googleMapsUri: museum.googleMapsUri,
+      googleRating: museum.googleRating,
+      googleUserRatingCount: museum.googleUserRatingCount,
+      googleReviewsLastFetchedAt: museum.googleReviewsLastFetchedAt,
+      reviews,
+    };
+  },
+});
+
+export const listGoogleReviewsForMuseum = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum?.googleReviewsEnabled) return [];
+    return await listGoogleReviewsBySort(ctx, args.museumId);
+  },
+});
+
+export const replaceGoogleReviewsForDashboard = mutation({
+  args: {
+    museumId: v.id("museums"),
+    googleReviewsEnabled: v.optional(v.boolean()),
+    googlePlaceId: v.optional(v.string()),
+    googleMapsUri: v.optional(v.string()),
+    googleRating: v.optional(v.number()),
+    googleUserRatingCount: v.optional(v.number()),
+    reviews: v.array(googleReviewCacheInputValidator),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) throw new Error("Museum not found");
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+
+    const existingReviews = await ctx.db
+      .query("museumGoogleReviews")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const review of existingReviews) {
+      await ctx.db.delete(review._id);
+    }
+
+    const now = Date.now();
+    for (const [index, review] of args.reviews.entries()) {
+      await ctx.db.insert("museumGoogleReviews", {
+        museumId: args.museumId,
+        googleReviewName: review.googleReviewName,
+        authorName: review.authorName,
+        authorUri: review.authorUri,
+        authorPhotoUri: review.authorPhotoUri,
+        rating: review.rating,
+        text: review.text,
+        originalText: review.originalText,
+        languageCode: review.languageCode,
+        relativePublishTimeDescription: review.relativePublishTimeDescription,
+        publishTime: review.publishTime,
+        googleMapsUri: review.googleMapsUri,
+        visitDate: review.visitDate,
+        sortOrder: index,
+        fetchedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await ctx.db.patch(args.museumId, {
+      googleReviewsEnabled: args.googleReviewsEnabled ?? true,
+      googlePlaceId: args.googlePlaceId,
+      googleMapsUri: args.googleMapsUri,
+      googleRating: args.googleRating,
+      googleUserRatingCount: args.googleUserRatingCount,
+      googleReviewsLastFetchedAt: now,
+    });
+
+    return {
+      reviewCount: args.reviews.length,
+      googleRating: args.googleRating,
+      googleUserRatingCount: args.googleUserRatingCount,
+      googleReviewsLastFetchedAt: now,
+    };
   },
 });
 
