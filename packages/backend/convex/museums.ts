@@ -665,6 +665,22 @@ export const listMuseumImagesForDashboard = query({
   },
 });
 
+export const listMuseumImagesForMuseum = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) return [];
+    const images = await listMuseumImagesBySort(ctx, args.museumId);
+    return images.map((image) => ({
+      _id: image._id,
+      imageUrl: image.imageUrl,
+      alt: image.alt,
+      sortOrder: image.sortOrder,
+      isPrimary: image.isPrimary,
+    }));
+  },
+});
+
 export const addMuseumImageForDashboard = mutation({
   args: {
     museumId: v.id("museums"),

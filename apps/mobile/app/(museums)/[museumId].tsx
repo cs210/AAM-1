@@ -1,5 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, ScrollView, Pressable, FlatList, Image, Modal, Linking, Alert } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Pressable,
+  FlatList,
+  Image,
+  Modal,
+  Linking,
+  Alert,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
@@ -16,6 +28,7 @@ import {
   PencilIcon,
   StarIcon,
   BookmarkIcon,
+  ImagesIcon,
 } from 'lucide-react-native';
 import { CategoryTag } from '../../components/category-tag';
 import { EventCard, EventCardData } from '../../components/event-card';
@@ -48,8 +61,139 @@ function normalizeExternalUrl(url: string): string {
   return `https://${url}`;
 }
 
+type MuseumGalleryImage = {
+  _id: Id<'museumImages'> | string;
+  imageUrl: string;
+  alt?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
+};
+
+type OfficialPhotoItem = {
+  id: string;
+  imageUrl: string;
+  alt?: string;
+  isPrimary: boolean;
+};
+
+function OfficialPhotoCarousel({
+  museumName,
+  photos,
+  width,
+  onPreview,
+  onImageError,
+}: {
+  museumName: string;
+  photos: OfficialPhotoItem[];
+  width: number;
+  onPreview: (imageUrl: string) => void;
+  onImageError: (imageUrl: string) => void;
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const listRef = useRef<FlatList<OfficialPhotoItem>>(null);
+  const hasMultiplePhotos = photos.length > 1;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [museumName, photos.length]);
+
+  const handleThumbnailPress = (index: number) => {
+    setActiveIndex(index);
+    listRef.current?.scrollToIndex({ index, animated: true });
+  };
+
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+    setActiveIndex(Math.max(0, Math.min(nextIndex, photos.length - 1)));
+  };
+
+  return (
+    <View className="mb-3 overflow-hidden rounded-[22px] bg-muted">
+      <FlatList
+        ref={listRef}
+        data={photos}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        bounces={false}
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScrollEnd}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+        renderItem={({ item }) => (
+          <Pressable
+            className="h-[220px] justify-end overflow-hidden bg-muted active:opacity-95"
+            style={{ width }}
+            onPress={() => onPreview(item.imageUrl)}>
+            <Image
+              source={{ uri: item.imageUrl }}
+              className="absolute inset-0 size-full"
+              resizeMode="cover"
+              accessibilityLabel={item.alt ?? museumName}
+              onError={() => onImageError(item.imageUrl)}
+            />
+            <View className="absolute inset-0 bg-black/30" />
+            <View className="px-4 pb-4">
+              <Text className="text-2xl font-bold text-white" numberOfLines={2}>
+                {museumName}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+      />
+
+      <View className="absolute right-3 top-3 flex-row items-center gap-2 rounded-full bg-black/50 px-3 py-1.5">
+        <ImagesIcon size={14} color="#ffffff" />
+        <Text className="text-xs font-semibold text-white">
+          {activeIndex + 1}/{photos.length}
+        </Text>
+      </View>
+
+      {hasMultiplePhotos ? (
+        <View className="absolute bottom-3 right-3 flex-row gap-1.5">
+          {photos.map((photo, index) => (
+            <View
+              key={photo.id}
+              className={cn(
+                'h-1.5 rounded-full bg-white',
+                index === activeIndex ? 'w-5 opacity-95' : 'w-1.5 opacity-45'
+              )}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      {hasMultiplePhotos ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="bg-card"
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 12, gap: 8 }}>
+          {photos.map((photo, index) => (
+            <Pressable
+              key={`thumb-${photo.id}`}
+              className={cn(
+                'overflow-hidden rounded-[10px] border-2 bg-muted active:opacity-80',
+                index === activeIndex ? 'border-primary' : 'border-transparent'
+              )}
+              onPress={() => handleThumbnailPress(index)}>
+              <Image
+                source={{ uri: photo.imageUrl }}
+                className="size-[58px]"
+                resizeMode="cover"
+                accessibilityLabel={photo.alt ?? museumName}
+                onError={() => onImageError(photo.imageUrl)}
+              />
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+}
+
 export default function MuseumDetailScreen() {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { theme } = useUniwind();
   const bookmarkIconColor = theme === 'dark' ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
   const bookmarkUnselectedIconColor = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
@@ -85,6 +229,10 @@ export default function MuseumDetailScreen() {
   const museum = useQuery(api.museums.getMuseum, 
     effectiveId ? { id: effectiveId as Id<"museums"> } : "skip"
   );
+  const museumImages = useQuery(
+    api.museums.listMuseumImagesForMuseum,
+    effectiveId ? { museumId: effectiveId as Id<'museums'> } : 'skip'
+  ) as MuseumGalleryImage[] | undefined;
   
   // Fetch events for this museum
   const events = useQuery(api.events.getEventsByMuseum, 
@@ -170,12 +318,74 @@ export default function MuseumDetailScreen() {
 
   const [editingCheckIn, setEditingCheckIn] = useState<UserCheckIn | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [failedOfficialPhotoUrls, setFailedOfficialPhotoUrls] = useState<Set<string>>(() => new Set());
   const [showMoreDetails, setShowMoreDetails] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
 
   useEffect(() => {
     setShowMoreDetails(false);
+    setFailedOfficialPhotoUrls(new Set());
   }, [effectiveId]);
+
+  const officialPhotoItems = useMemo(() => {
+    if (!museum) return [];
+
+    const itemsByUrl = new Map<string, OfficialPhotoItem>();
+    const addPhoto = (photo: OfficialPhotoItem) => {
+      if (!photo.imageUrl || failedOfficialPhotoUrls.has(photo.imageUrl)) return;
+      const existing = itemsByUrl.get(photo.imageUrl);
+      if (existing) {
+        itemsByUrl.set(photo.imageUrl, {
+          ...existing,
+          isPrimary: existing.isPrimary || photo.isPrimary,
+          alt: existing.alt ?? photo.alt,
+        });
+        return;
+      }
+      itemsByUrl.set(photo.imageUrl, photo);
+    };
+
+    if (museum.imageUrl) {
+      addPhoto({
+        id: `primary-${museum.imageUrl}`,
+        imageUrl: museum.imageUrl,
+        alt: museum.name,
+        isPrimary: true,
+      });
+    }
+
+    const sortedMuseumImages = [...(museumImages ?? [])].sort((left, right) => {
+      if (left.isPrimary && !right.isPrimary) return -1;
+      if (!left.isPrimary && right.isPrimary) return 1;
+      return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+    });
+
+    for (const image of sortedMuseumImages) {
+      addPhoto({
+        id: String(image._id),
+        imageUrl: image.imageUrl,
+        alt: image.alt ?? museum.name,
+        isPrimary: Boolean(image.isPrimary || image.imageUrl === museum.imageUrl),
+      });
+    }
+
+    return Array.from(itemsByUrl.values()).sort((left, right) => {
+      if (left.isPrimary && !right.isPrimary) return -1;
+      if (!left.isPrimary && right.isPrimary) return 1;
+      return 0;
+    });
+  }, [failedOfficialPhotoUrls, museum, museumImages]);
+
+  const carouselWidth = Math.max(280, windowWidth - 40);
+
+  const handleOfficialPhotoError = React.useCallback((imageUrl: string) => {
+    setFailedOfficialPhotoUrls((current) => {
+      if (current.has(imageUrl)) return current;
+      const next = new Set(current);
+      next.add(imageUrl);
+      return next;
+    });
+  }, []);
 
   const { upcomingItems, ongoingItems } = useMemo(() => {
     if (!events || !exhibitions) {
@@ -479,21 +689,15 @@ export default function MuseumDetailScreen() {
             style={{ flex: 1 }}
             contentContainerStyle={{ padding: 20, paddingBottom: 32 + insets.bottom }}
             showsVerticalScrollIndicator={false}>
-            {museum.imageUrl && (
-              <View className="mb-2.5 h-[150px] justify-end overflow-hidden rounded-[18px] bg-muted">
-                <Image
-                  source={{ uri: museum.imageUrl }}
-                  className="absolute inset-0 size-full"
-                  resizeMode="cover"
-                />
-                <View className="absolute inset-0 bg-black/35" />
-                <Text
-                  className="px-4 pb-3.5 text-2xl font-bold text-white"
-                  numberOfLines={2}>
-                  {museum.name}
-                </Text>
-              </View>
-            )}
+            {officialPhotoItems.length > 0 ? (
+              <OfficialPhotoCarousel
+                museumName={museum.name}
+                photos={officialPhotoItems}
+                width={carouselWidth}
+                onPreview={setPreviewImageUrl}
+                onImageError={handleOfficialPhotoError}
+              />
+            ) : null}
 
             <View className="mb-5 rounded-2xl border border-border bg-card p-5">
               <Text className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
