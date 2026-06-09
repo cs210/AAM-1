@@ -148,6 +148,39 @@ export default defineSchema({
     .index("by_slug", ["museumSlug"])
     .index("by_active", ["isActive"]),
 
+  softwareFairFeatureConfigs: defineTable({
+    key: v.string(),
+    enabled: v.boolean(),
+    announcementEnabled: v.boolean(),
+    announcementTitle: v.optional(v.string()),
+    announcementBody: v.optional(v.string()),
+    announcementCtaLabel: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_key", ["key"]),
+
+  softwareFairBoothAssignments: defineTable({
+    featureKey: v.string(),
+    museumId: v.id("museums"),
+    boothNumber: v.number(),
+    projectName: v.string(),
+    genres: v.array(v.string()),
+    teamMembers: v.array(v.string()),
+    description: v.optional(v.string()),
+    guideUrl: v.optional(v.string()),
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.string()),
+    updatedBy: v.optional(v.string()),
+  })
+    .index("by_feature", ["featureKey"])
+    .index("by_feature_active_sortOrder", ["featureKey", "isActive", "sortOrder"])
+    .index("by_feature_museum", ["featureKey", "museumId"])
+    .index("by_feature_boothNumber", ["featureKey", "boothNumber"]),
+
   // User Following (tracks which museums a user follows)
   userFollows: defineTable({
     userId: v.string(), // Better Auth user ID
