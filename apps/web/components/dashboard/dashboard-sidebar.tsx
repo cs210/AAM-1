@@ -83,15 +83,33 @@ export function DashboardSidebar({
   const [isLanguageOpen, setIsLanguageOpen] = React.useState(false)
   const getTabLabel = (id: AllDashboardTabId) =>
     tTabs(dashboardTabMessageKeys[id])
-  const museumOptionById = new Map(
-    museumContextOptions.map((option) => [option.id, option]),
+  const museumLabelCounts = React.useMemo(() => {
+    const counts = new Map<string, number>()
+    museumContextOptions.forEach((option) => {
+      counts.set(option.label, (counts.get(option.label) ?? 0) + 1)
+    })
+    return counts
+  }, [museumContextOptions])
+  const comboboxOptions = React.useMemo(
+    () =>
+      museumContextOptions.map((option) => ({
+        ...option,
+        value:
+          (museumLabelCounts.get(option.label) ?? 0) > 1
+            ? `${option.label} (${option.id.slice(-6)})`
+            : option.label,
+      })),
+    [museumContextOptions, museumLabelCounts],
   )
-  const comboboxItems = museumContextOptions.map((option) => option.label)
+  const museumOptionById = new Map(
+    comboboxOptions.map((option) => [option.id, option]),
+  )
+  const comboboxItems = comboboxOptions.map((option) => option.value)
   const activeMuseumOptionLabel = activeMuseumContextId
-    ? (museumOptionById.get(activeMuseumContextId)?.label ?? "")
+    ? (museumOptionById.get(activeMuseumContextId)?.value ?? "")
     : ""
-  const labelToMuseumId = new Map(
-    museumContextOptions.map((option) => [option.label, option.id]),
+  const valueToMuseumId = new Map(
+    comboboxOptions.map((option) => [option.value, option.id]),
   )
 
   return (
@@ -113,7 +131,7 @@ export function DashboardSidebar({
                 value={activeMuseumOptionLabel || null}
                 onValueChange={(value) => {
                   const museumId = value
-                    ? labelToMuseumId.get(value)
+                    ? valueToMuseumId.get(value)
                     : undefined
                   if (museumId) onMuseumContextChange?.(museumId)
                 }}

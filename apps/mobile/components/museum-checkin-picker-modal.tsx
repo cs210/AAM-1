@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/c
 import { Icon } from '@/components/ui/icon';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { SearchFieldRow } from '@/components/search-field-row';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 import {
   MuseumRequestSheet,
   normalizeMuseumRequestName,
@@ -34,6 +35,13 @@ type MuseumWithStats = {
   name: string;
   location?: { city?: string; state?: string; country?: string };
   distanceMeters?: number;
+  softwareFairBooth?: {
+    boothNumber: number;
+    projectName: string;
+    genres: string[];
+    teamMembers: string[];
+    description?: string | null;
+  };
 };
 
 async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
@@ -87,6 +95,8 @@ function formatDistance(distanceMeters: number | undefined): string | null {
 }
 
 export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
   const [search, setSearch] = useState('');
   const [requestModalVisible, setRequestModalVisible] = useState(false);
   const [requestedMuseumNames, setRequestedMuseumNames] = useState<Set<string>>(() => new Set());
@@ -131,20 +141,45 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
 
   const museums = useQuery(
     api.museums.listMuseumsWithStats,
-    locState.status === 'ok' ? { viewer: locState.viewer } : {}
+    !isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
   );
+  const softwareFairMuseums = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
+  );
+  const activeMuseums = (isSoftwareFairMode ? softwareFairMuseums : museums) as
+    | MuseumWithStats[]
+    | undefined;
 
   const filtered = useMemo(() => {
-    if (!museums) return [];
+    if (!activeMuseums) return [];
     const q = search.trim().toLowerCase();
     let list: MuseumWithStats[] = !q
-      ? [...museums]
-      : museums.filter((m) => {
+      ? [...activeMuseums]
+      : activeMuseums.filter((m) => {
           const loc = locationSubtitle(m);
-          return (
-            m.name.toLowerCase().includes(q) ||
-            (loc != null && loc.toLowerCase().includes(q))
-          );
+          const booth = m.softwareFairBooth;
+          const haystack = [
+            m.name,
+            loc,
+            booth?.projectName,
+            booth?.boothNumber != null ? String(booth.boothNumber) : undefined,
+            booth?.genres.join(' '),
+            booth?.teamMembers.join(' '),
+            booth?.description ?? undefined,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(q);
         });
 
     // Sort by distance if available, otherwise alphabetically
@@ -160,7 +195,7 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
     });
 
     return list;
-  }, [museums, search]);
+  }, [activeMuseums, search]);
 
   const sortedByDistance = useMemo(() => {
     return filtered.length > 0 && typeof filtered[0].distanceMeters === 'number';
@@ -211,7 +246,9 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
           <View className="border-b border-border px-5 pb-3 pt-3">
             <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
             <View className="flex-row items-center justify-between gap-3">
-              <Text className="flex-1 text-xl font-bold text-foreground">Check in</Text>
+              <Text className="flex-1 text-xl font-bold text-foreground">
+                {isSoftwareFairMode ? 'Check in at a booth' : 'Check in'}
+              </Text>
               <Button
                 variant="ghost"
                 size="icon"
@@ -223,8 +260,10 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
             </View>
             <Text className="mt-1 text-sm text-muted-foreground">
               {sortedByDistance
-                ? 'Nearest museums first'
-                : 'Choose a museum to log your visit.'}
+                ? `Nearest ${isSoftwareFairMode ? 'booths' : 'museums'} first`
+                : isSoftwareFairMode
+                  ? 'Choose a booth to log your visit.'
+                  : 'Choose a museum to log your visit.'}
             </Text>
           </View>
 
@@ -232,16 +271,16 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
             <SearchFieldRow
               value={search}
               onChangeText={setSearch}
-              placeholder="Search museums..."
+              placeholder={isSoftwareFairMode ? 'Search booths, teams...' : 'Search museums...'}
               className="mx-0 mb-3 mt-0"
             />
           </View>
 
-          {museums === undefined ? (
+          {activeMuseums === undefined ? (
             <View className="flex-1 items-center justify-center py-16">
               <BrandActivityIndicator size="large" />
               <Text variant="muted" className="mt-3 text-base">
-                Loading museums...
+                Loading {isSoftwareFairMode ? 'booths' : 'museums'}...
               </Text>
             </View>
           ) : (
@@ -254,33 +293,49 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
               ListEmptyComponent={
                 <View className="items-center px-4 py-8">
                   <Text className="text-foreground text-center text-base font-semibold">
-                    {museumRequestSubmitted ? 'Request sent' : 'No museums match your search.'}
+                    {isSoftwareFairMode
+                      ? 'No booths match your search.'
+                      : museumRequestSubmitted
+                        ? 'Request sent'
+                        : 'No museums match your search.'}
                   </Text>
-                  <Text className="text-muted-foreground mt-2 text-center text-sm leading-5">
-                    {canRequestMuseum
-                      ? museumRequestSubmitted
-                        ? `Thanks for telling us about "${trimmedSearch}". Our team can review it for Museum&.`
-                        : `Want us to add "${trimmedSearch}"? Send the details to our team for review.`
-                      : 'Search for a museum name, then request it if it is missing.'}
-                  </Text>
-                  {canRequestMuseum && !museumRequestSubmitted ? (
-                    <Button
-                      className="mt-4 rounded-xl px-6"
-                      onPress={() => setRequestModalVisible(true)}>
-                      <Text className="text-primary-foreground text-base font-semibold">
-                        Request this museum
+                  {!isSoftwareFairMode ? (
+                    <>
+                      <Text className="text-muted-foreground mt-2 text-center text-sm leading-5">
+                        {canRequestMuseum
+                          ? museumRequestSubmitted
+                            ? `Thanks for telling us about "${trimmedSearch}". Our team can review it for Museum&.`
+                            : `Want us to add "${trimmedSearch}"? Send the details to our team for review.`
+                          : 'Search for a museum name, then request it if it is missing.'}
                       </Text>
-                    </Button>
+                      {canRequestMuseum && !museumRequestSubmitted ? (
+                        <Button
+                          className="mt-4 rounded-xl px-6"
+                          onPress={() => setRequestModalVisible(true)}>
+                          <Text className="text-primary-foreground text-base font-semibold">
+                            Request this museum
+                          </Text>
+                        </Button>
+                      ) : null}
+                    </>
                   ) : null}
                 </View>
               }
               renderItem={({ item }) => {
                 const sub = locationSubtitle(item);
                 const dist = formatDistance(item.distanceMeters);
+                const booth = item.softwareFairBooth;
+                const title = booth?.projectName ?? item.name;
+                const subtitle = booth
+                  ? [
+                      `Booth ${booth.boothNumber}`,
+                      booth.teamMembers.length > 0 ? booth.teamMembers.join(', ') : item.name,
+                    ].join(' · ')
+                  : sub;
                 return (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Check in at ${item.name}${dist ? `, ${dist} away` : ''}`}
+                    accessibilityLabel={`Check in at ${isSoftwareFairMode ? 'booth ' : ''}${title}${dist ? `, ${dist} away` : ''}`}
                     onPress={() => onPickMuseum(item._id)}
                     className="mb-2 active:opacity-90">
                     <Card className="gap-0 border py-0 shadow-sm">
@@ -288,10 +343,10 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
                         <View className="flex-row items-start justify-between gap-3">
                           <View className="min-w-0 flex-1">
                             <CardTitle className="text-base font-semibold leading-snug">
-                              {item.name}
+                              {title}
                             </CardTitle>
-                            {sub ? (
-                              <CardDescription numberOfLines={2}>{sub}</CardDescription>
+                            {subtitle ? (
+                              <CardDescription numberOfLines={2}>{subtitle}</CardDescription>
                             ) : null}
                           </View>
                           {dist ? (

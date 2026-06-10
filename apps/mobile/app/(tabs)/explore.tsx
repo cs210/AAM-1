@@ -8,6 +8,7 @@ import {
   Image,
   Keyboard,
   TouchableWithoutFeedback,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +18,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { MuseumMapView } from '../../components/museum-map-view';
+import { SoftwareFairMapView } from '@/components/software-fair-map-view';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
@@ -33,6 +35,8 @@ import { cn } from '@/lib/utils';
 import { getLastExploreTabIndex, setLastExploreTabIndex } from '@/lib/last-people-search';
 import { userProfileHref } from '@/lib/user-profile-navigation';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
+import { SOFTWARE_FAIR_GENRE_COLORS } from '@/lib/software-fair-map-layout';
 import appsFlyer from 'react-native-appsflyer';
 
 const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
@@ -61,6 +65,97 @@ appsFlyer.setAppInviteOneLinkID('Rz7b');
 const MUSEUMS_PER_PAGE = 10;
 const LIST_PADDING_BOTTOM = { paddingBottom: 80 } as const;
 const FEED_LIST_PADDING = { paddingBottom: 80, paddingHorizontal: 20 } as const;
+const SOFTWARE_FAIR_GENRE_ORDER = Object.keys(SOFTWARE_FAIR_GENRE_COLORS);
+
+function normalizeGenre(value: string) {
+  return value.trim();
+}
+
+function boothHasGenre(museum: MuseumCardData, selectedGenre: string | null) {
+  if (!selectedGenre) return true;
+  const booth = museum.softwareFairBooth;
+  if (!booth) return false;
+  const normalizedSelected = normalizeGenre(selectedGenre).toLowerCase();
+  return booth.genres.some((genre) => normalizeGenre(genre).toLowerCase() === normalizedSelected);
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const raw = hex.replace('#', '');
+  if (raw.length !== 6) return `rgba(0,0,0,${alpha})`;
+  const red = Number.parseInt(raw.slice(0, 2), 16);
+  const green = Number.parseInt(raw.slice(2, 4), 16);
+  const blue = Number.parseInt(raw.slice(4, 6), 16);
+  return `rgba(${red},${green},${blue},${alpha})`;
+}
+
+function splitGenresIntoRows(genres: string[]) {
+  const midpoint = Math.ceil(genres.length / 2);
+  return [genres.slice(0, midpoint), genres.slice(midpoint)].filter((row) => row.length > 0);
+}
+
+function SoftwareFairGenreFilter({
+  genres,
+  selectedGenre,
+  onSelectGenre,
+}: {
+  genres: string[];
+  selectedGenre: string | null;
+  onSelectGenre: (genre: string | null) => void;
+}) {
+  if (genres.length === 0) return null;
+  const genreRows = splitGenresIntoRows(genres);
+
+  return (
+    <View className="border-border/70 bg-card/70 mx-5 mb-2 rounded-2xl border p-2.5 shadow-sm shadow-black/5">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingRight: 4 }}>
+        <View className="gap-1.5">
+          {genreRows.map((rowGenres, rowIndex) => (
+            <View key={`genre-row-${rowIndex}`} className="flex-row gap-2">
+              {rowGenres.map((genre) => {
+                const color = SOFTWARE_FAIR_GENRE_COLORS[genre] ?? SOFTWARE_FAIR_GENRE_COLORS.Other;
+                const isSelected = selectedGenre === genre;
+                return (
+                  <Pressable
+                    key={genre}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`${isSelected ? 'Clear' : 'Filter by'} ${genre}`}
+                    onPress={() => onSelectGenre(isSelected ? null : genre)}
+                    className={cn(
+                      'flex-row items-center gap-1.5 self-start rounded-full border px-2.5 py-1.5 active:opacity-80',
+                      isSelected ? 'border-transparent' : 'border-border bg-background/70'
+                    )}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: hexToRgba(color, 0.22),
+                            borderColor: hexToRgba(color, 0.45),
+                          }
+                        : undefined
+                    }>
+                    <View className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    <Text
+                      className={cn(
+                        'text-xs font-semibold',
+                        isSelected ? 'text-foreground' : 'text-muted-foreground'
+                      )}
+                      numberOfLines={1}>
+                      {genre}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
 
 function MuseumsRoute({
   museumSearch,
@@ -68,6 +163,7 @@ function MuseumsRoute({
   museums,
   pagedMuseums,
   filteredMuseums,
+  mapMuseums,
   museumPage,
   totalMuseumPages,
   onPrevPage,
@@ -78,14 +174,19 @@ function MuseumsRoute({
   onRetryLocation,
   viewMode,
   onToggleViewMode,
+  isSoftwareFairMode,
+  genreOptions,
+  selectedGenre,
+  onSelectGenre,
   onRequestMuseum,
   museumRequestSubmitted,
 }: {
   museumSearch: string;
   setMuseumSearch: (v: string) => void;
-  museums: ReturnType<typeof useQuery<typeof api.museums.listMuseumsWithStats>>;
+  museums: MuseumCardData[] | undefined;
   pagedMuseums: MuseumCardData[];
   filteredMuseums: MuseumCardData[];
+  mapMuseums: MuseumCardData[];
   museumPage: number;
   totalMuseumPages: number;
   onPrevPage: () => void;
@@ -96,9 +197,14 @@ function MuseumsRoute({
   onRetryLocation: () => void;
   viewMode: 'list' | 'map';
   onToggleViewMode: () => void;
+  isSoftwareFairMode: boolean;
+  genreOptions: string[];
+  selectedGenre: string | null;
+  onSelectGenre: (genre: string | null) => void;
   onRequestMuseum: () => void;
   museumRequestSubmitted: boolean;
 }) {
+  const noun = isSoftwareFairMode ? 'booths' : 'museums';
   const requestedMuseumName = museumSearch.trim();
   const canRequestMuseum = requestedMuseumName.length >= 2;
 
@@ -109,7 +215,7 @@ function MuseumsRoute({
           <SearchFieldRow
             value={museumSearch}
             onChangeText={setMuseumSearch}
-            placeholder="Search museums..."
+            placeholder={isSoftwareFairMode ? 'Search booths, teams...' : 'Search museums...'}
           />
         </View>
         <Pressable
@@ -124,11 +230,18 @@ function MuseumsRoute({
           )}
         </Pressable>
       </View>
+      {isSoftwareFairMode ? (
+        <SoftwareFairGenreFilter
+          genres={genreOptions}
+          selectedGenre={selectedGenre}
+          onSelectGenre={onSelectGenre}
+        />
+      ) : null}
       {sortedByDistance ? (
         <Text
           className="text-muted-foreground mx-5 mt-[-2px] mb-2 text-xs"
           accessibilityLiveRegion="polite">
-          Nearest first - distances in miles from you
+          Nearest {noun} first - distances in miles from you
         </Text>
       ) : locationNote ? (
         <View className="border-border bg-muted/30 mx-5 mt-[-2px] mb-3 rounded-xl border p-3">
@@ -148,13 +261,19 @@ function MuseumsRoute({
         </View>
       ) : null}
 
-      {viewMode === 'map' ? (
+      {viewMode === 'map' && isSoftwareFairMode ? (
+        <SoftwareFairMapView
+          booths={mapMuseums}
+          isLoading={museums === undefined}
+          selectedGenre={selectedGenre}
+        />
+      ) : viewMode === 'map' ? (
         <MuseumMapView museums={filteredMuseums} isLoading={museums === undefined} />
       ) : museums === undefined ? (
         <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
           <Text variant="muted" className="mt-3 text-base">
-            Loading museums...
+            Loading {noun}...
           </Text>
         </View>
       ) : (
@@ -185,21 +304,29 @@ function MuseumsRoute({
           ListEmptyComponent={
             <View className="items-center px-8 py-12">
               <Text className="text-foreground text-center text-lg font-semibold">
-                {museumRequestSubmitted ? 'Request sent' : 'No museums match your search'}
+                {isSoftwareFairMode
+                  ? `No booths match your ${selectedGenre ? 'filters' : 'search'}`
+                  : museumRequestSubmitted
+                    ? 'Request sent'
+                    : 'No museums match your search'}
               </Text>
-              <Text className="text-muted-foreground mt-2 text-center text-base leading-6">
-                {canRequestMuseum
-                  ? museumRequestSubmitted
-                    ? `Thanks for telling us about "${requestedMuseumName}". Our team can review it for Museum&.`
-                    : `Want us to add "${requestedMuseumName}"? Send the details to our team for review.`
-                  : 'Search for a museum name, then request it if it is missing.'}
-              </Text>
-              {canRequestMuseum && !museumRequestSubmitted ? (
-                <Button className="mt-5 rounded-xl px-6" onPress={onRequestMuseum}>
-                  <Text className="text-primary-foreground text-base font-semibold">
-                    Request this museum
+              {!isSoftwareFairMode ? (
+                <>
+                  <Text className="text-muted-foreground mt-2 text-center text-base leading-6">
+                    {canRequestMuseum
+                      ? museumRequestSubmitted
+                        ? `Thanks for telling us about "${requestedMuseumName}". Our team can review it for Museum&.`
+                        : `Want us to add "${requestedMuseumName}"? Send the details to our team for review.`
+                      : 'Search for a museum name, then request it if it is missing.'}
                   </Text>
-                </Button>
+                  {canRequestMuseum && !museumRequestSubmitted ? (
+                    <Button className="mt-5 rounded-xl px-6" onPress={onRequestMuseum}>
+                      <Text className="text-primary-foreground text-base font-semibold">
+                        Request this museum
+                      </Text>
+                    </Button>
+                  ) : null}
+                </>
               ) : null}
             </View>
           }
@@ -416,13 +543,15 @@ function PeopleSearchRoute({
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const tabs = React.useMemo(
     () => [
       { key: 'people', title: 'People' },
-      { key: 'museums', title: 'Museums' },
+      { key: 'museums', title: isSoftwareFairMode ? 'Booths' : 'Museums' },
     ],
-    []
+    [isSoftwareFairMode]
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
@@ -451,23 +580,70 @@ export default function SearchScreen() {
   const [museumRequestModalVisible, setMuseumRequestModalVisible] = useState(false);
   const [requestedMuseumNames, setRequestedMuseumNames] = useState<Set<string>>(() => new Set());
   const [museumPage, setMuseumPage] = useState(1);
-  const { locState, retry } = useViewerLocation();
+  const [selectedSoftwareFairGenre, setSelectedSoftwareFairGenre] = useState<string | null>(null);
+  const shouldResolveViewerLocation = !isSoftwareFairMode || viewMode !== 'map';
+  const { locState, retry } = useViewerLocation({ enabled: shouldResolveViewerLocation });
+  const viewerArg =
+    shouldResolveViewerLocation && locState.status === 'ok' ? locState.viewer : undefined;
 
   const museums = useQuery(
     api.museums.listMuseumsWithStats,
-    locState.status === 'ok' ? { viewer: locState.viewer } : {}
+    !isSoftwareFairMode ? (viewerArg ? { viewer: viewerArg } : {}) : 'skip'
   );
-  const filteredMuseums = useMemo(() => {
-    if (!museums) return [];
-    if (!museumSearch.trim()) return museums;
+  const softwareFairMuseums = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode ? (viewerArg ? { viewer: viewerArg } : {}) : 'skip'
+  );
+  const activeMuseums = (isSoftwareFairMode ? softwareFairMuseums : museums) as
+    | MuseumCardData[]
+    | undefined;
+  const softwareFairGenreOptions = useMemo(() => {
+    if (!isSoftwareFairMode || !activeMuseums) return [];
+    const activeGenres = new Set<string>();
+    activeMuseums.forEach((museum) => {
+      museum.softwareFairBooth?.genres.forEach((genre) => {
+        const normalized = normalizeGenre(genre);
+        if (normalized) activeGenres.add(normalized);
+      });
+    });
+
+    const orderedGenres = SOFTWARE_FAIR_GENRE_ORDER.filter((genre) => activeGenres.has(genre));
+    const extraGenres = [...activeGenres]
+      .filter((genre) => !SOFTWARE_FAIR_GENRE_ORDER.includes(genre))
+      .sort((a, b) => a.localeCompare(b));
+    return [...orderedGenres, ...extraGenres];
+  }, [activeMuseums, isSoftwareFairMode]);
+
+  const searchFilteredMuseums = useMemo(() => {
+    if (!activeMuseums) return [];
+    if (!museumSearch.trim()) return activeMuseums;
     const lowerSearch = museumSearch.toLowerCase();
-    return museums.filter(
-      (museum) =>
-        museum.name.toLowerCase().includes(lowerSearch) ||
-        museum.location?.city?.toLowerCase().includes(lowerSearch) ||
-        museum.location?.state?.toLowerCase().includes(lowerSearch)
+    return activeMuseums.filter((museum) => {
+      const booth = museum.softwareFairBooth;
+      const haystack = [
+        museum.name,
+        museum.category,
+        museum.location?.city,
+        museum.location?.state,
+        booth?.projectName,
+        booth?.boothNumber != null ? String(booth.boothNumber) : undefined,
+        booth?.genres.join(' '),
+        booth?.teamMembers.join(' '),
+        booth?.description ?? undefined,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(lowerSearch);
+    });
+  }, [activeMuseums, museumSearch]);
+  const filteredMuseums = useMemo(() => {
+    if (!isSoftwareFairMode || !selectedSoftwareFairGenre) return searchFilteredMuseums;
+    return searchFilteredMuseums.filter((museum) =>
+      boothHasGenre(museum, selectedSoftwareFairGenre)
     );
-  }, [museums, museumSearch]);
+  }, [isSoftwareFairMode, searchFilteredMuseums, selectedSoftwareFairGenre]);
+  const mapMuseums = isSoftwareFairMode ? searchFilteredMuseums : filteredMuseums;
   const totalMuseumPages = useMemo(
     () => Math.max(1, Math.ceil(filteredMuseums.length / MUSEUMS_PER_PAGE)),
     [filteredMuseums.length]
@@ -479,7 +655,18 @@ export default function SearchScreen() {
   }, [filteredMuseums, currentMuseumPage]);
   useEffect(() => {
     setMuseumPage(1);
-  }, [museumSearch]);
+  }, [museumSearch, isSoftwareFairMode, selectedSoftwareFairGenre]);
+  useEffect(() => {
+    setSelectedSoftwareFairGenre(null);
+  }, [isSoftwareFairMode]);
+  useEffect(() => {
+    if (
+      selectedSoftwareFairGenre &&
+      !softwareFairGenreOptions.includes(selectedSoftwareFairGenre)
+    ) {
+      setSelectedSoftwareFairGenre(null);
+    }
+  }, [selectedSoftwareFairGenre, softwareFairGenreOptions]);
   useEffect(() => {
     if (museumPage > totalMuseumPages) {
       setMuseumPage(totalMuseumPages);
@@ -604,19 +791,28 @@ export default function SearchScreen() {
             <MuseumsRoute
               museumSearch={museumSearch}
               setMuseumSearch={setMuseumSearch}
-              museums={museums}
+              museums={activeMuseums}
               pagedMuseums={pagedMuseums}
               filteredMuseums={filteredMuseums}
+              mapMuseums={mapMuseums}
               museumPage={currentMuseumPage}
               totalMuseumPages={totalMuseumPages}
               onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
               onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
-              sortedByDistance={locState.status === 'ok'}
+              sortedByDistance={
+                locState.status === 'ok' && (!isSoftwareFairMode || viewMode !== 'map')
+              }
               expectDistanceOnCards={locState.status === 'ok'}
-              locationNote={locState.status === 'unavailable' ? locState.message : null}
+              locationNote={
+                !isSoftwareFairMode && locState.status === 'unavailable' ? locState.message : null
+              }
               onRetryLocation={retry}
               viewMode={viewMode}
               onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
+              isSoftwareFairMode={isSoftwareFairMode}
+              genreOptions={softwareFairGenreOptions}
+              selectedGenre={selectedSoftwareFairGenre}
+              onSelectGenre={setSelectedSoftwareFairGenre}
               onRequestMuseum={() => setMuseumRequestModalVisible(true)}
               museumRequestSubmitted={museumRequestSubmitted}
             />

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { ChevronRightIcon, LogOutIcon, Trash2Icon } from 'lucide-react-native';
+import { ChevronRightIcon, LogOutIcon, MapIcon, Trash2Icon } from 'lucide-react-native';
 import { isUsernameReadyForSubmit, UsernameField } from '@/components/username-field';
 import { normalizeUsernameInput } from '@/lib/username';
 import { Text } from '@/components/ui/text';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 import { useUniwind } from 'uniwind';
 import {
   RN_API_DESTRUCTIVE_DARK,
@@ -29,6 +30,7 @@ export default function ProfileSettingsScreen() {
   const { theme } = useUniwind();
   const primaryHex = useBrandPrimaryHex();
   const destructiveHex = theme === 'dark' ? RN_API_DESTRUCTIVE_DARK : RN_API_DESTRUCTIVE_LIGHT;
+  const softwareFair = useSoftwareFairMode();
 
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentProfile = useQuery(api.userProfiles.getCurrentUserProfile);
@@ -77,6 +79,23 @@ export default function ProfileSettingsScreen() {
     [myOrganizations]
   );
   const isCheckingOrganizations = myOrganizations === undefined;
+  const softwareFairActionDisabled = softwareFair.config === undefined || !softwareFair.enabled;
+  const softwareFairActionLabel =
+    softwareFair.config === undefined
+      ? 'Loading'
+      : !softwareFair.enabled
+        ? 'Unavailable'
+        : softwareFair.isJoined
+          ? 'Exit'
+          : 'Join';
+  const softwareFairDescription =
+    softwareFair.config === undefined
+      ? 'Checking whether this experiment is available.'
+      : !softwareFair.enabled
+        ? 'Admins have not enabled this experiment yet.'
+        : softwareFair.isJoined
+          ? 'Software Fair mode is active on this device.'
+          : 'Join the Stanford Software Fair experience from this device.';
 
   const toggleAlerts = async (enabled: boolean) => {
     setBusy(true);
@@ -166,6 +185,35 @@ export default function ProfileSettingsScreen() {
             Update your check-in survey responses
           </Text>
         </Pressable>
+
+        <SectionLabel>Experimental</SectionLabel>
+        <Card className="mb-7 gap-1 px-4 py-4">
+          <View className="flex-row items-center justify-between gap-3">
+            <View
+              className="size-10 items-center justify-center rounded-full border"
+              style={{
+                backgroundColor: `${primaryHex}1A`,
+                borderColor: `${primaryHex}4D`,
+              }}>
+              <MapIcon size={18} color={primaryHex} />
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text className="text-foreground text-base font-medium">Stanford Software Fair</Text>
+              <Text variant="muted" className="mt-1 leading-5">
+                {softwareFairDescription}
+              </Text>
+            </View>
+            <Button
+              variant={softwareFair.isJoined ? 'outline' : 'default'}
+              disabled={softwareFairActionDisabled}
+              accessibilityLabel={
+                softwareFair.isJoined ? 'Exit Software Fair mode' : 'Join Software Fair mode'
+              }
+              onPress={() => void (softwareFair.isJoined ? softwareFair.exit() : softwareFair.join())}>
+              <Text>{softwareFairActionLabel}</Text>
+            </Button>
+          </View>
+        </Card>
 
         <SectionLabel>Notifications</SectionLabel>
         <Card className="mb-7 gap-1 px-4 py-4">

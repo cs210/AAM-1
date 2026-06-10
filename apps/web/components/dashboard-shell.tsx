@@ -19,7 +19,11 @@ import {
   type DashboardTabId,
   type WorkspaceDashboardTabId,
 } from "@/components/dashboard/constants"
-import { DashboardMuseumProvider } from "@/components/dashboard/dashboard-museum-context"
+import {
+  DashboardMuseumProvider,
+  type DashboardMuseumContextSource,
+  type SetDashboardMuseumContextOptions,
+} from "@/components/dashboard/dashboard-museum-context"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 import { DeleteAccountDialog } from "@/components/dashboard/delete-account-dialog"
 import { Button } from "@/components/ui/button"
@@ -35,6 +39,8 @@ import { authClient } from "@/lib/auth-client"
 import { Input } from "@/components/ui/input"
 
 const ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY = "dashboard:activeMuseumContextId"
+const ACTIVE_MUSEUM_CONTEXT_SOURCE_STORAGE_KEY =
+  "dashboard:activeMuseumContextSource"
 
 function slugify(name: string) {
   return name
@@ -109,6 +115,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const [adminMuseumContextId, setAdminMuseumContextId] = React.useState<
     string | null
   >(null)
+  const [adminMuseumContextSource, setAdminMuseumContextSource] =
+    React.useState<DashboardMuseumContextSource>("regular")
   const [activeWorkspaceId, setActiveWorkspaceId] = React.useState<
     string | null
   >(null)
@@ -216,7 +224,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
     const storedMuseumId = window.localStorage.getItem(
       ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY,
     )
+    const storedSource =
+      window.localStorage.getItem(ACTIVE_MUSEUM_CONTEXT_SOURCE_STORAGE_KEY) ===
+      "softwareFair"
+        ? "softwareFair"
+        : "regular"
     setAdminMuseumContextId(storedMuseumId)
+    setAdminMuseumContextSource(storedSource)
     setIsMuseumContextHydrated(true)
   }, [])
 
@@ -226,6 +240,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     if (museums.length === 0) {
       if (adminMuseumContextId) {
         setAdminMuseumContextId(null)
+        setAdminMuseumContextSource("regular")
         setMuseumContextWarning(t("invalidMuseumContextNoMuseums"))
       }
       return
@@ -237,12 +252,23 @@ export function DashboardShell({ children }: DashboardShellProps) {
     ) {
       return
     }
+    if (adminMuseumContextId && adminMuseumContextSource === "softwareFair") {
+      return
+    }
 
     if (adminMuseumContextId) {
       setMuseumContextWarning(t("invalidMuseumContextSwitched"))
     }
+    setAdminMuseumContextSource("regular")
     setAdminMuseumContextId(museums[0]._id)
-  }, [isAdmin, isMuseumContextHydrated, museums, adminMuseumContextId, t])
+  }, [
+    isAdmin,
+    isMuseumContextHydrated,
+    museums,
+    adminMuseumContextId,
+    adminMuseumContextSource,
+    t,
+  ])
 
   React.useEffect(() => {
     if (!isAdmin || !isMuseumContextHydrated || typeof window === "undefined")
@@ -252,15 +278,29 @@ export function DashboardShell({ children }: DashboardShellProps) {
         ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY,
         adminMuseumContextId,
       )
+      window.localStorage.setItem(
+        ACTIVE_MUSEUM_CONTEXT_SOURCE_STORAGE_KEY,
+        adminMuseumContextSource,
+      )
     } else {
       window.localStorage.removeItem(ACTIVE_MUSEUM_CONTEXT_STORAGE_KEY)
+      window.localStorage.removeItem(ACTIVE_MUSEUM_CONTEXT_SOURCE_STORAGE_KEY)
     }
-  }, [isAdmin, isMuseumContextHydrated, adminMuseumContextId])
+  }, [
+    isAdmin,
+    isMuseumContextHydrated,
+    adminMuseumContextId,
+    adminMuseumContextSource,
+  ])
 
-  const handleSetMuseumContext = React.useCallback((museumId: string) => {
-    setAdminMuseumContextId(museumId)
-    setMuseumContextWarning(null)
-  }, [])
+  const handleSetMuseumContext = React.useCallback(
+    (museumId: string, options?: SetDashboardMuseumContextOptions) => {
+      setAdminMuseumContextId(museumId)
+      setAdminMuseumContextSource(options?.source ?? "regular")
+      setMuseumContextWarning(null)
+    },
+    [],
+  )
 
   const handleWorkspaceChange = React.useCallback(
     (workspaceId: string) => {
@@ -576,7 +616,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
     !isAdmin && isMuseumContextTab && !activeMuseumContextId
 
   return (
-    <DashboardMuseumProvider museumId={activeMuseumContextId}>
+    <DashboardMuseumProvider
+      museumId={activeMuseumContextId}
+      onMuseumContextChange={handleSetMuseumContext}
+    >
       <div className="bg-background min-h-screen">
         <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_12%,color-mix(in oklch,var(--primary)_14%,transparent),transparent_30%),radial-gradient(circle_at_88%_4%,color-mix(in oklch,var(--primary)_8%,transparent),transparent_26%)]" />
         <div className="flex min-h-screen w-full">

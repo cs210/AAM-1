@@ -8,9 +8,11 @@ import { InfoIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { EventCard, EventCardData } from '@/components/event-card';
+import { MuseumCard, MuseumCardData } from '@/components/museum-card';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useBrandPrimaryHex } from '@/hooks/use-brand-primary';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 
 function promptEnableLocation(message: string, onRetry: () => void) {
   Alert.alert('Turn on location', message, [
@@ -22,23 +24,35 @@ function promptEnableLocation(message: string, onRetry: () => void) {
 
 export default function NearbyEventsScreen() {
   const brandPrimary = useBrandPrimaryHex();
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
   const { locState, retry } = useViewerLocation();
   const nearbyFeed = useQuery(
     api.events.getNearbyFeed,
-    locState.status === 'ok' ? { viewer: locState.viewer } : 'skip'
+    !isSoftwareFairMode && locState.status === 'ok' ? { viewer: locState.viewer } : 'skip'
   );
   const availableFeed = useQuery(
     api.events.getAvailableFeed,
-    locState.status === 'unavailable' ? {} : 'skip'
+    !isSoftwareFairMode && locState.status === 'unavailable' ? {} : 'skip'
+  );
+  const softwareFairBooths = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
   );
 
   const feed =
     locState.status === 'ok' ? nearbyFeed : locState.status === 'unavailable' ? availableFeed : undefined;
 
   const loading =
-    locState.status === 'pending' ||
-    (locState.status === 'ok' && nearbyFeed === undefined) ||
-    (locState.status === 'unavailable' && availableFeed === undefined);
+    isSoftwareFairMode
+      ? softwareFairBooths === undefined
+      : locState.status === 'pending' ||
+        (locState.status === 'ok' && nearbyFeed === undefined) ||
+        (locState.status === 'unavailable' && availableFeed === undefined);
 
   const promptLocation = useCallback(() => {
     if (locState.status !== 'unavailable') return;
@@ -49,12 +63,19 @@ export default function NearbyEventsScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <ScreenTitleBar title="Visit Exhibitions and Events" onBackPress={() => router.back()} />
+        <ScreenTitleBar
+          title={isSoftwareFairMode ? 'Software Fair Booths' : 'Visit Exhibitions and Events'}
+          onBackPress={() => router.back()}
+        />
         {loading ? (
           <View className="flex-1 items-center justify-center gap-3">
             <BrandActivityIndicator size="large" />
             <Text variant="muted" className="text-base">
-              {locState.status === 'pending' ? 'Finding events near you...' : 'Loading events...'}
+              {isSoftwareFairMode
+                ? 'Loading booths...'
+                : locState.status === 'pending'
+                  ? 'Finding events near you...'
+                  : 'Loading events...'}
             </Text>
           </View>
         ) : (
@@ -63,7 +84,7 @@ export default function NearbyEventsScreen() {
             style={{ flex: 1 }}
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}>
-            {locState.status === 'unavailable' ? (
+            {!isSoftwareFairMode && locState.status === 'unavailable' ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="About location for nearby picks"
@@ -75,7 +96,19 @@ export default function NearbyEventsScreen() {
                 </Text>
               </Pressable>
             ) : null}
-            {feed && feed.length > 0 ? (
+            {isSoftwareFairMode ? (
+              softwareFairBooths && softwareFairBooths.length > 0 ? (
+                (softwareFairBooths as MuseumCardData[]).map((museum) => (
+                  <MuseumCard key={museum._id} museum={museum} className="mx-0" />
+                ))
+              ) : (
+                <View className="items-center px-4 py-16">
+                  <Text className="text-center text-base text-muted-foreground">
+                    No active Software Fair booths yet.
+                  </Text>
+                </View>
+              )
+            ) : feed && feed.length > 0 ? (
               feed.map((event, index) => (
                 <EventCard
                   key={`${event.kind ?? 'event'}-${event._id}`}

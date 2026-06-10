@@ -29,6 +29,7 @@ import type * as permissions from "../permissions.js";
 import type * as profileViews from "../profileViews.js";
 import type * as recsys from "../recsys.js";
 import type * as socialNotifications from "../socialNotifications.js";
+import type * as softwareFair from "../softwareFair.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
 import type * as usernameValidation from "../usernameValidation.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   profileViews: typeof profileViews;
   recsys: typeof recsys;
   socialNotifications: typeof socialNotifications;
+  softwareFair: typeof softwareFair;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
   usernameValidation: typeof usernameValidation;
