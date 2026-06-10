@@ -39,6 +39,12 @@ export default defineSchema({
     imageUrl: v.optional(v.string()),
     website: v.optional(v.string()),
     phone: v.optional(v.string()),
+    googleReviewsEnabled: v.optional(v.boolean()),
+    googlePlaceId: v.optional(v.string()),
+    googleMapsUri: v.optional(v.string()),
+    googleRating: v.optional(v.number()),
+    googleUserRatingCount: v.optional(v.number()),
+    googleReviewsLastFetchedAt: v.optional(v.number()),
     operatingHours: v.optional(v.array(v.object({
       day: v.string(),
       isOpen: v.boolean(),
@@ -66,6 +72,36 @@ export default defineSchema({
     .index("by_museum", ["museumId"])
     .index("by_museum_sortOrder", ["museumId", "sortOrder"])
     .index("by_museum_primary", ["museumId", "isPrimary"]),
+
+  // Cached Google Maps reviews. Display is controlled by
+  // museums.googleReviewsEnabled, and these ratings are never folded into the
+  // app's check-in rating calculations.
+  museumGoogleReviews: defineTable({
+    museumId: v.id("museums"),
+    googleReviewName: v.string(),
+    authorName: v.optional(v.string()),
+    authorUri: v.optional(v.string()),
+    authorPhotoUri: v.optional(v.string()),
+    rating: v.number(),
+    text: v.optional(v.string()),
+    originalText: v.optional(v.string()),
+    languageCode: v.optional(v.string()),
+    relativePublishTimeDescription: v.optional(v.string()),
+    publishTime: v.optional(v.string()),
+    googleMapsUri: v.optional(v.string()),
+    visitDate: v.optional(v.object({
+      year: v.optional(v.number()),
+      month: v.optional(v.number()),
+      day: v.optional(v.number()),
+    })),
+    sortOrder: v.number(),
+    fetchedAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_museum", ["museumId"])
+    .index("by_museum_sortOrder", ["museumId", "sortOrder"])
+    .index("by_museum_review", ["museumId", "googleReviewName"]),
 
   // Special Events
   events: defineTable({

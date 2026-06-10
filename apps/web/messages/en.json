@@ -357,6 +357,22 @@
         "websitePromptCta": "Run with website",
         "imagesImported": "{count, plural, one {Imported # image to gallery.} other {Imported # images to gallery.}}"
       },
+      "googleReviews": {
+        "enableLabel": "Show Google Maps reviews in the mobile app",
+        "enableDescription": "Reviews are cached from Google Places, labeled separately, and do not affect the Museum& rating.",
+        "refresh": "Refresh reviews",
+        "enableAndFetch": "Enable and fetch",
+        "refreshing": "Fetching reviews...",
+        "cachedSummary": "{count, plural, one {# cached review} other {# cached reviews}}",
+        "ratingSummary": "{rating} Google rating from {count, plural, one {# rating} other {# ratings}}",
+        "notFetched": "No Google Maps reviews cached yet.",
+        "lastFetched": "Last fetched {date}",
+        "refreshSuccess": "{count, plural, one {Cached # Google Maps review.} other {Cached # Google Maps reviews.}}",
+        "refreshFailed": "Failed to refresh Google Maps reviews.",
+        "refreshFailedAfterSave": "Museum details saved, but Google Maps reviews could not be refreshed: {message}",
+        "sourceLabel": "Google Maps",
+        "anonymousAuthor": "Google Maps user"
+      },
       "fields": {
         "name": "Museum Name",
         "tagline": "Tagline",
