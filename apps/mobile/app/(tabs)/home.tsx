@@ -17,6 +17,7 @@ import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { MuseumCheckinPickerModal } from '@/components/museum-checkin-picker-modal';
 import { HomeFeedSection } from '@/components/home-feed-section';
 import { HomeCheckinCta } from '@/components/home-checkin-cta';
+import { SoftwareFairHomeSection } from '@/components/software-fair-home-section';
 import { FriendCheckinPhotosSection } from '@/components/friend-checkin-photos-section';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
@@ -195,6 +196,8 @@ export default function HomeScreen() {
               </Pressable>
             </View>
           </View>
+
+          <SoftwareFairHomeSection />
 
           <HomeFeedSection
             title="From Your Friends"

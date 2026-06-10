@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
-import { ArrowLeftIcon, ChevronRightIcon, LogOutIcon, Trash2Icon } from 'lucide-react-native';
+import { ArrowLeftIcon, ChevronRightIcon, LogOutIcon, MapIcon, Trash2Icon } from 'lucide-react-native';
 import { isUsernameReadyForSubmit, UsernameField } from '@/components/username-field';
 import { normalizeUsernameInput } from '@/lib/username';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 import { useUniwind } from 'uniwind';
 import {
   RN_API_BACKGROUND_DARK,
@@ -42,6 +43,7 @@ export default function ProfileSettingsScreen() {
   const background = isDark ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
   const card = isDark ? RN_API_CARD_DARK : RN_API_CARD_LIGHT;
   const border = isDark ? RN_API_BORDER_DARK : RN_API_BORDER_LIGHT;
+  const softwareFair = useSoftwareFairMode();
 
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentProfile = useQuery(api.userProfiles.getCurrentUserProfile);
@@ -90,6 +92,23 @@ export default function ProfileSettingsScreen() {
     [myOrganizations]
   );
   const isCheckingOrganizations = myOrganizations === undefined;
+  const softwareFairActionDisabled = softwareFair.config === undefined || !softwareFair.enabled;
+  const softwareFairActionLabel =
+    softwareFair.config === undefined
+      ? 'Loading'
+      : !softwareFair.enabled
+        ? 'Unavailable'
+        : softwareFair.isJoined
+          ? 'Exit'
+          : 'Join';
+  const softwareFairDescription =
+    softwareFair.config === undefined
+      ? 'Checking whether this experiment is available.'
+      : !softwareFair.enabled
+        ? 'Admins have not enabled this experiment yet.'
+        : softwareFair.isJoined
+          ? 'Software Fair mode is active on this device.'
+          : 'Join the Stanford Software Fair experience from this device.';
 
   const toggleAlerts = async (enabled: boolean) => {
     setBusy(true);
@@ -198,6 +217,55 @@ export default function ProfileSettingsScreen() {
             Update your check-in survey responses
           </Text>
         </Pressable>
+
+        <SectionLabel muted={muted}>Experimental</SectionLabel>
+        <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
+          <View style={styles.rowLargeGap}>
+            <View
+              style={[
+                styles.softwareFairIcon,
+                {
+                  backgroundColor: `${primaryHex}1A`,
+                  borderColor: `${primaryHex}4D`,
+                },
+              ]}>
+              <MapIcon size={18} color={primaryHex} />
+            </View>
+            <View style={styles.flexOne}>
+              <Text style={{ color: fg, fontSize: 16, fontWeight: '500' }}>
+                Stanford Software Fair
+              </Text>
+              <Text style={{ color: muted, fontSize: 14, lineHeight: 20, marginTop: 4 }}>
+                {softwareFairDescription}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                softwareFair.isJoined ? 'Exit Software Fair mode' : 'Join Software Fair mode'
+              }
+              disabled={softwareFairActionDisabled}
+              onPress={() => void (softwareFair.isJoined ? softwareFair.exit() : softwareFair.join())}
+              style={({ pressed }) => [
+                styles.softwareFairActionButton,
+                {
+                  backgroundColor: softwareFair.isJoined ? background : primaryHex,
+                  borderColor: softwareFair.isJoined ? `${primaryHex}80` : primaryHex,
+                },
+                pressed && !softwareFairActionDisabled && styles.pressed,
+                softwareFairActionDisabled && styles.disabled,
+              ]}>
+              <Text
+                style={{
+                  color: softwareFair.isJoined ? primaryHex : '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: '700',
+                }}>
+                {softwareFairActionLabel}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
         <SectionLabel muted={muted}>Notifications</SectionLabel>
         <View style={[styles.card, { backgroundColor: card, borderColor: border }]}>
@@ -531,6 +599,23 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  softwareFairActionButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    minWidth: 88,
+    paddingHorizontal: 14,
+  },
+  softwareFairIcon: {
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   warningBox: {
     borderRadius: 10,
