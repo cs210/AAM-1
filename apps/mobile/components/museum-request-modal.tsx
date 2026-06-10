@@ -21,20 +21,24 @@ export function normalizeMuseumRequestName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-type Props = {
-  visible: boolean;
+type SheetProps = {
   initialMuseumName: string;
   onClose: () => void;
   /** Called with the trimmed museum name after a successful submission. */
   onSubmitted?: (museumName: string) => void;
 };
 
+type ModalProps = SheetProps & {
+  visible: boolean;
+};
+
 /**
- * Self-contained "request a missing museum" form. Owns its submit + error
- * state and calls the Convex action directly so it can be dropped into any
- * screen that surfaces an empty museum search.
+ * The "request a missing museum" bottom sheet body WITHOUT a Modal wrapper.
+ * Use this when you need to render the form on top of an already-open Modal
+ * (iOS does not reliably present a Modal over another Modal). Render it inside
+ * an `absolute inset-0` container so it covers its parent.
  */
-export function MuseumRequestModal({ visible, initialMuseumName, onClose, onSubmitted }: Props) {
+export function MuseumRequestSheet({ initialMuseumName, onClose, onSubmitted }: SheetProps) {
   const submitMuseumAdditionRequest = useAction(
     api.museumAdditionRequests.submitMuseumAdditionRequest
   );
@@ -47,14 +51,13 @@ export function MuseumRequestModal({ visible, initialMuseumName, onClose, onSubm
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!visible) return;
     setMuseumName(initialMuseumName);
     setCity('');
     setState('');
     setWebsite('');
     setNote('');
     setErrorMessage(null);
-  }, [initialMuseumName, visible]);
+  }, [initialMuseumName]);
 
   const canSubmit = museumName.trim().length >= 2;
 
@@ -81,10 +84,7 @@ export function MuseumRequestModal({ visible, initialMuseumName, onClose, onSubm
     }
   };
 
-  if (!visible) return null;
-
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-end">
@@ -205,6 +205,23 @@ export function MuseumRequestModal({ visible, initialMuseumName, onClose, onSubm
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * Self-contained "request a missing museum" form wrapped in its own Modal.
+ * Use this on screens where it is NOT rendered on top of another Modal.
+ */
+export function MuseumRequestModal({ visible, initialMuseumName, onClose, onSubmitted }: ModalProps) {
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <MuseumRequestSheet
+        initialMuseumName={initialMuseumName}
+        onClose={onClose}
+        onSubmitted={onSubmitted}
+      />
     </Modal>
   );
 }

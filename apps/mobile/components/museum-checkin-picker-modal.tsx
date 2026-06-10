@@ -20,7 +20,7 @@ import { Icon } from '@/components/ui/icon';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { SearchFieldRow } from '@/components/search-field-row';
 import {
-  MuseumRequestModal,
+  MuseumRequestSheet,
   normalizeMuseumRequestName,
 } from '@/components/museum-request-modal';
 
@@ -192,7 +192,6 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
   if (!visible) return null;
 
   return (
-    <>
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -303,14 +302,17 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
             />
           )}
         </View>
+
+        {requestModalVisible ? (
+          <View className="absolute inset-0">
+            <MuseumRequestSheet
+              initialMuseumName={trimmedSearch}
+              onClose={() => setRequestModalVisible(false)}
+              onSubmitted={handleMuseumRequestSubmitted}
+            />
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </Modal>
-    <MuseumRequestModal
-      visible={requestModalVisible}
-      initialMuseumName={trimmedSearch}
-      onClose={() => setRequestModalVisible(false)}
-      onSubmitted={handleMuseumRequestSubmitted}
-    />
-    </>
   );
 }
