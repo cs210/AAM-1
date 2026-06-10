@@ -176,8 +176,14 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
 
   const trimmedSearch = search.trim();
   const canRequestMuseum = trimmedSearch.length >= 2;
+  const currentMuseumRequestKey = useMemo(() => normalizeMuseumRequestName(search), [search]);
+  const existingMuseumRequest = useQuery(
+    api.museumAdditionRequests.getMyRequestForMuseum,
+    currentMuseumRequestKey.length >= 2 ? { museumName: trimmedSearch } : 'skip'
+  );
   const museumRequestSubmitted =
-    canRequestMuseum && requestedMuseumNames.has(normalizeMuseumRequestName(search));
+    canRequestMuseum &&
+    (requestedMuseumNames.has(currentMuseumRequestKey) || Boolean(existingMuseumRequest));
 
   const handleMuseumRequestSubmitted = useCallback((museumName: string) => {
     const requestKey = normalizeMuseumRequestName(museumName);
