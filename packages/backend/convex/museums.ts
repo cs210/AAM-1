@@ -368,11 +368,13 @@ export const addMuseum = mutation({
   },
 });
 
-// List all museums
+// List non-experimental museums for normal public and admin museum surfaces.
 export const listMuseums = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("museums").collect();
+    return (await ctx.db.query("museums").collect()).filter(
+      (museum) => !museum.isSoftwareFairOnly
+    );
   },
 });
 

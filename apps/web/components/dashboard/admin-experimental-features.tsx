@@ -4,6 +4,7 @@ import * as React from "react"
 import { useMutation, useQuery } from "convex/react"
 import { useTranslations } from "next-intl"
 import {
+  Building2Icon,
   Loader2Icon,
   PencilIcon,
   PlusIcon,
@@ -37,6 +38,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  useDashboardMuseumContextActions,
+  useDashboardMuseumId,
+} from "@/components/dashboard/dashboard-museum-context"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
 
@@ -55,6 +60,7 @@ type SoftwareFairConfig = {
 
 type SoftwareFairBooth = {
   _id: Id<"softwareFairBooths">
+  museumId: Id<"museums"> | null
   boothNumber: number
   projectName: string
   genres: string[]
@@ -105,6 +111,8 @@ function joinListInput(values: string[]) {
 export function AdminExperimentalFeatures() {
   const t = useTranslations("dashboard.adminExperimentalFeatures")
   const tCommon = useTranslations("common")
+  const activeMuseumContextId = useDashboardMuseumId()
+  const dashboardMuseumActions = useDashboardMuseumContextActions()
   const config = useQuery(api.softwareFair.getConfigForAdmin) as SoftwareFairConfig | undefined
   const booths = useQuery(api.softwareFair.listBoothsForAdmin) as SoftwareFairBooth[] | undefined
   const updateConfig = useMutation(api.softwareFair.updateConfigForAdmin)
@@ -337,6 +345,15 @@ export function AdminExperimentalFeatures() {
     } finally {
       setPendingBoothAction(null)
     }
+  }
+
+  const handleSetBoothContext = (booth: SoftwareFairBooth) => {
+    if (!booth.museumId) return
+    dashboardMuseumActions?.setMuseumContext(booth.museumId, {
+      source: "softwareFair",
+    })
+    setBoothError(null)
+    setBoothMessage(t("assignments.contextSet", { name: booth.projectName }))
   }
 
   return (
@@ -720,6 +737,17 @@ export function AdminExperimentalFeatures() {
                         <Button type="button" variant="outline" onClick={() => startEditingBooth(booth)}>
                           <PencilIcon className="size-4" />
                           {t("assignments.edit")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={activeMuseumContextId === booth.museumId ? "secondary" : "outline"}
+                          onClick={() => handleSetBoothContext(booth)}
+                          disabled={!booth.museumId || !dashboardMuseumActions}
+                        >
+                          <Building2Icon className="size-4" />
+                          {activeMuseumContextId === booth.museumId
+                            ? t("assignments.currentContext")
+                            : t("assignments.setContext")}
                         </Button>
                         <Button
                           type="button"

@@ -22,6 +22,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  useDashboardMuseumContextActions,
+  useDashboardMuseumId,
+} from "@/components/dashboard/dashboard-museum-context"
 
 type MuseumRow = {
   _id: Id<"museums">
@@ -265,6 +269,8 @@ function updateCsvImportResult(index: number, updater: (row: CsvImportResultRow)
 export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: AdminMuseumsProps) {
   const t = useTranslations("dashboard.adminMuseums")
   const tCommon = useTranslations("common")
+  const dashboardMuseumContextId = useDashboardMuseumId()
+  const dashboardMuseumActions = useDashboardMuseumContextActions()
   const listMuseums = useAction(api.admin.listMuseumsForAdmin)
   const importMuseumCsvRow = useAction(api.admin.importMuseumCsvRowForAdmin)
   const createMuseum = useMutation(api.admin.createMuseumForAdmin)
@@ -291,6 +297,8 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
     csvStopRequested,
     csvCurrentIndex,
   } = csvImportState
+  const currentMuseumContextId =
+    activeMuseumContextId ?? dashboardMuseumContextId
 
   const loadMuseums = React.useCallback(async () => {
     setMuseums(undefined)
@@ -338,7 +346,11 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
   }
 
   const handleEditContext = (museum: MuseumRow) => {
-    onEditMuseumContext?.(museum._id)
+    if (onEditMuseumContext) {
+      onEditMuseumContext(museum._id)
+    } else {
+      dashboardMuseumActions?.setMuseumContext(museum._id)
+    }
     setError(null)
     setSuccess(t("contextSwitched", { name: museum.name }))
   }
@@ -793,7 +805,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                     )}
                     <div className="flex flex-wrap gap-1">
                       <Badge variant="secondary">{museum.category}</Badge>
-                      {activeMuseumContextId === museum._id && <Badge variant="default">{t("currentContext")}</Badge>}
+                      {currentMuseumContextId === museum._id && <Badge variant="default">{t("currentContext")}</Badge>}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-start gap-1">
@@ -808,7 +820,10 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                       size="sm"
                       variant="outline"
                       onClick={() => handleEditContext(museum)}
-                      disabled={deletingId === museum._id}
+                      disabled={
+                        deletingId === museum._id ||
+                        (!onEditMuseumContext && !dashboardMuseumActions)
+                      }
                     >
                       {t("edit")}
                     </Button>
