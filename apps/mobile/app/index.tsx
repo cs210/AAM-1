@@ -28,8 +28,8 @@ export default function Screen() {
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
       
-      <SafeAreaView className="flex-1 items-center justify-center bg-background" style={{ flex: 1 }}>
-        <View className="items-center gap-3">
+      <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center gap-3" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
           <Text variant="muted">Loading</Text>
         </View>
