@@ -9,6 +9,7 @@ import {
   Linking,
   Alert,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router, type Href } from 'expo-router';
@@ -28,6 +29,8 @@ import {
   StarIcon,
   BookmarkIcon,
   ExternalLinkIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from 'lucide-react-native';
 import { CategoryTag } from '../../components/category-tag';
 import { EventCard, EventCardData } from '../../components/event-card';
@@ -43,6 +46,8 @@ import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { userProfileHref } from '@/lib/user-profile-navigation';
 import { useSoftwareFairMode } from '@/lib/software-fair-mode';
+import { SoftwareFairBoothMapSvg } from '@/components/software-fair-booth-map-svg';
+import { SOFTWARE_FAIR_MAP_VIEWBOX } from '@/lib/software-fair-map-layout';
 import {
   getSoftwareFairCardPalette,
   SOFTWARE_FAIR_GRADIENT_END,
@@ -68,6 +73,7 @@ function normalizeExternalUrl(url: string): string {
 
 export default function MuseumDetailScreen() {
   const insets = useSafeAreaInsets();
+  const { width: viewportWidth } = useWindowDimensions();
   const { theme } = useUniwind();
   const bookmarkIconColor = theme === 'dark' ? RN_API_BACKGROUND_DARK : RN_API_BACKGROUND_LIGHT;
   const bookmarkUnselectedIconColor =
@@ -218,10 +224,12 @@ export default function MuseumDetailScreen() {
   const [editingCheckIn, setEditingCheckIn] = useState<UserCheckIn | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [isBoothMapExpanded, setIsBoothMapExpanded] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckIn(null));
 
   useEffect(() => {
     setShowMoreDetails(false);
+    setIsBoothMapExpanded(false);
   }, [effectiveId]);
 
   const { upcomingItems, ongoingItems } = useMemo(() => {
@@ -386,6 +394,9 @@ export default function MuseumDetailScreen() {
   const placeNoun = softwareFairBooth ? 'Booth' : 'Museum';
   const boothLocationLabel = hasAddress ? address : 'CoDa B80';
   const showMuseumEventSections = !softwareFair.isJoined || softwareFairBooth === null;
+  const boothPreviewMapWidth = Math.max(220, Math.min(360, viewportWidth - 80));
+  const boothPreviewMapHeight =
+    boothPreviewMapWidth * (SOFTWARE_FAIR_MAP_VIEWBOX.height / SOFTWARE_FAIR_MAP_VIEWBOX.width);
 
   const openMapUrl = async (url: string) => {
     try {
@@ -638,7 +649,23 @@ export default function MuseumDetailScreen() {
 
             {softwareFairBooth ? (
               <View className="border-border bg-card mb-5 rounded-2xl border p-5">
-                <Text className="text-foreground mb-3 text-base font-semibold">Location</Text>
+                <View className="mb-3 flex-row items-center justify-between gap-3">
+                  <Text className="text-foreground text-base font-semibold">Location</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={isBoothMapExpanded ? 'Hide booth map' : 'Show booth map'}
+                    onPress={() => setIsBoothMapExpanded((value) => !value)}
+                    className="bg-muted flex-row items-center gap-1 rounded-full px-3 py-1.5 active:opacity-75">
+                    <Text className="text-foreground text-xs font-semibold">
+                      {isBoothMapExpanded ? 'Hide map' : 'Show map'}
+                    </Text>
+                    {isBoothMapExpanded ? (
+                      <ChevronUpIcon size={14} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+                    ) : (
+                      <ChevronDownIcon size={14} color={RN_API_MUTED_FOREGROUND_LIGHT} />
+                    )}
+                  </Pressable>
+                </View>
                 <Pressable
                   className={cn(
                     'flex-row items-center gap-2 rounded-md',
@@ -651,6 +678,23 @@ export default function MuseumDetailScreen() {
                     {boothLocationLabel}
                   </Text>
                 </Pressable>
+                {isBoothMapExpanded ? (
+                  <View className="border-border bg-card mt-4 self-center overflow-hidden rounded-xl border">
+                    <SoftwareFairBoothMapSvg
+                      booths={[
+                        {
+                          boothNumber: softwareFairBooth.boothNumber,
+                          genres: softwareFairBooth.genres,
+                        },
+                      ]}
+                      width={boothPreviewMapWidth}
+                      height={boothPreviewMapHeight}
+                      accessibilityLabel={`CoDa B80 map highlighting booth ${softwareFairBooth.boothNumber}`}
+                      highlightedBoothNumber={softwareFairBooth.boothNumber}
+                      showAllBoothNumbers
+                    />
+                  </View>
+                ) : null}
               </View>
             ) : (
               <View className="border-border bg-card mb-5 rounded-2xl border p-5">
