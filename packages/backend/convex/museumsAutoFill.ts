@@ -4,6 +4,7 @@ import Firecrawl from "@mendable/firecrawl-js";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { action } from "./_generated/server";
+import { requireAdminAction } from "./permissions";
 
 const firecrawlImageLimit = 5;
 const firecrawlFallbackAdditionalImageLimit = 2;
@@ -106,6 +107,14 @@ type PrefillActionResult = {
 };
 
 type PrefillFormData = PrefillActionResult["prefill"];
+
+type RefreshMuseumImagesResult = {
+  searchQuery: string;
+  imageUrls: string[];
+  deletedCount: number;
+  insertedCount: number;
+  primaryImageUrl: string | null;
+};
 
 type GoogleReviewCacheInput = {
   googleReviewName: string;
@@ -907,6 +916,65 @@ export const prefillMuseumDetailsWithFirecrawl = action({
       }
       throw error;
     }
+  },
+});
+
+export const refreshMuseumImagesForAdmin = action({
+  args: {
+    museumId: v.id("museums"),
+    brokenImageIds: v.optional(v.array(v.id("museumImages"))),
+    brokenPrimaryImageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<RefreshMuseumImagesResult> => {
+    await requireAdminAction(ctx);
+
+    const details = (await ctx.runQuery(api.museums.getMuseumDetailsForDashboard, {
+      id: args.museumId,
+    })) as MuseumDetailsForPrefill | null;
+    if (!details) {
+      throw new Error("Museum not found");
+    }
+
+    const googlePlacesApiKey =
+      process.env.GOOGLE_PLACES_API_KEY?.trim() ?? process.env.GOOGLE_MAPS_API_KEY?.trim();
+    if (!googlePlacesApiKey) {
+      throw new Error("Missing GOOGLE_PLACES_API_KEY (or GOOGLE_MAPS_API_KEY) environment variable");
+    }
+
+    const googlePlacesApiUrl = process.env.GOOGLE_PLACES_API_URL?.trim() || defaultGooglePlacesApiUrl;
+    const searchQuery = buildGoogleSearchQuery(details.name, details, {
+      city: details.location.city,
+      state: details.location.state,
+      country: details.location.country,
+    });
+    const topPlace = await fetchGooglePlacesTopResult(searchQuery, googlePlacesApiKey, googlePlacesApiUrl);
+    if (!topPlace) {
+      throw new Error("Google Places did not find a matching museum.");
+    }
+
+    const imageUrls = await fetchGooglePlacePhotoUris(topPlace, googlePlacesApiKey, googlePlacesApiUrl);
+    if (imageUrls.length === 0) {
+      throw new Error("Google Places did not return replacement photos for this museum.");
+    }
+
+    const replacement = (await ctx.runMutation((api as any).admin.replaceBrokenMuseumImagesForAdmin, {
+      museumId: args.museumId,
+      brokenImageIds: args.brokenImageIds ?? [],
+      brokenPrimaryImageUrl: args.brokenPrimaryImageUrl,
+      imageUrls,
+    })) as {
+      deletedCount: number;
+      insertedCount: number;
+      primaryImageUrl: string | null;
+    };
+
+    return {
+      searchQuery,
+      imageUrls,
+      deletedCount: replacement.deletedCount,
+      insertedCount: replacement.insertedCount,
+      primaryImageUrl: replacement.primaryImageUrl,
+    };
   },
 });
 
