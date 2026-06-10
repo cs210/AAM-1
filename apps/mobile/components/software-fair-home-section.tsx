@@ -29,9 +29,9 @@ export function SoftwareFairHomeSection() {
   if (announcementCollapsed) {
     return (
       <View className="mb-5 px-5">
-        <View className="flex-row items-center gap-2 border-y border-border/70 py-2">
+        <View className="border-border/70 bg-card/70 flex-row items-center gap-2 rounded-2xl border px-3 py-2 shadow-sm shadow-black/5">
           <MapIcon size={14} color={primaryHex} />
-          <Text numberOfLines={1} className="min-w-0 flex-1 text-xs font-medium text-foreground">
+          <Text numberOfLines={1} className="text-foreground min-w-0 flex-1 text-xs font-medium">
             {isJoined ? 'Software Fair mode active' : announcementTitle}
           </Text>
           <Pressable
@@ -39,7 +39,7 @@ export function SoftwareFairHomeSection() {
             accessibilityLabel={isJoined ? 'Exit Software Fair mode' : 'Join Software Fair mode'}
             onPress={() => void (isJoined ? exit() : join())}
             className="rounded-full px-2 py-1 active:opacity-75">
-            <Text className="text-xs font-semibold text-primary">
+            <Text className="text-primary text-xs font-semibold">
               {isJoined ? 'Exit' : announcementCtaLabel}
             </Text>
           </Pressable>
@@ -58,16 +58,16 @@ export function SoftwareFairHomeSection() {
 
   return (
     <View className="mb-5 px-5">
-      <View className="border-y border-border/70 py-3">
+      <View className="border-border/70 bg-card/70 rounded-2xl border px-3.5 py-3 shadow-sm shadow-black/5">
         <View className="flex-row items-start gap-2.5">
           <View className="mt-0.5">
             <MapIcon size={15} color={primaryHex} />
           </View>
           <View className="min-w-0 flex-1">
-            <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+            <Text numberOfLines={1} className="text-foreground text-sm font-semibold">
               {title}
             </Text>
-            <Text numberOfLines={2} className="mt-0.5 text-xs leading-5 text-muted-foreground">
+            <Text numberOfLines={2} className="text-muted-foreground mt-0.5 text-xs leading-5">
               {body}
             </Text>
           </View>
@@ -85,13 +85,13 @@ export function SoftwareFairHomeSection() {
             accessibilityRole="button"
             accessibilityLabel={isJoined ? 'Exit Software Fair mode' : 'Join Software Fair mode'}
             onPress={() => void (isJoined ? exit() : join())}
-            className="rounded-full bg-primary/10 px-3 py-1.5 active:opacity-80">
-            <Text className="text-xs font-semibold text-primary">
+            className="bg-primary/10 rounded-full px-3 py-1.5 active:opacity-80">
+            <Text className="text-primary text-xs font-semibold">
               {isJoined ? 'Exit mode' : announcementCtaLabel}
             </Text>
           </Pressable>
           {isJoined ? (
-            <Text className="text-xs font-medium text-primary">Active on this device</Text>
+            <Text className="text-primary text-xs font-medium">Active on this device</Text>
           ) : null}
         </View>
       </View>
