@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Tabs, router, useGlobalSearchParams } from 'expo-router';
 import { HomeIcon, CompassIcon, UserIcon, ScanSearchIcon } from 'lucide-react-native';
 import { useConvexAuth, useQuery } from 'convex/react';
@@ -39,9 +39,8 @@ export default function TabLayout() {
 
   if (isLoading || (isAuthenticated && currentProfile === undefined)) {
     return (
-      <SafeAreaView
-        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.background }}>
-        <ActivityIndicator size="large" color={t.primary} />
+      <SafeAreaView className="flex-1 items-center justify-center bg-background" style={{ flex: 1 }}>
+        <BrandActivityIndicator size="large" />
       </SafeAreaView>
     );
   }
