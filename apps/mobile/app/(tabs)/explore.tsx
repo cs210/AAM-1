@@ -8,6 +8,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { MuseumMapView } from '../../components/museum-map-view';
+import { SoftwareFairMapView } from '@/components/software-fair-map-view';
 import { CheckinPost, type CheckinPostData } from '../../components/checkin-post';
 import { SearchFieldRow } from '../../components/search-field-row';
 import { PaginationPill } from '../../components/pagination-pill';
@@ -97,19 +98,17 @@ function MuseumsRoute({
             placeholder={isSoftwareFairMode ? 'Search booths, teams...' : 'Search museums...'}
           />
         </View>
-        {!isSoftwareFairMode ? (
-          <Pressable
-            onPress={onToggleViewMode}
-            className="bg-primary rounded-lg p-2.5 active:opacity-80"
-            accessibilityLabel={`Switch to ${viewMode === 'list' ? 'map' : 'list'} view`}
-            accessibilityRole="button">
-            {viewMode === 'list' ? (
-              <MapPin size={20} color="white" />
-            ) : (
-              <List size={20} color="white" />
-            )}
-          </Pressable>
-        ) : null}
+        <Pressable
+          onPress={onToggleViewMode}
+          className="bg-primary rounded-lg p-2.5 active:opacity-80"
+          accessibilityLabel={`Switch to ${viewMode === 'list' ? 'map' : 'list'} view`}
+          accessibilityRole="button">
+          {viewMode === 'list' ? (
+            <MapPin size={20} color="white" />
+          ) : (
+            <List size={20} color="white" />
+          )}
+        </Pressable>
       </View>
       {sortedByDistance ? (
         <Text
@@ -135,7 +134,9 @@ function MuseumsRoute({
         </View>
       ) : null}
 
-      {viewMode === 'map' ? (
+      {viewMode === 'map' && isSoftwareFairMode ? (
+        <SoftwareFairMapView booths={filteredMuseums} isLoading={museums === undefined} />
+      ) : viewMode === 'map' ? (
         <MuseumMapView museums={filteredMuseums} isLoading={museums === undefined} />
       ) : museums === undefined ? (
         <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
@@ -424,23 +425,18 @@ export default function SearchScreen() {
 
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumPage, setMuseumPage] = useState(1);
-  const { locState, retry } = useViewerLocation();
+  const shouldResolveViewerLocation = !isSoftwareFairMode || viewMode !== 'map';
+  const { locState, retry } = useViewerLocation({ enabled: shouldResolveViewerLocation });
+  const viewerArg =
+    shouldResolveViewerLocation && locState.status === 'ok' ? locState.viewer : undefined;
 
   const museums = useQuery(
     api.museums.listMuseumsWithStats,
-    !isSoftwareFairMode
-      ? locState.status === 'ok'
-        ? { viewer: locState.viewer }
-        : {}
-      : 'skip'
+    !isSoftwareFairMode ? (viewerArg ? { viewer: viewerArg } : {}) : 'skip'
   );
   const softwareFairMuseums = useQuery(
     api.softwareFair.listActiveBoothMuseums,
-    isSoftwareFairMode
-      ? locState.status === 'ok'
-        ? { viewer: locState.viewer }
-        : {}
-      : 'skip'
+    isSoftwareFairMode ? (viewerArg ? { viewer: viewerArg } : {}) : 'skip'
   );
   const activeMuseums = (isSoftwareFairMode ? softwareFairMuseums : museums) as
     | MuseumCardData[]
@@ -480,9 +476,6 @@ export default function SearchScreen() {
   useEffect(() => {
     setMuseumPage(1);
   }, [museumSearch, isSoftwareFairMode]);
-  useEffect(() => {
-    if (isSoftwareFairMode) setViewMode('list');
-  }, [isSoftwareFairMode]);
   useEffect(() => {
     if (museumPage > totalMuseumPages) {
       setMuseumPage(totalMuseumPages);

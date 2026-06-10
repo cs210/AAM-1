@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 
 export type ViewerCoordinates = { latitude: number; longitude: number };
@@ -54,14 +54,17 @@ function formatLocationFailure(err: unknown): string {
   return 'Could not read your location. Try again or enable location in Settings.';
 }
 
-export function useViewerLocation() {
+export function useViewerLocation({ enabled = true }: { enabled?: boolean } = {}) {
   const [locState, setLocState] = useState<ViewerLocationState>({ status: 'pending' });
   const [retryKey, setRetryKey] = useState(0);
+  const requestIdRef = useRef(0);
 
-  const resolveLocation = useCallback(async () => {
+  const resolveLocation = useCallback(async (requestId: number) => {
+    const isCurrentRequest = () => requestIdRef.current === requestId;
     setLocState({ status: 'pending' });
     try {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!isCurrentRequest()) return;
       if (!servicesEnabled) {
         setLocState({
           status: 'unavailable',
@@ -71,9 +74,11 @@ export function useViewerLocation() {
       }
 
       let perm = await Location.getForegroundPermissionsAsync();
+      if (!isCurrentRequest()) return;
       if (perm.status !== 'granted') {
         perm = await Location.requestForegroundPermissionsAsync();
       }
+      if (!isCurrentRequest()) return;
       if (perm.status !== 'granted') {
         setLocState({
           status: 'unavailable',
@@ -83,8 +88,10 @@ export function useViewerLocation() {
       }
 
       const viewer = await withTimeout(fetchViewerCoordinates(), 25_000);
+      if (!isCurrentRequest()) return;
       setLocState({ status: 'ok', viewer });
     } catch (err) {
+      if (!isCurrentRequest()) return;
       setLocState({
         status: 'unavailable',
         message: formatLocationFailure(err),
@@ -93,12 +100,24 @@ export function useViewerLocation() {
   }, []);
 
   useEffect(() => {
-    void resolveLocation();
-  }, [retryKey, resolveLocation]);
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    if (!enabled) {
+      setLocState({
+        status: 'unavailable',
+        message: 'Location is not used in this view.',
+      });
+      return;
+    }
+
+    void resolveLocation(requestId);
+  }, [enabled, retryKey, resolveLocation]);
 
   const retry = useCallback(() => {
+    if (!enabled) return;
     setRetryKey((k) => k + 1);
-  }, []);
+  }, [enabled]);
 
   return { locState, retry };
 }
