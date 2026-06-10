@@ -160,9 +160,8 @@ export default defineSchema({
     updatedBy: v.optional(v.string()),
   }).index("by_key", ["key"]),
 
-  softwareFairBoothAssignments: defineTable({
+  softwareFairBooths: defineTable({
     featureKey: v.string(),
-    museumId: v.id("museums"),
     boothNumber: v.number(),
     projectName: v.string(),
     genres: v.array(v.string()),
@@ -178,7 +177,6 @@ export default defineSchema({
   })
     .index("by_feature", ["featureKey"])
     .index("by_feature_active_sortOrder", ["featureKey", "isActive", "sortOrder"])
-    .index("by_feature_museum", ["featureKey", "museumId"])
     .index("by_feature_boothNumber", ["featureKey", "boothNumber"]),
 
   // User Following (tracks which museums a user follows)

@@ -7,7 +7,7 @@ import { requireAdmin } from "./permissions";
 export const SOFTWARE_FAIR_FEATURE_KEY = "software_fair_2026";
 
 type ConfigRow = Doc<"softwareFairFeatureConfigs">;
-type BoothAssignmentRow = Doc<"softwareFairBoothAssignments">;
+type BoothRow = Doc<"softwareFairBooths">;
 
 function optionalTrimmed(value: string | undefined) {
   const trimmed = value?.trim();
@@ -77,10 +77,9 @@ function toAdminConfig(row: ConfigRow | null) {
   };
 }
 
-function toPublicBooth(row: BoothAssignmentRow) {
+function toPublicBooth(row: BoothRow) {
   return {
     _id: row._id,
-    museumId: row.museumId,
     boothNumber: row.boothNumber,
     projectName: row.projectName,
     genres: row.genres,
@@ -92,60 +91,26 @@ function toPublicBooth(row: BoothAssignmentRow) {
   };
 }
 
-function compareBooths(a: BoothAssignmentRow, b: BoothAssignmentRow) {
+function compareBooths(a: BoothRow, b: BoothRow) {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   if (a.boothNumber !== b.boothNumber) return a.boothNumber - b.boothNumber;
   return a.projectName.localeCompare(b.projectName);
 }
 
-async function getMuseumStats(ctx: QueryCtx | MutationCtx, museumId: Id<"museums">) {
-  const checkIns = await ctx.db
-    .query("checkIns")
-    .withIndex("by_content", (q) =>
-      q.eq("contentType", "museum").eq("contentId", museumId)
-    )
-    .collect();
-
-  const ratings = checkIns
-    .map((checkIn) => checkIn.rating)
-    .filter((rating): rating is number => typeof rating === "number");
-  const ratingCount = ratings.length;
-  const averageRating =
-    ratingCount > 0
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratingCount
-      : null;
-
-  return {
-    averageRating,
-    ratingCount,
-  };
-}
-
-async function assertNoAssignmentConflicts(
+async function assertNoBoothNumberConflict(
   ctx: MutationCtx,
   args: {
-    assignmentId?: Id<"softwareFairBoothAssignments">;
-    museumId: Id<"museums">;
+    boothId?: Id<"softwareFairBooths">;
     boothNumber: number;
   }
 ) {
-  const existingForMuseum = await ctx.db
-    .query("softwareFairBoothAssignments")
-    .withIndex("by_feature_museum", (q) =>
-      q.eq("featureKey", SOFTWARE_FAIR_FEATURE_KEY).eq("museumId", args.museumId)
-    )
-    .first();
-  if (existingForMuseum && existingForMuseum._id !== args.assignmentId) {
-    throw new Error("This museum is already assigned to a Software Fair booth");
-  }
-
   const existingForBooth = await ctx.db
-    .query("softwareFairBoothAssignments")
+    .query("softwareFairBooths")
     .withIndex("by_feature_boothNumber", (q) =>
       q.eq("featureKey", SOFTWARE_FAIR_FEATURE_KEY).eq("boothNumber", args.boothNumber)
     )
     .first();
-  if (existingForBooth && existingForBooth._id !== args.assignmentId) {
+  if (existingForBooth && existingForBooth._id !== args.boothId) {
     throw new Error("This Software Fair booth number is already assigned");
   }
 }
@@ -158,54 +123,35 @@ export const getConfig = query({
   },
 });
 
-export const listActiveBoothMuseums = query({
+export const listActiveBooths = query({
   args: {},
   handler: async (ctx) => {
     const config = await getConfigRow(ctx);
     if (!config?.enabled) return [];
 
-    const assignments = await ctx.db
-      .query("softwareFairBoothAssignments")
+    const booths = await ctx.db
+      .query("softwareFairBooths")
       .withIndex("by_feature_active_sortOrder", (q) =>
         q.eq("featureKey", SOFTWARE_FAIR_FEATURE_KEY).eq("isActive", true)
       )
       .collect();
-    assignments.sort(compareBooths);
+    booths.sort(compareBooths);
 
-    const rows = await Promise.all(
-      assignments.map(async (assignment) => {
-        const museum = await ctx.db.get(assignment.museumId);
-        if (!museum) return null;
-        const stats = await getMuseumStats(ctx, assignment.museumId);
-        return {
-          ...museum,
-          ...stats,
-          softwareFairBooth: toPublicBooth(assignment),
-        };
-      })
-    );
-
-    return rows.filter((row): row is NonNullable<typeof row> => row !== null);
+    return booths.map(toPublicBooth);
   },
 });
 
-export const getBoothForMuseum = query({
+export const getBooth = query({
   args: {
-    museumId: v.id("museums"),
+    boothId: v.id("softwareFairBooths"),
   },
   handler: async (ctx, args) => {
     const config = await getConfigRow(ctx);
     if (!config?.enabled) return null;
 
-    const assignment = await ctx.db
-      .query("softwareFairBoothAssignments")
-      .withIndex("by_feature_museum", (q) =>
-        q.eq("featureKey", SOFTWARE_FAIR_FEATURE_KEY).eq("museumId", args.museumId)
-      )
-      .first();
-
-    if (!assignment?.isActive) return null;
-    return toPublicBooth(assignment);
+    const booth = await ctx.db.get(args.boothId);
+    if (!booth || booth.featureKey !== SOFTWARE_FAIR_FEATURE_KEY || !booth.isActive) return null;
+    return toPublicBooth(booth);
   },
 });
 
@@ -253,39 +199,30 @@ export const updateConfigForAdmin = mutation({
   },
 });
 
-export const listBoothAssignmentsForAdmin = query({
+export const listBoothsForAdmin = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const assignments = await ctx.db
-      .query("softwareFairBoothAssignments")
+    const booths = await ctx.db
+      .query("softwareFairBooths")
       .withIndex("by_feature", (q) => q.eq("featureKey", SOFTWARE_FAIR_FEATURE_KEY))
       .collect();
-    assignments.sort(compareBooths);
+    booths.sort(compareBooths);
 
-    return await Promise.all(
-      assignments.map(async (assignment) => {
-        const museum = await ctx.db.get(assignment.museumId);
-        return {
-          ...toPublicBooth(assignment),
-          featureKey: assignment.featureKey,
-          createdAt: assignment.createdAt,
-          updatedAt: assignment.updatedAt,
-          createdBy: assignment.createdBy ?? null,
-          updatedBy: assignment.updatedBy ?? null,
-          museumName: museum?.name ?? null,
-          museumLocation: museum?.location ?? null,
-          hasMissingMuseum: museum === null,
-        };
-      })
-    );
+    return booths.map((booth) => ({
+      ...toPublicBooth(booth),
+      featureKey: booth.featureKey,
+      createdAt: booth.createdAt,
+      updatedAt: booth.updatedAt,
+      createdBy: booth.createdBy ?? null,
+      updatedBy: booth.updatedBy ?? null,
+    }));
   },
 });
 
-export const upsertBoothAssignmentForAdmin = mutation({
+export const upsertBoothForAdmin = mutation({
   args: {
-    assignmentId: v.optional(v.id("softwareFairBoothAssignments")),
-    museumId: v.id("museums"),
+    boothId: v.optional(v.id("softwareFairBooths")),
     boothNumber: v.number(),
     projectName: v.string(),
     genres: v.array(v.string()),
@@ -297,28 +234,24 @@ export const upsertBoothAssignmentForAdmin = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAdmin(ctx);
-    const museum = await ctx.db.get(args.museumId);
-    if (!museum) throw new Error("Museum not found");
 
     const projectName = args.projectName.trim();
     if (!projectName) throw new Error("Project name is required");
     assertPositiveInteger(args.boothNumber, "Booth number");
     assertFiniteNumber(args.sortOrder, "Sort order");
-    await assertNoAssignmentConflicts(ctx, {
-      assignmentId: args.assignmentId,
-      museumId: args.museumId,
+    await assertNoBoothNumberConflict(ctx, {
+      boothId: args.boothId,
       boothNumber: args.boothNumber,
     });
 
-    const existing = args.assignmentId ? await ctx.db.get(args.assignmentId) : null;
-    if (args.assignmentId && (!existing || existing.featureKey !== SOFTWARE_FAIR_FEATURE_KEY)) {
-      throw new Error("Software Fair booth assignment not found");
+    const existing = args.boothId ? await ctx.db.get(args.boothId) : null;
+    if (args.boothId && (!existing || existing.featureKey !== SOFTWARE_FAIR_FEATURE_KEY)) {
+      throw new Error("Software Fair booth not found");
     }
 
     const now = Date.now();
-    const nextAssignment = {
+    const nextBooth = {
       featureKey: SOFTWARE_FAIR_FEATURE_KEY,
-      museumId: args.museumId,
       boothNumber: args.boothNumber,
       projectName,
       genres: normalizeStringArray(args.genres),
@@ -332,27 +265,27 @@ export const upsertBoothAssignmentForAdmin = mutation({
     };
 
     if (existing) {
-      await ctx.db.patch(existing._id, nextAssignment);
+      await ctx.db.patch(existing._id, nextBooth);
       return existing._id;
     }
 
-    return await ctx.db.insert("softwareFairBoothAssignments", {
-      ...nextAssignment,
+    return await ctx.db.insert("softwareFairBooths", {
+      ...nextBooth,
       createdAt: now,
       createdBy: user._id,
     });
   },
 });
 
-export const deleteBoothAssignmentForAdmin = mutation({
+export const deleteBoothForAdmin = mutation({
   args: {
-    assignmentId: v.id("softwareFairBoothAssignments"),
+    boothId: v.id("softwareFairBooths"),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const assignment = await ctx.db.get(args.assignmentId);
-    if (!assignment || assignment.featureKey !== SOFTWARE_FAIR_FEATURE_KEY) return false;
-    await ctx.db.delete(args.assignmentId);
+    const booth = await ctx.db.get(args.boothId);
+    if (!booth || booth.featureKey !== SOFTWARE_FAIR_FEATURE_KEY) return false;
+    await ctx.db.delete(args.boothId);
     return true;
   },
 });

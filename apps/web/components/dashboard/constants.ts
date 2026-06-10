@@ -9,6 +9,7 @@ import {
   LayersIcon,
   SearchIcon,
   UserCircleIcon,
+  FlaskConicalIcon,
 } from "lucide-react"
 
 export const dashboardTabs = [
@@ -58,6 +59,7 @@ export const workspaceDashboardPathToTabId: Partial<Record<string, WorkspaceDash
 export const adminDashboardTabs = [
   { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
   { id: "admin-museums", path: "museums", label: "Museums", icon: Building2Icon },
+  { id: "experimental-features", path: "experimental-features", label: "Experimental Features", icon: FlaskConicalIcon },
   { id: "visual-search", path: "visual-search", label: "Visual Search", icon: SearchIcon },
   { id: "users", path: "users", label: "Users", icon: UsersIcon },
   { id: "invitations", path: "invitations", label: "Invitations", icon: MailIcon },
@@ -81,6 +83,7 @@ export type DashboardTabMessageKey =
   | "analytics"
   | "orgRequests"
   | "adminMuseums"
+  | "experimentalFeatures"
   | "visualSearch"
   | "users"
   | "invitations"
@@ -94,6 +97,7 @@ export const dashboardTabMessageKeys: Record<AllDashboardTabId, DashboardTabMess
   analytics: "analytics",
   "org-requests": "orgRequests",
   "admin-museums": "adminMuseums",
+  "experimental-features": "experimentalFeatures",
   "visual-search": "visualSearch",
   users: "users",
   invitations: "invitations",
