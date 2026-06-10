@@ -1,9 +1,22 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, FlatList, Pressable, Linking, Share, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import {
+  View,
+  FlatList,
+  Pressable,
+  Linking,
+  Share,
+  Image,
+  Keyboard,
+  TouchableWithoutFeedback,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { MapPin, List } from 'lucide-react-native';
+import { MapPin, List, XIcon } from 'lucide-react-native';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
@@ -16,6 +29,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { getLastExploreTabIndex, setLastExploreTabIndex } from '@/lib/last-people-search';
 import { userProfileHref } from '@/lib/user-profile-navigation';
@@ -48,6 +62,174 @@ appsFlyer.setAppInviteOneLinkID('Rz7b');
 const MUSEUMS_PER_PAGE = 10;
 const LIST_PADDING_BOTTOM = { paddingBottom: 80 } as const;
 const FEED_LIST_PADDING = { paddingBottom: 80, paddingHorizontal: 20 } as const;
+const MUTED_ICON_COLOR = '#73706c';
+
+type MuseumAdditionRequestDraft = {
+  museumName: string;
+  city: string;
+  state: string;
+  website: string;
+  note: string;
+};
+
+function normalizeMuseumRequestName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function MuseumRequestModal({
+  visible,
+  initialMuseumName,
+  onClose,
+  onSubmit,
+}: {
+  visible: boolean;
+  initialMuseumName: string;
+  onClose: () => void;
+  onSubmit: (request: MuseumAdditionRequestDraft) => void;
+}) {
+  const [museumName, setMuseumName] = useState(initialMuseumName);
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [website, setWebsite] = useState('');
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    if (!visible) return;
+    setMuseumName(initialMuseumName);
+    setCity('');
+    setState('');
+    setWebsite('');
+    setNote('');
+  }, [initialMuseumName, visible]);
+
+  const canSubmit = museumName.trim().length >= 2;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    onSubmit({
+      museumName: museumName.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      website: website.trim(),
+      note: note.trim(),
+    });
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 justify-end">
+        <Pressable
+          className="absolute inset-0 bg-black/40"
+          onPress={onClose}
+          accessibilityLabel="Dismiss museum request form"
+        />
+        <View className="z-10 max-h-[90%] rounded-t-3xl bg-background shadow-lg">
+          <View className="border-border border-b px-5 pb-4 pt-3">
+            <View className="bg-muted mx-auto mb-3 h-1 w-10 rounded-full" />
+            <View className="flex-row items-center justify-between gap-3">
+              <View className="min-w-0 flex-1">
+                <Text className="text-foreground text-xl font-bold">Request a museum</Text>
+                <Text className="text-muted-foreground mt-1 text-sm leading-5">
+                  Share what you know and our team can review it.
+                </Text>
+              </View>
+              <Button
+                variant="ghost"
+                size="icon"
+                accessibilityLabel="Close museum request form"
+                onPress={onClose}
+                className="shrink-0">
+                <XIcon size={21} color={MUTED_ICON_COLOR} />
+              </Button>
+            </View>
+          </View>
+
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ padding: 20, paddingBottom: 28 }}>
+            <View className="gap-4">
+              <View className="gap-2">
+                <Text className="text-foreground text-sm font-semibold">Museum name</Text>
+                <Input
+                  value={museumName}
+                  onChangeText={setMuseumName}
+                  placeholder="Museum name"
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View className="flex-row gap-3">
+                <View className="flex-1 gap-2">
+                  <Text className="text-foreground text-sm font-semibold">City</Text>
+                  <Input
+                    value={city}
+                    onChangeText={setCity}
+                    placeholder="Optional"
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
+                </View>
+                <View className="w-24 gap-2">
+                  <Text className="text-foreground text-sm font-semibold">State</Text>
+                  <Input
+                    value={state}
+                    onChangeText={setState}
+                    placeholder="CA"
+                    autoCapitalize="characters"
+                    maxLength={24}
+                    returnKeyType="next"
+                  />
+                </View>
+              </View>
+
+              <View className="gap-2">
+                <Text className="text-foreground text-sm font-semibold">Website</Text>
+                <Input
+                  value={website}
+                  onChangeText={setWebsite}
+                  placeholder="Optional"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View className="gap-2">
+                <Text className="text-foreground text-sm font-semibold">Anything else?</Text>
+                <Input
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder="Optional note for the team"
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View className="mt-2 flex-row gap-3">
+                <Button variant="outline" className="flex-1 rounded-xl" onPress={onClose}>
+                  <Text className="text-base font-semibold">Cancel</Text>
+                </Button>
+                <Button
+                  className="flex-1 rounded-xl"
+                  onPress={handleSubmit}
+                  disabled={!canSubmit}>
+                  <Text className="text-primary-foreground text-base font-semibold">Submit</Text>
+                </Button>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
 
 function MuseumsRoute({
   museumSearch,
@@ -65,6 +247,8 @@ function MuseumsRoute({
   onRetryLocation,
   viewMode,
   onToggleViewMode,
+  onRequestMuseum,
+  museumRequestSubmitted,
 }: {
   museumSearch: string;
   setMuseumSearch: (v: string) => void;
@@ -81,7 +265,12 @@ function MuseumsRoute({
   onRetryLocation: () => void;
   viewMode: 'list' | 'map';
   onToggleViewMode: () => void;
+  onRequestMuseum: () => void;
+  museumRequestSubmitted: boolean;
 }) {
+  const requestedMuseumName = museumSearch.trim();
+  const canRequestMuseum = requestedMuseumName.length >= 2;
+
   return (
     <View className="flex-1" style={{ flex: 1 }}>
       <View className="flex-row items-center gap-2 px-5 py-3">
@@ -163,10 +352,24 @@ function MuseumsRoute({
             ) : null
           }
           ListEmptyComponent={
-            <View className="items-center px-12 py-12">
-              <Text className="text-muted-foreground text-center text-base">
-                No museums match your search
+            <View className="items-center px-8 py-12">
+              <Text className="text-foreground text-center text-lg font-semibold">
+                {museumRequestSubmitted ? 'Request sent' : 'No museums match your search'}
               </Text>
+              <Text className="text-muted-foreground mt-2 text-center text-base leading-6">
+                {canRequestMuseum
+                  ? museumRequestSubmitted
+                    ? `Thanks for telling us about "${requestedMuseumName}". Our team can review it for Museum&.`
+                    : `Want us to add "${requestedMuseumName}"? Send the details to our team for review.`
+                  : 'Search for a museum name, then request it if it is missing.'}
+              </Text>
+              {canRequestMuseum && !museumRequestSubmitted ? (
+                <Button className="mt-5 rounded-xl px-6" onPress={onRequestMuseum}>
+                  <Text className="text-primary-foreground text-base font-semibold">
+                    Request this museum
+                  </Text>
+                </Button>
+              ) : null}
             </View>
           }
         />
@@ -414,6 +617,8 @@ export default function SearchScreen() {
   );
 
   const [museumSearch, setMuseumSearch] = useState('');
+  const [museumRequestModalVisible, setMuseumRequestModalVisible] = useState(false);
+  const [requestedMuseumNames, setRequestedMuseumNames] = useState<Set<string>>(() => new Set());
   const [museumPage, setMuseumPage] = useState(1);
   const { locState, retry } = useViewerLocation();
 
@@ -449,6 +654,23 @@ export default function SearchScreen() {
       setMuseumPage(totalMuseumPages);
     }
   }, [museumPage, totalMuseumPages]);
+  const currentMuseumRequestKey = useMemo(
+    () => normalizeMuseumRequestName(museumSearch),
+    [museumSearch]
+  );
+  const museumRequestSubmitted =
+    currentMuseumRequestKey.length > 0 && requestedMuseumNames.has(currentMuseumRequestKey);
+  const handleSubmitMuseumRequest = useCallback((request: MuseumAdditionRequestDraft) => {
+    const requestKey = normalizeMuseumRequestName(request.museumName);
+    if (!requestKey) return;
+    setRequestedMuseumNames((previous) => {
+      const next = new Set(previous);
+      next.add(requestKey);
+      return next;
+    });
+    setMuseumSearch(request.museumName);
+    setMuseumRequestModalVisible(false);
+  }, []);
 
   const [debouncedPeopleSearch, setDebouncedPeopleSearch] = useState('');
   useEffect(() => {
@@ -494,71 +716,81 @@ export default function SearchScreen() {
   const activeTabKey = tabs[index]?.key ?? 'people';
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView
-        className="bg-background relative flex-1"
-        style={{ flex: 1 }}
-        edges={['top', 'left', 'right']}>
-        <DecorativeGradientShapes />
+    <>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <SafeAreaView
+          className="bg-background relative flex-1"
+          style={{ flex: 1 }}
+          edges={['top', 'left', 'right']}>
+          <DecorativeGradientShapes />
 
-        <View className="border-border z-10 flex-row border-b">
-          {tabs.map((tab, tabIndex) => {
-            const isActive = tabIndex === index;
-            return (
-              <Pressable
-                key={tab.key}
-                className="flex-1 items-center pt-3.5 pb-2"
-                onPress={() => setIndex(tabIndex)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: isActive }}>
-                <Text
-                  className={cn(
-                    'text-base font-medium',
-                    isActive ? 'text-foreground' : 'text-muted-foreground'
-                  )}>
-                  {tab.title}
-                </Text>
-                <View
-                  className={cn(
-                    'mt-2 h-0.5 w-2/3 rounded-full',
-                    isActive ? 'bg-primary' : 'bg-transparent'
-                  )}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
+          <View className="border-border z-10 flex-row border-b">
+            {tabs.map((tab, tabIndex) => {
+              const isActive = tabIndex === index;
+              return (
+                <Pressable
+                  key={tab.key}
+                  className="flex-1 items-center pt-3.5 pb-2"
+                  onPress={() => setIndex(tabIndex)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isActive }}>
+                  <Text
+                    className={cn(
+                      'text-base font-medium',
+                      isActive ? 'text-foreground' : 'text-muted-foreground'
+                    )}>
+                    {tab.title}
+                  </Text>
+                  <View
+                    className={cn(
+                      'mt-2 h-0.5 w-2/3 rounded-full',
+                      isActive ? 'bg-primary' : 'bg-transparent'
+                    )}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
 
-      {activeTabKey === 'people' ? (
-        <PeopleSearchRoute
-          peopleSearch={peopleSearch}
-          setPeopleSearch={setPeopleSearch}
-          searchResults={searchResults}
-          searchLoading={searchLoading}
-          currUser={currUser}
-          currUserId={currUser?._id ?? null}
-          recommendedPeople={recommendedPeople}
-        />
-      ) : (
-        <MuseumsRoute
-          museumSearch={museumSearch}
-          setMuseumSearch={setMuseumSearch}
-          museums={museums}
-          pagedMuseums={pagedMuseums}
-          filteredMuseums={filteredMuseums}
-          museumPage={currentMuseumPage}
-          totalMuseumPages={totalMuseumPages}
-          onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
-          onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
-          sortedByDistance={locState.status === 'ok'}
-          expectDistanceOnCards={locState.status === 'ok'}
-          locationNote={locState.status === 'unavailable' ? locState.message : null}
-          onRetryLocation={retry}
-          viewMode={viewMode}
-          onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
-        />
-      )}
-    </SafeAreaView>
-    </TouchableWithoutFeedback>
+          {activeTabKey === 'people' ? (
+            <PeopleSearchRoute
+              peopleSearch={peopleSearch}
+              setPeopleSearch={setPeopleSearch}
+              searchResults={searchResults}
+              searchLoading={searchLoading}
+              currUser={currUser}
+              currUserId={currUser?._id ?? null}
+              recommendedPeople={recommendedPeople}
+            />
+          ) : (
+            <MuseumsRoute
+              museumSearch={museumSearch}
+              setMuseumSearch={setMuseumSearch}
+              museums={museums}
+              pagedMuseums={pagedMuseums}
+              filteredMuseums={filteredMuseums}
+              museumPage={currentMuseumPage}
+              totalMuseumPages={totalMuseumPages}
+              onPrevPage={() => setMuseumPage((p) => Math.max(1, p - 1))}
+              onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
+              sortedByDistance={locState.status === 'ok'}
+              expectDistanceOnCards={locState.status === 'ok'}
+              locationNote={locState.status === 'unavailable' ? locState.message : null}
+              onRetryLocation={retry}
+              viewMode={viewMode}
+              onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
+              onRequestMuseum={() => setMuseumRequestModalVisible(true)}
+              museumRequestSubmitted={museumRequestSubmitted}
+            />
+          )}
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
+      <MuseumRequestModal
+        visible={museumRequestModalVisible}
+        initialMuseumName={museumSearch.trim()}
+        onClose={() => setMuseumRequestModalVisible(false)}
+        onSubmit={handleSubmitMuseumRequest}
+      />
+    </>
   );
 }
