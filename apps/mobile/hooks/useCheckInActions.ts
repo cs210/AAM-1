@@ -18,7 +18,8 @@ export function useCheckInActions(onClose: () => void) {
     review: string,
     imageStorageIds?: Id<'_storage'>[],
     friendUserIds?: string[],
-    durationHours?: number
+    durationHours?: number,
+    attendedEventIds?: (Id<'events'> | Id<'exhibitions'>)[]
   ) => {
     await updateCheckIn({
       checkInId,
@@ -27,6 +28,7 @@ export function useCheckInActions(onClose: () => void) {
       ...(imageStorageIds !== undefined ? { imageStorageIds } : {}),
       ...(friendUserIds !== undefined ? { friendUserIds } : {}),
       ...(durationHours !== undefined ? { durationHours } : {}),
+      ...(attendedEventIds !== undefined ? { attendedEventIds } : {}),
     });
 
     posthog?.capture('museum_visit_updated', {
@@ -35,6 +37,7 @@ export function useCheckInActions(onClose: () => void) {
       hasReview: review.trim().length > 0,
       ...(imageStorageIds !== undefined ? { photoCount: imageStorageIds.length } : {}),
       ...(friendUserIds !== undefined ? { taggedFriends: friendUserIds.length } : {}),
+      ...(attendedEventIds !== undefined ? { eventsAttended: attendedEventIds.length } : {}),
     });
 
     onClose();

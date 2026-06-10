@@ -1,19 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
   ScrollView,
   Dimensions,
-  TouchableOpacity,
   Image,
   Pressable,
   ImageBackground,
   Alert,
-  ActivityIndicator,
   Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { Stack, useLocalSearchParams, useNavigation, router } from 'expo-router';
 import {
   ArrowLeftIcon,
   StarIcon,
@@ -25,12 +23,14 @@ import {
   Grid3x3Icon,
   ListIcon,
   BookmarkIcon,
+  InfoIcon,
 } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { MuseumCard } from '@/components/museum-card';
+import { TasteProfileExplainerModal } from '@/components/taste-profile-explainer-modal';
 import { useCheckInActions } from '@/hooks/useCheckInActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -38,15 +38,21 @@ import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { cn } from '@/lib/utils';
+import { userProfileHref } from '@/lib/user-profile-navigation';
+import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { useUniwind } from 'uniwind';
 import {
   RN_API_FOREGROUND_DARK,
   RN_API_FOREGROUND_LIGHT,
+  RN_API_INFO_DARK,
+  RN_API_INFO_LIGHT,
   RN_API_MUTED_FOREGROUND_DARK,
   RN_API_MUTED_FOREGROUND_LIGHT,
   RN_API_PRIMARY_DARK,
   RN_API_PRIMARY_LIGHT,
 } from '@/constants/rn-api-colors';
+import { usePostHog } from 'posthog-react-native';
+import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
 
 const { width } = Dimensions.get('window');
 /** Matches `h-30` banner (30 × 4px). */
@@ -67,12 +73,17 @@ type ProfileVisit = {
     friendUserIds?: string[];
     imageIds?: Id<'_storage'>[];
     imageUrls?: string[];
+    attendedEventIds?: (Id<'events'> | Id<'exhibitions'>)[];
   };
   museum: { _id: string; name: string; imageUrl?: string; category: string; city?: string };
 };
 
 function formatVisitDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(ts).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function PassportCard({
@@ -93,15 +104,15 @@ function PassportCard({
   return (
     <View className="mb-3.5">
       <Pressable
-        className="overflow-hidden rounded-xl border border-border bg-card shadow-sm shadow-black/5 active:opacity-95"
+        className="border-border bg-card overflow-hidden rounded-xl border shadow-sm shadow-black/5 active:opacity-95"
         onPress={onCardPress}>
         <View className="flex-row p-3">
           <View className="mr-3.5 h-24 w-24 overflow-hidden rounded-lg">
             {museum.imageUrl ? (
               <Image source={{ uri: museum.imageUrl }} className="size-full" resizeMode="cover" />
             ) : (
-              <View className="size-full items-center justify-center bg-muted">
-                <Text className="text-3xl font-bold text-muted-foreground">
+              <View className="bg-muted size-full items-center justify-center">
+                <Text className="text-muted-foreground text-3xl font-bold">
                   {museum.name ? museum.name[0].toUpperCase() : '?'}
                 </Text>
               </View>
@@ -109,7 +120,7 @@ function PassportCard({
           </View>
           <View className="min-h-24 flex-1 justify-between">
             <View className="mb-1 flex-row items-start justify-between gap-2">
-              <Text className="flex-1 text-base font-bold text-foreground" numberOfLines={2}>
+              <Text className="text-foreground flex-1 text-base font-bold" numberOfLines={2}>
                 {museum.name}
               </Text>
               {isOwnProfile && onEditPress ? (
@@ -127,15 +138,15 @@ function PassportCard({
             {museum.city ? (
               <View className="mb-1.5 flex-row items-center gap-1">
                 <MapPinIcon size={12} color={mutedHex} />
-                <Text className="text-sm text-muted-foreground">{museum.city}</Text>
+                <Text className="text-muted-foreground text-sm">{museum.city}</Text>
               </View>
             ) : null}
-            <View className="mb-1.5 flex-row items-center self-start rounded-md bg-muted px-2 py-1">
-              <Text className="text-xs font-semibold tracking-wide text-muted-foreground">
+            <View className="bg-muted mb-1.5 flex-row items-center self-start rounded-md px-2 py-1">
+              <Text className="text-muted-foreground text-xs font-semibold tracking-wide">
                 {formatVisitDate(checkIn.visitDate)}
               </Text>
               {checkIn.editedAt != null ? (
-                <Text className="text-xs italic text-muted-foreground"> · Edited</Text>
+                <Text className="text-muted-foreground text-xs italic"> · Edited</Text>
               ) : null}
             </View>
             {checkIn.rating != null ? (
@@ -148,11 +159,13 @@ function PassportCard({
                     fill={star <= checkIn.rating! ? '#FFB800' : 'none'}
                   />
                 ))}
-                <Text className="text-sm font-semibold text-amber-500">{checkIn.rating.toFixed(1)}</Text>
+                <Text className="text-sm font-semibold text-amber-500">
+                  {checkIn.rating.toFixed(1)}
+                </Text>
               </View>
             ) : null}
             {checkIn.review ? (
-              <Text className="mt-1 text-sm leading-snug text-muted-foreground" numberOfLines={2}>
+              <Text className="text-muted-foreground mt-1 text-sm leading-snug" numberOfLines={2}>
                 {checkIn.review}
               </Text>
             ) : null}
@@ -184,10 +197,10 @@ function MosaicGallery({
 
   if (allImages.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center bg-background p-12">
+      <View className="bg-background flex-1 items-center justify-center p-12">
         <CameraIcon size={48} color={mutedHex} />
-        <Text className="mb-2 mt-4 text-lg font-bold text-foreground">No photos yet</Text>
-        <Text className="text-center text-base text-muted-foreground">
+        <Text className="text-foreground mt-4 mb-2 text-lg font-bold">No photos yet</Text>
+        <Text className="text-muted-foreground text-center text-base">
           Photos from your check-ins will appear here
         </Text>
       </View>
@@ -196,7 +209,7 @@ function MosaicGallery({
 
   const GAP = 4;
   const CONTAINER_PADDING = 20;
-  const AVAILABLE_WIDTH = width - (CONTAINER_PADDING * 2);
+  const AVAILABLE_WIDTH = width - CONTAINER_PADDING * 2;
   const largeSize = (AVAILABLE_WIDTH - GAP) * 0.66;
   const smallSize = (AVAILABLE_WIDTH - GAP) * 0.34;
 
@@ -217,42 +230,42 @@ function MosaicGallery({
           rows.push(
             <View key={`row-${index}`} className="mb-1 flex-row" style={{ gap: GAP }}>
               {/* Large image on left */}
-              <TouchableOpacity
+              <Pressable
                 onPress={() => onImagePress(rowImages[0].visit)}
-                activeOpacity={0.8}
+                className="active:opacity-80"
                 style={{ width: largeSize, height: largeSize }}>
                 <Image
                   source={{ uri: rowImages[0].url }}
-                  className="size-full rounded-lg bg-muted"
+                  className="bg-muted size-full rounded-lg"
                   resizeMode="cover"
                 />
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Two small images stacked on right */}
               <View className="flex-1" style={{ gap: GAP }}>
                 {rowImages[1] && (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => onImagePress(rowImages[1].visit)}
-                    activeOpacity={0.8}
+                    className="active:opacity-80"
                     style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[1].url }}
-                      className="size-full rounded-lg bg-muted"
+                      className="bg-muted size-full rounded-lg"
                       resizeMode="cover"
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
                 {rowImages[2] && (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => onImagePress(rowImages[2].visit)}
-                    activeOpacity={0.8}
+                    className="active:opacity-80"
                     style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[2].url }}
-                      className="size-full rounded-lg bg-muted"
+                      className="bg-muted size-full rounded-lg"
                       resizeMode="cover"
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
             </View>
@@ -263,42 +276,42 @@ function MosaicGallery({
             <View key={`row-${index}`} className="mb-1 flex-row" style={{ gap: GAP }}>
               {/* Two small images stacked on left */}
               <View className="flex-1" style={{ gap: GAP }}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => onImagePress(rowImages[0].visit)}
-                  activeOpacity={0.8}
+                  className="active:opacity-80"
                   style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                   <Image
                     source={{ uri: rowImages[0].url }}
-                    className="size-full rounded-lg bg-muted"
+                    className="bg-muted size-full rounded-lg"
                     resizeMode="cover"
                   />
-                </TouchableOpacity>
+                </Pressable>
                 {rowImages[1] && (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => onImagePress(rowImages[1].visit)}
-                    activeOpacity={0.8}
+                    className="active:opacity-80"
                     style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[1].url }}
-                      className="size-full rounded-lg bg-muted"
+                      className="bg-muted size-full rounded-lg"
                       resizeMode="cover"
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
 
               {/* Large image on right */}
               {rowImages[2] && (
-                <TouchableOpacity
+                <Pressable
                   onPress={() => onImagePress(rowImages[2].visit)}
-                  activeOpacity={0.8}
+                  className="active:opacity-80"
                   style={{ width: largeSize, height: largeSize }}>
                   <Image
                     source={{ uri: rowImages[2].url }}
-                    className="size-full rounded-lg bg-muted"
+                    className="bg-muted size-full rounded-lg"
                     resizeMode="cover"
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           );
@@ -313,7 +326,7 @@ function MosaicGallery({
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      className="bg-background flex-1"
       style={{ flex: 1 }}
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}>
@@ -322,41 +335,93 @@ function MosaicGallery({
   );
 }
 
+type ProfileScreenProps = {
+  presentation?: 'tab' | 'stack';
+  stackUserId?: string;
+};
 
-export default function ProfileScreen() {
-  const { userId: paramUserId, search: paramSearch } = useLocalSearchParams<{ userId?: string | string[]; search?: string | string[] }>();
+export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScreenProps) {
+  const isStackPresentation = presentation === 'stack';
+  const { userId: paramUserId } = useLocalSearchParams<{
+    userId?: string | string[];
+  }>();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
-  // When navigating from search, userId is in URL params; otherwise show current user's profile
   const paramUserIdStr = Array.isArray(paramUserId) ? paramUserId[0] : paramUserId;
-  const viewedUserId = (typeof paramUserIdStr === 'string' && paramUserIdStr ? paramUserIdStr : null) || currentUserId;
-  const searchFromParams = Array.isArray(paramSearch) ? paramSearch[0] : paramSearch;
-  const returnSearch = typeof searchFromParams === 'string' ? searchFromParams : '';
+  const viewedUserId = isStackPresentation
+    ? stackUserId ?? null
+    : (typeof paramUserIdStr === 'string' && paramUserIdStr ? paramUserIdStr : null) || currentUserId;
   const isViewingOtherProfile = viewedUserId && currentUserId && viewedUserId !== currentUserId;
+  const navigation = useNavigation();
+  const wasViewingOtherProfileRef = React.useRef(false);
 
-  // Fetch user profile info
-  const userProfile = useQuery(api.auth.listUsers, {});
-  // Removed redundant saveUserProfile call. Profile upsert now only happens after sign-up.
-  const profile = React.useMemo(() => {
-    if (!userProfile || !viewedUserId) return null;
-    return userProfile.find((u: any) => u.userId === viewedUserId);
-  }, [userProfile, viewedUserId]);
+  React.useEffect(() => {
+    wasViewingOtherProfileRef.current = Boolean(isViewingOtherProfile);
+  }, [isViewingOtherProfile]);
+
+  /** Legacy tab URLs: open other users on the stack screen (no bottom tabs). */
+  React.useEffect(() => {
+    if (isStackPresentation) return;
+    if (!paramUserIdStr || !currentUserId || paramUserIdStr === currentUserId) return;
+    router.replace(userProfileHref(paramUserIdStr));
+  }, [isStackPresentation, paramUserIdStr, currentUserId]);
+
+  /** Drop ?userId= from the Profile tab when leaving so Home → Explore does not reopen that profile. */
+  React.useEffect(() => {
+    if (isStackPresentation) return;
+    const unsubscribe = navigation.addListener('blur', () => {
+      if (!wasViewingOtherProfileRef.current) return;
+      router.setParams({ userId: '', search: '' });
+    });
+    return unsubscribe;
+  }, [navigation, isStackPresentation]);
+
+  const profile = useQuery(
+    api.userProfiles.getUserProfile,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+
+  const posthog = usePostHog();
 
   // Fetch follower/following counts
-  const followers = useQuery(api.follows.getFollowers, viewedUserId ? { userId: viewedUserId } : 'skip');
-  const following = useQuery(api.follows.getFollowing, viewedUserId ? { userId: viewedUserId } : 'skip');
-  const isFollowing = useQuery(api.follows.isFollowingUser, viewedUserId && currentUserId && viewedUserId !== currentUserId ? { userId: viewedUserId } : 'skip');
-  
-  // Fetch follower/following user profiles
+  const followers = useQuery(
+    api.follows.getFollowers,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+  const following = useQuery(
+    api.follows.getFollowing,
+    viewedUserId ? { userId: viewedUserId } : 'skip'
+  );
+  const isFollowing = useQuery(
+    api.follows.isFollowingUser,
+    viewedUserId && currentUserId && viewedUserId !== currentUserId
+      ? { userId: viewedUserId }
+      : 'skip'
+  );
+
+  const followerFollowingUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    followers?.forEach((id) => ids.add(id));
+    following?.forEach((id) => ids.add(id));
+    return [...ids];
+  }, [followers, following]);
+
+  const followerFollowingProfiles = useQuery(
+    api.userProfiles.getProfilesByUserIds,
+    followerFollowingUserIds.length > 0 ? { userIds: followerFollowingUserIds } : 'skip'
+  );
+
   const followersData = useMemo(() => {
-    if (!followers || followers.length === 0) return [];
-    return followers.map(id => userProfile?.find((u: any) => u.userId === id)).filter(Boolean);
-  }, [followers, userProfile]);
-  
+    if (!followers || followers.length === 0 || !followerFollowingProfiles) return [];
+    const byUserId = new Map(followerFollowingProfiles.map((p) => [p.userId, p]));
+    return followers.map((id) => byUserId.get(id)).filter(Boolean);
+  }, [followers, followerFollowingProfiles]);
+
   const followingData = useMemo(() => {
-    if (!following || following.length === 0) return [];
-    return following.map(id => userProfile?.find((u: any) => u.userId === id)).filter(Boolean);
-  }, [following, userProfile]);
+    if (!following || following.length === 0 || !followerFollowingProfiles) return [];
+    const byUserId = new Map(followerFollowingProfiles.map((p) => [p.userId, p]));
+    return following.map((id) => byUserId.get(id)).filter(Boolean);
+  }, [following, followerFollowingProfiles]);
 
   // Cultural passport: visits for the profile being viewed
   const profileVisits = useQuery(
@@ -388,7 +453,45 @@ export default function ProfileScreen() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('visits');
   const [showFollowModal, setShowFollowModal] = useState<'followers' | 'following' | null>(null);
+  const [showTasteProfileModal, setShowTasteProfileModal] = useState(false);
+  const [showWrappedHint, setShowWrappedHint] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingVisit(null));
+  const isWrappedEligible = !isViewingOtherProfile && !!profileVisits && profileVisits.length >= 3;
+
+  useEffect(() => {
+    if (!currentUserId || !isWrappedEligible) {
+      setShowWrappedHint(false);
+      return;
+    }
+    let isActive = true;
+
+    const run = async () => {
+      try {
+        const shouldShow = await shouldShowFeatureHint(currentUserId, 'profile_wrapped');
+        if (!isActive) return;
+        setShowWrappedHint(shouldShow);
+      } catch {
+        if (!isActive) return;
+        setShowWrappedHint(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUserId, isWrappedEligible]);
+
+  const dismissWrappedHint = React.useCallback(async () => {
+    if (!currentUserId) return;
+    setShowWrappedHint(false);
+    try {
+      await dismissFeatureHint(currentUserId, 'profile_wrapped');
+    } catch {
+      // Non-blocking persistence failure.
+    }
+  }, [currentUserId]);
 
   const MAX_AVATAR_DIMENSION = 512;
   const MAX_BANNER_WIDTH = 1200;
@@ -457,14 +560,10 @@ export default function ProfileScreen() {
         }
       }
 
-      const manipulated = await ImageManipulator.manipulateAsync(
-        originalUri,
-        actions,
-        {
-          compress: type === 'avatar' ? 0.5 : 0.6,
-          format: ImageManipulator.SaveFormat.JPEG,
-        },
-      );
+      const manipulated = await ImageManipulator.manipulateAsync(originalUri, actions, {
+        compress: type === 'avatar' ? 0.5 : 0.6,
+        format: ImageManipulator.SaveFormat.JPEG,
+      });
 
       const uploadUrl = await generateUploadUrl();
       const response = await fetch(uploadUrl, {
@@ -498,22 +597,32 @@ export default function ProfileScreen() {
 
   const FALLBACK_DISPLAY_NAME = "Name can't be displayed";
   // Own profile: use current user's name/email from auth; else profile. Other users: name only (never show their email).
-  const rawDisplayName = viewedUserId === currentUserId
-    ? (currentUser?.name ?? currentUser?.email ?? profile?.name ?? profile?.email ?? FALLBACK_DISPLAY_NAME)
-    : (profile?.name ?? FALLBACK_DISPLAY_NAME);
+  const rawDisplayName =
+    viewedUserId === currentUserId
+      ? (currentUser?.name ??
+        currentUser?.email ??
+        profile?.name ??
+        profile?.email ??
+        FALLBACK_DISPLAY_NAME)
+      : (profile?.name ?? FALLBACK_DISPLAY_NAME);
   // Never show trailing " 2", " 3", etc. (e.g. from auth duplicate-name handling)
-  const displayName = typeof rawDisplayName === 'string'
-    ? rawDisplayName.replace(/\s+\d+$/, '').trim() || FALLBACK_DISPLAY_NAME
-    : FALLBACK_DISPLAY_NAME;
+  const displayName =
+    typeof rawDisplayName === 'string'
+      ? rawDisplayName.replace(/\s+\d+$/, '').trim() || FALLBACK_DISPLAY_NAME
+      : FALLBACK_DISPLAY_NAME;
 
-  const handleBackToSearch = () => {
-    const search = encodeURIComponent(returnSearch);
-    router.replace(`/(tabs)/explore?tab=people&search=${search}`);
+  const handleBack = () => {
+    if (isStackPresentation) {
+      router.back();
+      return;
+    }
+    router.replace('/(tabs)/explore?tab=people');
   };
 
   const { theme } = useUniwind();
   const fgHex = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
   const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const infoHex = theme === 'dark' ? RN_API_INFO_DARK : RN_API_INFO_LIGHT;
   const mutedHex = theme === 'dark' ? RN_API_MUTED_FOREGROUND_DARK : RN_API_MUTED_FOREGROUND_LIGHT;
   const insets = useSafeAreaInsets();
   /** Own profile: bleed banner under status bar / Dynamic Island; other profile: back row sits in safe area. */
@@ -524,97 +633,115 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView
-      className="flex-1 bg-background"
+      className="bg-background flex-1"
       style={{ flex: 1 }}
       edges={['top', 'left', 'right']}>
-      <Pressable className="flex-1" style={{ flex: 1 }} onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
-        {isViewingOtherProfile ? (
-          <View className="flex-row items-center bg-background px-3 pb-2 pt-3">
-            <TouchableOpacity
+      {isStackPresentation ? (
+        <ScreenTitleBar title={displayName} onBackPress={handleBack} />
+      ) : null}
+      <Pressable
+        className="flex-1"
+        style={{ flex: 1 }}
+        onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
+        {isViewingOtherProfile && !isStackPresentation ? (
+          <View className="bg-background flex-row items-center px-3 pt-3 pb-2">
+            <Pressable
               className="p-2"
-              onPress={handleBackToSearch}
+              onPress={handleBack}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <ArrowLeftIcon size={24} color={fgHex} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : null}
-        <View className="border-b border-border bg-background">
+        <View className="border-border bg-background border-b">
           {/* Banner Image */}
-          <TouchableOpacity
+          <Pressable
             onPress={!isViewingOtherProfile ? () => pickAndUploadImage('banner') : undefined}
-            activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+            className={cn(!isViewingOtherProfile && 'active:opacity-85')}
             disabled={!!isViewingOtherProfile}
             style={!isViewingOtherProfile ? { marginTop: -insets.top } : undefined}>
             <ImageBackground
-              source={profile?.bannerUrl ? { uri: profile.bannerUrl } : require('@/assets/images/login-background.jpg')}
+              source={
+                profile?.bannerUrl
+                  ? { uri: profile.bannerUrl }
+                  : require('@/assets/images/login-background.jpg')
+              }
               className="w-full"
               style={bannerBleedStyle}
               imageStyle={{ resizeMode: 'cover' }}
               resizeMode="cover">
               <View className="absolute inset-0 bg-black/20" />
               {!isViewingOtherProfile && (
-                <View className="absolute bottom-2 right-2 rounded-xl bg-black/45 p-1.5">
+                <View className="absolute right-2 bottom-2 rounded-xl bg-black/45 p-1.5">
                   {uploadingBanner ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <BrandActivityIndicator size="small" color="#fff" />
                   ) : (
                     <CameraIcon size={16} color="#fff" />
                   )}
                 </View>
               )}
             </ImageBackground>
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Profile Content */}
-          <View className="px-5 pb-3 pt-0">
+          <View className="px-5 pt-0 pb-3">
             <View className="-mt-10 mb-3 flex-row items-start justify-between">
               {/* Avatar */}
-              <TouchableOpacity
-                className="rounded-full border-4 border-background"
+              <Pressable
                 onPress={!isViewingOtherProfile ? () => pickAndUploadImage('avatar') : undefined}
-                activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+                className={cn(
+                  'border-background rounded-full border-4',
+                  !isViewingOtherProfile && 'active:opacity-85'
+                )}
                 disabled={!!isViewingOtherProfile}>
                 {uploadingAvatar ? (
-                  <View className="size-20 items-center justify-center rounded-full bg-primary opacity-70">
-                    <ActivityIndicator size="small" color="#fff" />
+                  <View className="bg-primary size-20 items-center justify-center rounded-full opacity-70">
+                    <BrandActivityIndicator size="small" color="#fff" />
                   </View>
                 ) : profile?.imageUrl ? (
-                  <Image source={{ uri: profile.imageUrl }} className="size-20 rounded-full bg-primary/20" />
+                  <Image
+                    source={{ uri: profile.imageUrl }}
+                    className="bg-primary/20 size-20 rounded-full"
+                  />
                 ) : (
-                  <View className="size-20 items-center justify-center rounded-full bg-primary">
-                    <Text className="text-4xl font-semibold text-primary-foreground">
-                      {(displayName && displayName !== FALLBACK_DISPLAY_NAME ? displayName[0] : '?').toUpperCase()}
+                  <View className="bg-primary size-20 items-center justify-center rounded-full">
+                    <Text className="text-primary-foreground text-4xl font-semibold">
+                      {(displayName && displayName !== FALLBACK_DISPLAY_NAME
+                        ? displayName[0]
+                        : '?'
+                      ).toUpperCase()}
                     </Text>
                   </View>
                 )}
                 {!isViewingOtherProfile && !uploadingAvatar && (
-                  <View className="absolute bottom-0 right-0 size-5 items-center justify-center rounded-full border-2 border-background bg-primary">
+                  <View className="border-background bg-primary absolute right-0 bottom-0 size-5 items-center justify-center rounded-full border-2">
                     <CameraIcon size={10} color="#fff" />
                   </View>
                 )}
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Settings Icon or Follow/Unfollow Button - Top Right */}
               {!isViewingOtherProfile ? (
                 <View>
-                  <TouchableOpacity
-                    className="mt-12 size-9 items-center justify-center rounded-full border border-border bg-background"
+                  <Pressable
+                    className="border-border bg-background mt-12 size-9 items-center justify-center rounded-full border"
                     onPress={() => setShowSettingsDropdown(!showSettingsDropdown)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <SettingsIcon size={20} color={fgHex} />
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {showSettingsDropdown && (
-                    <View className="absolute right-0 top-22 z-1000 min-w-40 rounded-lg border border-border bg-card shadow-md">
-                      <TouchableOpacity
+                    <View className="border-border bg-card absolute top-22 right-0 z-1000 min-w-40 rounded-lg border shadow-md">
+                      <Pressable
                         className="px-4 py-3"
                         onPress={() => {
                           setShowSettingsDropdown(false);
-                          router.push('/intake?redirect=/(tabs)/profile');
+                          router.push('/profile-settings');
                         }}>
-                        <Text className="text-sm font-medium text-foreground">Preferences</Text>
-                      </TouchableOpacity>
-                      <View className="my-1 h-px bg-border" />
-                      <TouchableOpacity
+                        <Text className="text-foreground text-sm font-medium">Settings</Text>
+                      </Pressable>
+                      <View className="bg-border my-1 h-px" />
+                      <Pressable
                         className="px-4 py-3"
                         onPress={async () => {
                           setShowSettingsDropdown(false);
@@ -622,8 +749,8 @@ export default function ProfileScreen() {
                           await authClient.signOut();
                           router.replace('/sign-in');
                         }}>
-                        <Text className="text-sm font-medium text-destructive">Log out</Text>
-                      </TouchableOpacity>
+                        <Text className="text-destructive text-sm font-medium">Log out</Text>
+                      </Pressable>
                     </View>
                   )}
                 </View>
@@ -632,7 +759,9 @@ export default function ProfileScreen() {
                   variant={isFollowing ? 'outline' : 'default'}
                   className="mt-12 rounded-lg px-5 py-2"
                   onPress={isFollowing ? handleUnfollow : handleFollow}>
-                  <Text className="text-sm font-semibold">{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+                  <Text className="text-sm font-semibold">
+                    {isFollowing ? 'Unfollow' : 'Follow'}
+                  </Text>
                 </Button>
               )}
             </View>
@@ -640,47 +769,90 @@ export default function ProfileScreen() {
             {/* Name and Taste profile badge */}
             <View className="mb-2">
               <View className="mb-0.5 flex-row flex-wrap items-center gap-2">
-                <Text className="max-w-3/5 shrink text-2xl font-semibold text-foreground" numberOfLines={1}>
+                <Text
+                  className="text-foreground max-w-3/5 shrink text-2xl font-semibold"
+                  numberOfLines={1}>
                   {displayName}
                 </Text>
                 {tasteProfile?.profileName ? (
-                  <View className="flex-row items-center gap-1 rounded-xl bg-primary/15 px-2.5 py-1">
-                    <Text className="text-sm font-semibold text-primary">{tasteProfile.profileName}</Text>
-                  </View>
+                  <Pressable
+                    className="bg-primary/15 flex-row items-center gap-1 rounded-xl px-2.5 py-1 active:opacity-80"
+                    onPress={() => setShowTasteProfileModal(true)}>
+                    <Text className="text-primary text-sm font-semibold">
+                      {tasteProfile.profileName}
+                    </Text>
+                  </Pressable>
                 ) : null}
-                {!isViewingOtherProfile && profileVisits && profileVisits.length >= 3 && (
-                  <TouchableOpacity
-                    className="flex-row items-center gap-1.5 rounded-full bg-primary px-2.5 py-1.5 active:opacity-90"
-                    onPress={() => router.push('/wrapped')}
-                    activeOpacity={0.8}>
+                {isWrappedEligible ? (
+                  <Pressable
+                    className="bg-primary flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5 active:opacity-90"
+                    onPress={() => {
+                      posthog?.capture('wrapped_click', {});
+                      if (showWrappedHint) void dismissWrappedHint();
+                      router.push('/wrapped');
+                    }}>
                     <Sparkles size={14} color="#FFFFFF" />
-                    <Text className="text-sm font-bold text-primary-foreground">Wrapped</Text>
-                  </TouchableOpacity>
-                )}
+                    <Text className="text-primary-foreground text-sm font-bold">Wrapped</Text>
+                  </Pressable>
+                ) : null}
               </View>
-              {viewedUserId === currentUserId && profile?.email && (
-                <Text className="mb-2 text-sm text-muted-foreground">{profile.email}</Text>
+              {profile?.username ? (
+                <Text className="text-muted-foreground mb-1 text-sm">@{profile.username}</Text>
+              ) : null}
+              {showWrappedHint ? (
+                <View className="mt-3 mb-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-3 dark:border-blue-800/70 dark:bg-blue-950/40">
+                  <View className="flex-row items-start gap-2">
+                    <View className="mt-0.5">
+                      <InfoIcon size={14} color={infoHex} />
+                    </View>
+                    <Text className="flex-1 text-xs leading-5 text-blue-900 dark:text-blue-100">
+                      Your Wrapped has been curated. Tap in to see your highlights!
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss wrapped hint"
+                      onPress={() => void dismissWrappedHint()}
+                      className="shrink-0">
+                      <Text className="text-xs font-semibold text-blue-700 dark:text-blue-300">Dismiss</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
+              {viewedUserId === currentUserId && (currentUser?.email || profile?.email) && (
+                <Text className="text-muted-foreground mb-2 text-sm">
+                  {currentUser?.email ?? profile?.email}
+                </Text>
               )}
 
               <View className="mt-1 flex-row gap-4">
                 <Pressable
-                  onPress={() => viewedUserId === currentUserId && followers && followers.length > 0 && setShowFollowModal('followers')}
+                  onPress={() =>
+                    viewedUserId === currentUserId &&
+                    followers &&
+                    followers.length > 0 &&
+                    setShowFollowModal('followers')
+                  }
                   disabled={viewedUserId !== currentUserId}>
                   <Text className="text-sm">
-                    <Text className="text-sm font-bold text-foreground">
+                    <Text className="text-foreground text-sm font-bold">
                       {followers ? followers.length : '0'}
                     </Text>
-                    <Text className="text-sm text-muted-foreground"> Followers</Text>
+                    <Text className="text-muted-foreground text-sm"> Followers</Text>
                   </Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => viewedUserId === currentUserId && following && following.length > 0 && setShowFollowModal('following')}
+                  onPress={() =>
+                    viewedUserId === currentUserId &&
+                    following &&
+                    following.length > 0 &&
+                    setShowFollowModal('following')
+                  }
                   disabled={viewedUserId !== currentUserId}>
                   <Text className="text-sm">
-                    <Text className="text-sm font-bold text-foreground">
+                    <Text className="text-foreground text-sm font-bold">
                       {following ? following.length : '0'}
                     </Text>
-                    <Text className="text-sm text-muted-foreground"> Following</Text>
+                    <Text className="text-muted-foreground text-sm"> Following</Text>
                   </Text>
                 </Pressable>
               </View>
@@ -689,53 +861,50 @@ export default function ProfileScreen() {
         </View>
 
         {viewedUserId && (
-          <View className="flex-row border-b border-border bg-background px-5">
-            <TouchableOpacity
+          <View className="border-border bg-background flex-row border-b px-5">
+            <Pressable
               className={cn(
-                'flex-1 items-center justify-center border-b-2 py-3.5',
+                'flex-1 items-center justify-center border-b-2 py-3.5 active:opacity-70',
                 activeTab === 'visits' ? 'border-primary' : 'border-transparent'
               )}
-              onPress={() => setActiveTab('visits')}
-              activeOpacity={0.7}>
+              onPress={() => setActiveTab('visits')}>
               <ListIcon size={22} color={activeTab === 'visits' ? primaryHex : mutedHex} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               className={cn(
-                'flex-1 items-center justify-center border-b-2 py-3.5',
+                'flex-1 items-center justify-center border-b-2 py-3.5 active:opacity-70',
                 activeTab === 'gallery' ? 'border-primary' : 'border-transparent'
               )}
-              onPress={() => setActiveTab('gallery')}
-              activeOpacity={0.7}>
+              onPress={() => setActiveTab('gallery')}>
               <Grid3x3Icon size={22} color={activeTab === 'gallery' ? primaryHex : mutedHex} />
-            </TouchableOpacity>
+            </Pressable>
             {viewedUserId === currentUserId && (
-              <TouchableOpacity
+              <Pressable
                 className={cn(
-                  'flex-1 items-center justify-center border-b-2 py-3.5',
+                  'flex-1 items-center justify-center border-b-2 py-3.5 active:opacity-70',
                   activeTab === 'bookmarks' ? 'border-primary' : 'border-transparent'
                 )}
-                onPress={() => setActiveTab('bookmarks')}
-                activeOpacity={0.7}>
+                onPress={() => setActiveTab('bookmarks')}>
                 <BookmarkIcon size={22} color={activeTab === 'bookmarks' ? primaryHex : mutedHex} />
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         )}
 
         {viewedUserId ? (
           profileVisits === undefined ? (
-            <View className="flex-1 items-center justify-center bg-background p-6">
+            <View className="bg-background flex-1 items-center justify-center p-6">
               <BrandActivityIndicator size="large" />
               <Text variant="muted" className="mt-3 text-base">
                 Loading...
               </Text>
             </View>
           ) : profileVisits.length === 0 ? (
-            <View className="flex-1 items-center justify-center bg-background p-8">
-              <Text className="mb-2 text-lg font-bold text-foreground">
+            <View className="bg-background flex-1 items-center justify-center p-8">
+              <Text className="text-foreground mb-2 text-lg font-bold">
                 {viewedUserId === currentUserId ? 'No visits yet' : 'No visits'}
               </Text>
-              <Text className="mb-5 text-center text-base text-muted-foreground">
+              <Text className="text-muted-foreground mb-5 text-center text-base">
                 {viewedUserId === currentUserId
                   ? 'Check in at a museum to start your passport.'
                   : 'This user has not checked in anywhere yet.'}
@@ -748,20 +917,22 @@ export default function ProfileScreen() {
             </View>
           ) : activeTab === 'visits' ? (
             <FlatList
-              className="flex-1 bg-background"
+              className="bg-background flex-1"
               data={profileVisits}
               keyExtractor={(item) => item.checkIn._id}
               renderItem={({ item }) => (
                 <PassportCard
                   visit={item}
                   isOwnProfile={viewedUserId === currentUserId}
-                  onEditPress={viewedUserId === currentUserId ? () => setEditingVisit(item) : undefined}
+                  onEditPress={
+                    viewedUserId === currentUserId ? () => setEditingVisit(item) : undefined
+                  }
                 />
               )}
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={
-                <View className="bg-background px-5 pb-2 pt-4">
+                <View className="bg-background px-5 pt-4 pb-2">
                   <Text variant="muted" className="mt-0.5 text-sm">
                     {profileVisits.length} visit{profileVisits.length !== 1 ? 's' : ''}
                   </Text>
@@ -778,16 +949,16 @@ export default function ProfileScreen() {
               <BrandActivityIndicator size="large" className="flex-1" />
             ) : bookmarks && bookmarks.length > 0 ? (
               <FlatList
-                className="flex-1 bg-background"
+                className="bg-background flex-1"
                 data={bookmarks}
                 keyExtractor={(item) => item.museumId}
-                renderItem={({ item }) => (
-                  <MuseumCard museum={item.museum} />
-                )}
+                renderItem={({ item }) =>
+                  item.museum ? <MuseumCard museum={item.museum} /> : null
+                }
                 contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 32 }}
                 showsVerticalScrollIndicator={false}
                 ListHeaderComponent={
-                  <View className="bg-background px-5 pb-2 pt-4">
+                  <View className="bg-background px-5 pt-4 pb-2">
                     <Text variant="muted" className="mt-0.5 text-sm">
                       {bookmarks.length} bookmark{bookmarks.length !== 1 ? 's' : ''}
                     </Text>
@@ -795,9 +966,9 @@ export default function ProfileScreen() {
                 }
               />
             ) : (
-              <View className="flex-1 items-center justify-center bg-background p-8">
-                <Text className="mb-2 text-lg font-bold text-foreground">No bookmarks yet</Text>
-                <Text className="mb-5 text-center text-base text-muted-foreground">
+              <View className="bg-background flex-1 items-center justify-center p-8">
+                <Text className="text-foreground mb-2 text-lg font-bold">No bookmarks yet</Text>
+                <Text className="text-muted-foreground mb-5 text-center text-base">
                   Bookmark museums you want to visit later.
                 </Text>
                 <Button variant="secondary" onPress={() => router.push('/(tabs)/explore')}>
@@ -811,6 +982,7 @@ export default function ProfileScreen() {
         <EditCheckinModal
           visible={editingVisit != null}
           checkInId={editingVisit?.checkIn._id as Id<'checkIns'> | null}
+          museumId={editingVisit?.checkIn.museumId as Id<'museums'> | undefined}
           initialRating={editingVisit?.checkIn.rating ?? null}
           initialReview={editingVisit?.checkIn.review}
           initialImageUrls={editingVisit?.checkIn.imageUrls}
@@ -818,10 +990,9 @@ export default function ProfileScreen() {
           initialFriendUserIds={editingVisit?.checkIn.friendUserIds}
           initialDurationHours={editingVisit?.checkIn.durationHours}
           initialVisitDate={editingVisit?.checkIn.visitDate}
+          initialAttendedEventIds={editingVisit?.checkIn.attendedEventIds}
           onSave={saveCheckIn}
-          onDelete={() =>
-            editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)
-          }
+          onDelete={() => editingVisit && deleteCheckIn(editingVisit.checkIn._id as Id<'checkIns'>)}
           onClose={() => setEditingVisit(null)}
         />
 
@@ -836,16 +1007,16 @@ export default function ProfileScreen() {
               className="flex-1 items-center justify-center bg-black/50"
               onPress={() => setShowFollowModal(null)}>
               <Pressable
-                className="max-h-[50%] w-4/5 rounded-2xl border border-border bg-card"
+                className="border-border bg-card max-h-[50%] w-4/5 rounded-2xl border"
                 onPress={(e) => e.stopPropagation()}>
-                <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-                  <Text className="text-lg font-semibold text-foreground">
+                <View className="border-border flex-row items-center justify-between border-b px-5 py-4">
+                  <Text className="text-foreground text-lg font-semibold">
                     {showFollowModal === 'followers' ? 'Followers' : 'Following'}
                   </Text>
                   <Pressable
                     onPress={() => setShowFollowModal(null)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text className="text-2xl font-bold text-muted-foreground">×</Text>
+                    <Text className="text-muted-foreground text-2xl font-bold">×</Text>
                   </Pressable>
                 </View>
                 <FlatList
@@ -855,23 +1026,32 @@ export default function ProfileScreen() {
                     const rawName = item.name || item.email || '';
                     const displayNameForModal =
                       typeof rawName === 'string' ? rawName.replace(/\s+\d+$/, '').trim() : '';
-                    const initial = (displayNameForModal && displayNameForModal !== "Name can't be displayed" ? displayNameForModal[0] : '?').toUpperCase();
-                    const listData = showFollowModal === 'followers' ? followersData : followingData;
+                    const initial = (
+                      displayNameForModal && displayNameForModal !== "Name can't be displayed"
+                        ? displayNameForModal[0]
+                        : '?'
+                    ).toUpperCase();
+                    const listData =
+                      showFollowModal === 'followers' ? followersData : followingData;
                     return (
                       <Pressable
                         className="active:bg-muted flex-row items-center gap-3 px-5 py-3"
                         onPress={() => {
                           setShowFollowModal(null);
-                          router.push(`/(tabs)/profile?userId=${encodeURIComponent(item.userId)}`);
+                      router.push(userProfileHref(item.userId));
                         }}>
                         {item.imageUrl ? (
                           <Image source={{ uri: item.imageUrl }} className="size-12 rounded-full" />
                         ) : (
-                          <View className="size-12 items-center justify-center rounded-full bg-primary">
-                            <Text className="text-base font-semibold text-primary-foreground">{initial}</Text>
+                          <View className="bg-primary size-12 items-center justify-center rounded-full">
+                            <Text className="text-primary-foreground text-base font-semibold">
+                              {initial}
+                            </Text>
                           </View>
                         )}
-                        <Text className="flex-1 text-base font-medium text-foreground" numberOfLines={1}>
+                        <Text
+                          className="text-foreground flex-1 text-base font-medium"
+                          numberOfLines={1}>
                           {displayNameForModal || "Name can't be displayed"}
                         </Text>
                       </Pressable>
@@ -885,7 +1065,22 @@ export default function ProfileScreen() {
             </Pressable>
           </Modal>
         )}
+
+        <TasteProfileExplainerModal
+          visible={showTasteProfileModal && !!tasteProfile?.profileName}
+          profileName={tasteProfile?.profileName ?? ''}
+          onClose={() => setShowTasteProfileModal(false)}
+        />
       </Pressable>
     </SafeAreaView>
+  );
+}
+
+export default function TabProfileScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ProfileScreen presentation="tab" />
+    </>
   );
 }

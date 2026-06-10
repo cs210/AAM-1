@@ -5,6 +5,17 @@ import { useTranslations } from "next-intl"
 import { useAction, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
+import {
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ImageOffIcon,
+  Loader2Icon,
+  RefreshCwIcon,
+  SquareIcon,
+  UploadIcon,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,6 +32,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  useDashboardMuseumContextActions,
+  useDashboardMuseumId,
+} from "@/components/dashboard/dashboard-museum-context"
 
 type MuseumRow = {
   _id: Id<"museums">
@@ -43,25 +58,295 @@ type AdminMuseumsProps = {
   onEditMuseumContext?: (museumId: string) => void
 }
 
+type CsvMuseumImportRow = {
+  rowNumber: number
+  museumName: string
+  city?: string
+  state?: string
+  country?: string
+  exhibitionPageUrl?: string
+}
+
+type CsvImportResultRow = CsvMuseumImportRow & {
+  status: "pending" | "running" | "completed" | "failed" | "stopped"
+  message?: string
+  museumId?: string
+  wasCreated?: boolean
+  detailsStatus?: string
+  exhibitionsStatus?: string
+  imagesImportedCount?: number
+  exhibitionsCreatedCount?: number
+  exhibitionsParsedCount?: number
+}
+
+type CsvImportActionResult = {
+  museumId: string
+  wasCreated: boolean
+  museum: {
+    status: "updated" | "skipped" | "failed"
+    message?: string
+    imagesImportedCount: number
+  }
+  exhibitions: {
+    status: "imported" | "skipped" | "failed"
+    message?: string
+    createdCount: number
+    skippedCount: number
+    parsedCount: number
+  }
+}
+
+type MuseumImageHealthIssue = {
+  museumId: Id<"museums">
+  museumName: string
+  city?: string
+  state?: string
+  imageId?: Id<"museumImages">
+  imageUrl: string
+  source: "primary" | "gallery"
+  isPrimary: boolean
+  status?: number
+  error?: string
+}
+
+type MuseumImageHealthRow = {
+  museumId: Id<"museums">
+  museumName: string
+  city?: string
+  state?: string
+  checkedCount: number
+  brokenCount: number
+  issues: MuseumImageHealthIssue[]
+}
+
+type RefreshMuseumImagesResult = {
+  imageUrls: string[]
+  deletedCount: number
+  insertedCount: number
+  primaryImageUrl: string | null
+}
+
+const adminMuseumPageSize = 25
+
+function parseCsvRecords(input: string) {
+  const records: string[][] = []
+  let row: string[] = []
+  let field = ""
+  let inQuotes = false
+
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index]
+    const next = input[index + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        field += '"'
+        index += 1
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(field)
+      field = ""
+      continue
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") index += 1
+      row.push(field)
+      if (row.some((value) => value.trim().length > 0)) records.push(row)
+      row = []
+      field = ""
+      continue
+    }
+
+    field += char
+  }
+
+  row.push(field)
+  if (row.some((value) => value.trim().length > 0)) records.push(row)
+  return records
+}
+
+function normalizeCsvHeader(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_")
+}
+
+function firstCsvValue(row: Record<string, string>, keys: string[]) {
+  for (const key of keys) {
+    const value = row[key]?.trim()
+    if (value) return value
+  }
+  return undefined
+}
+
+function parseMuseumImportCsv(input: string): CsvMuseumImportRow[] {
+  const records = parseCsvRecords(input)
+  const [headerRecord, ...dataRecords] = records
+  if (!headerRecord) throw new Error("CSV is empty.")
+
+  const headers = headerRecord.map(normalizeCsvHeader)
+  const rows: CsvMuseumImportRow[] = []
+  dataRecords.forEach((record, index) => {
+    const row = Object.fromEntries(headers.map((header, columnIndex) => [header, record[columnIndex] ?? ""]))
+    const museumName = firstCsvValue(row, ["museum_name", "name", "museum"])
+    if (!museumName) return
+    rows.push({
+      rowNumber: index + 2,
+      museumName,
+      city: firstCsvValue(row, ["city"]),
+      state: firstCsvValue(row, ["state", "province", "region"]),
+      country: firstCsvValue(row, ["country"]),
+      exhibitionPageUrl: firstCsvValue(row, [
+        "exhibition_page_url",
+        "exhibitions_page_url",
+        "exhibition_url",
+        "exhibitions_url",
+        "url",
+      ]),
+    })
+  })
+
+  if (rows.length === 0) throw new Error("No rows with a museum_name column were found.")
+  return rows
+}
+
+type CsvImportStoreState = {
+  csvFileName: string | null
+  csvRows: CsvMuseumImportRow[]
+  csvImportResults: CsvImportResultRow[]
+  csvImportRunning: boolean
+  csvStopRequested: boolean
+  csvCurrentIndex: number | null
+  lastUpdatedAt: number | null
+}
+
+const csvImportStorageKey = "museum-admin-csv-import-state"
+const emptyCsvImportStoreState: CsvImportStoreState = {
+  csvFileName: null,
+  csvRows: [],
+  csvImportResults: [],
+  csvImportRunning: false,
+  csvStopRequested: false,
+  csvCurrentIndex: null,
+  lastUpdatedAt: null,
+}
+
+let csvImportStoreState: CsvImportStoreState = emptyCsvImportStoreState
+let csvImportStoreHydrated = false
+const csvImportStoreListeners = new Set<() => void>()
+
+function readStoredCsvImportState() {
+  if (typeof window === "undefined") return null
+  try {
+    const stored = window.localStorage.getItem(csvImportStorageKey)
+    if (!stored) return null
+    const parsed = JSON.parse(stored) as Partial<CsvImportStoreState>
+    return {
+      ...emptyCsvImportStoreState,
+      ...parsed,
+      csvFileName: parsed.csvFileName ?? null,
+      csvRows: Array.isArray(parsed.csvRows) ? parsed.csvRows : [],
+      csvImportResults: Array.isArray(parsed.csvImportResults) ? parsed.csvImportResults : [],
+      csvImportRunning: Boolean(parsed.csvImportRunning),
+      csvStopRequested: Boolean(parsed.csvStopRequested),
+      csvCurrentIndex: typeof parsed.csvCurrentIndex === "number" ? parsed.csvCurrentIndex : null,
+      lastUpdatedAt: typeof parsed.lastUpdatedAt === "number" ? parsed.lastUpdatedAt : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+function hydrateCsvImportStore() {
+  if (csvImportStoreHydrated) return
+  csvImportStoreHydrated = true
+  csvImportStoreState = readStoredCsvImportState() ?? emptyCsvImportStoreState
+}
+
+function persistCsvImportStore() {
+  if (typeof window === "undefined") return
+  window.localStorage.setItem(csvImportStorageKey, JSON.stringify(csvImportStoreState))
+}
+
+function emitCsvImportStore() {
+  persistCsvImportStore()
+  csvImportStoreListeners.forEach((listener) => listener())
+}
+
+function getCsvImportStoreSnapshot() {
+  hydrateCsvImportStore()
+  return csvImportStoreState
+}
+
+function setCsvImportStoreState(
+  updater: CsvImportStoreState | ((current: CsvImportStoreState) => CsvImportStoreState)
+) {
+  hydrateCsvImportStore()
+  csvImportStoreState = {
+    ...(typeof updater === "function" ? updater(csvImportStoreState) : updater),
+    lastUpdatedAt: Date.now(),
+  }
+  emitCsvImportStore()
+}
+
+function subscribeCsvImportStore(listener: () => void) {
+  hydrateCsvImportStore()
+  csvImportStoreListeners.add(listener)
+  return () => {
+    csvImportStoreListeners.delete(listener)
+  }
+}
+
+function updateCsvImportResult(index: number, updater: (row: CsvImportResultRow) => CsvImportResultRow) {
+  setCsvImportStoreState((current) => ({
+    ...current,
+    csvImportResults: current.csvImportResults.map((row, rowIndex) => (rowIndex === index ? updater(row) : row)),
+  }))
+}
+
 export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: AdminMuseumsProps) {
   const t = useTranslations("dashboard.adminMuseums")
   const tCommon = useTranslations("common")
+  const dashboardMuseumContextId = useDashboardMuseumId()
+  const dashboardMuseumActions = useDashboardMuseumContextActions()
   const listMuseums = useAction(api.admin.listMuseumsForAdmin)
+  const checkMuseumImageLinks = useAction(api.admin.checkMuseumImageLinksForAdmin)
+  const importMuseumCsvRow = useAction(api.admin.importMuseumCsvRowForAdmin)
+  const refreshMuseumImages = useAction(api.museumsAutoFill.refreshMuseumImagesForAdmin)
   const createMuseum = useMutation(api.admin.createMuseumForAdmin)
   const deleteMuseum = useMutation(api.admin.deleteMuseumForAdmin)
 
   const [museums, setMuseums] = React.useState<MuseumRow[] | null | undefined>(undefined)
+  const [imageHealthRows, setImageHealthRows] = React.useState<MuseumImageHealthRow[] | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = React.useState(false)
   const [newMuseumName, setNewMuseumName] = React.useState("")
   const [creating, setCreating] = React.useState(false)
+  const [checkingImages, setCheckingImages] = React.useState(false)
+  const [refreshingImagesForMuseumId, setRefreshingImagesForMuseumId] = React.useState<Id<"museums"> | null>(null)
   const [deletingId, setDeletingId] = React.useState<Id<"museums"> | null>(null)
   const [pendingDeleteMuseum, setPendingDeleteMuseum] = React.useState<MuseumRow | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [categoryFilter, setCategoryFilter] = React.useState("all")
   const [stateFilter, setStateFilter] = React.useState("all")
   const [cityFilter, setCityFilter] = React.useState("all")
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [csvImportState, setCsvImportState] = React.useState<CsvImportStoreState>(() => getCsvImportStoreSnapshot())
+  const {
+    csvFileName,
+    csvRows,
+    csvImportResults,
+    csvImportRunning,
+    csvStopRequested,
+    csvCurrentIndex,
+  } = csvImportState
+  const currentMuseumContextId =
+    activeMuseumContextId ?? dashboardMuseumContextId
 
   const loadMuseums = React.useCallback(async () => {
     setMuseums(undefined)
@@ -78,6 +363,10 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
   React.useEffect(() => {
     loadMuseums()
   }, [loadMuseums])
+
+  React.useEffect(() => {
+    return subscribeCsvImportStore(() => setCsvImportState(getCsvImportStoreSnapshot()))
+  }, [])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,7 +394,11 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
   }
 
   const handleEditContext = (museum: MuseumRow) => {
-    onEditMuseumContext?.(museum._id)
+    if (onEditMuseumContext) {
+      onEditMuseumContext(museum._id)
+    } else {
+      dashboardMuseumActions?.setMuseumContext(museum._id)
+    }
     setError(null)
     setSuccess(t("contextSwitched", { name: museum.name }))
   }
@@ -124,6 +417,177 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       setDeletingId(null)
       setPendingDeleteMuseum(null)
     }
+  }
+
+  const handleCheckImageLinks = async () => {
+    setCheckingImages(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const rows = (await checkMuseumImageLinks()) as MuseumImageHealthRow[]
+      setImageHealthRows(rows)
+      setSuccess(
+        rows.length > 0
+          ? t("imageAudit.scanFound", {
+              museums: rows.length,
+              images: rows.reduce((total, row) => total + row.brokenCount, 0),
+            })
+          : t("imageAudit.scanClean")
+      )
+    } catch (auditError) {
+      setError(auditError instanceof Error ? auditError.message : t("imageAudit.scanFailed"))
+    } finally {
+      setCheckingImages(false)
+    }
+  }
+
+  const handleRefreshBrokenImages = async (row: MuseumImageHealthRow) => {
+    setRefreshingImagesForMuseumId(row.museumId)
+    setError(null)
+    setSuccess(null)
+    try {
+      const brokenImageIds = row.issues
+        .map((issue) => issue.imageId)
+        .filter((imageId): imageId is Id<"museumImages"> => Boolean(imageId))
+      const brokenPrimaryImageUrl = row.issues.find((issue) => issue.source === "primary" || issue.isPrimary)?.imageUrl
+      const result = (await refreshMuseumImages({
+        museumId: row.museumId,
+        brokenImageIds,
+        ...(brokenPrimaryImageUrl ? { brokenPrimaryImageUrl } : {}),
+      })) as RefreshMuseumImagesResult
+
+      const refreshSuccess = t("imageAudit.refreshSuccess", {
+        name: row.museumName,
+        inserted: result.insertedCount,
+        deleted: result.deletedCount,
+      })
+      await loadMuseums()
+      await handleCheckImageLinks()
+      setSuccess(refreshSuccess)
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : t("imageAudit.refreshFailed"))
+    } finally {
+      setRefreshingImagesForMuseumId(null)
+    }
+  }
+
+  const handleCsvFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    setError(null)
+    setSuccess(null)
+    setCsvImportStoreState((current) => ({
+      ...current,
+      csvImportResults: [],
+      csvCurrentIndex: null,
+    }))
+    if (!file) {
+      setCsvImportStoreState({
+        ...emptyCsvImportStoreState,
+      })
+      return
+    }
+
+    try {
+      const text = await file.text()
+      const rows = parseMuseumImportCsv(text)
+      setCsvImportStoreState({
+        ...emptyCsvImportStoreState,
+        csvFileName: file.name,
+        csvRows: rows,
+      })
+      setSuccess(t("csv.parsed", { count: rows.length }))
+    } catch (csvError) {
+      setCsvImportStoreState({
+        ...emptyCsvImportStoreState,
+      })
+      setError(csvError instanceof Error ? csvError.message : t("csv.parseFailed"))
+    } finally {
+      event.target.value = ""
+    }
+  }
+
+  const handleStartCsvImport = async () => {
+    const rows = getCsvImportStoreSnapshot().csvRows
+    if (rows.length === 0 || getCsvImportStoreSnapshot().csvImportRunning) return
+
+    setError(null)
+    setSuccess(null)
+    setCsvImportStoreState((current) => ({
+      ...current,
+      csvImportRunning: true,
+      csvStopRequested: false,
+      csvCurrentIndex: null,
+      csvImportResults: rows.map((row) => ({ ...row, status: "pending" })),
+    }))
+
+    for (let index = 0; index < rows.length; index += 1) {
+      if (getCsvImportStoreSnapshot().csvStopRequested) {
+        setCsvImportStoreState((current) => ({
+          ...current,
+          csvImportResults: current.csvImportResults.map((row, rowIndex) =>
+            rowIndex >= index ? { ...row, status: "stopped" } : row
+          ),
+        }))
+        break
+      }
+
+      const row = rows[index]!
+      setCsvImportStoreState((current) => ({ ...current, csvCurrentIndex: index }))
+      updateCsvImportResult(index, (result) => ({ ...result, status: "running" }))
+
+      try {
+        const result = (await importMuseumCsvRow({
+          museumName: row.museumName,
+          ...(row.city ? { city: row.city } : {}),
+          ...(row.state ? { state: row.state } : {}),
+          ...(row.country ? { country: row.country } : {}),
+          ...(row.exhibitionPageUrl ? { exhibitionPageUrl: row.exhibitionPageUrl } : {}),
+        })) as CsvImportActionResult
+
+        const rowMessage =
+          result.museum.message && result.museum.status === "skipped"
+            ? result.museum.message
+            : result.museum.status === "failed"
+            ? result.museum.message
+            : result.exhibitions.status === "failed"
+              ? result.exhibitions.message
+              : undefined
+
+        updateCsvImportResult(index, (current) => ({
+          ...current,
+          status: result.museum.status === "failed" || result.exhibitions.status === "failed" ? "failed" : "completed",
+          message: rowMessage,
+          museumId: result.museumId,
+          wasCreated: result.wasCreated,
+          detailsStatus: result.museum.status,
+          exhibitionsStatus: result.exhibitions.status,
+          imagesImportedCount: result.museum.imagesImportedCount,
+          exhibitionsCreatedCount: result.exhibitions.createdCount,
+          exhibitionsParsedCount: result.exhibitions.parsedCount,
+        }))
+      } catch (importError) {
+        updateCsvImportResult(index, (current) => ({
+          ...current,
+          status: "failed",
+          message: importError instanceof Error ? importError.message : t("csv.importFailed"),
+        }))
+      }
+    }
+
+    setCsvImportStoreState((current) => ({
+      ...current,
+      csvImportRunning: false,
+      csvCurrentIndex: null,
+      csvStopRequested: false,
+    }))
+    await loadMuseums()
+  }
+
+  const handleStopCsvImport = () => {
+    setCsvImportStoreState((current) => ({
+      ...current,
+      csvStopRequested: true,
+    }))
   }
 
   const museumList = React.useMemo(() => museums ?? [], [museums])
@@ -163,8 +627,25 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       return searchableText.includes(query)
     })
   }, [museumList, categoryFilter, stateFilter, cityFilter, searchQuery])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, categoryFilter, stateFilter, cityFilter])
+  const totalPages = Math.max(1, Math.ceil(filteredMuseums.length / adminMuseumPageSize))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  React.useEffect(() => {
+    if (currentPage !== safeCurrentPage) {
+      setCurrentPage(safeCurrentPage)
+    }
+  }, [currentPage, safeCurrentPage])
+  const pagedMuseums = React.useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * adminMuseumPageSize
+    return filteredMuseums.slice(startIndex, startIndex + adminMuseumPageSize)
+  }, [filteredMuseums, safeCurrentPage])
   const hasActiveFilters =
     searchQuery.trim().length > 0 || categoryFilter !== "all" || stateFilter !== "all" || cityFilter !== "all"
+  const csvCompletedCount = csvImportResults.filter((row) => row.status === "completed" || row.status === "failed").length
+  const csvProgressTotal = csvImportResults.length || csvRows.length
+  const csvProgressPercent = csvProgressTotal > 0 ? Math.round((csvCompletedCount / csvProgressTotal) * 100) : 0
 
   if (museums === undefined) {
     return (
@@ -232,6 +713,197 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
           </div>
         )}
 
+        <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-1">
+              <p className="font-medium">{t("csv.title")}</p>
+              <p className="text-muted-foreground text-sm">{t("csv.description")}</p>
+              {csvFileName && (
+                <p className="text-muted-foreground text-xs">
+                  {t("csv.selectedFile", { fileName: csvFileName, count: csvRows.length })}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={csvImportRunning}
+                render={<label htmlFor="museum-csv-upload" />}
+              >
+                <UploadIcon className="size-4" />
+                {t("csv.chooseFile")}
+              </Button>
+              <input
+                id="museum-csv-upload"
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={handleCsvFileChange}
+                disabled={csvImportRunning}
+              />
+              {csvImportRunning ? (
+                <Button type="button" variant="destructive" onClick={handleStopCsvImport} disabled={csvStopRequested}>
+                  <SquareIcon className="size-4" />
+                  {csvStopRequested ? t("csv.stopping") : t("csv.stop")}
+                </Button>
+              ) : (
+                <Button type="button" onClick={() => void handleStartCsvImport()} disabled={csvRows.length === 0}>
+                  {t("csv.start")}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {(csvImportRunning || csvImportResults.length > 0) && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">
+                    {csvImportRunning && csvCurrentIndex !== null
+                      ? t("csv.runningRow", {
+                          current: csvCurrentIndex + 1,
+                          total: csvProgressTotal,
+                          name: csvRows[csvCurrentIndex]?.museumName ?? "",
+                        })
+                      : t("csv.progress", { completed: csvCompletedCount, total: csvProgressTotal })}
+                  </span>
+                  <span className="font-medium">{t("csv.percent", { percent: csvProgressPercent })}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${csvProgressPercent}%` }} />
+                </div>
+              </div>
+
+              <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                {csvImportResults.map((row) => (
+                  <div key={`${row.rowNumber}-${row.museumName}`} className="rounded-lg border bg-background px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {t("csv.rowLabel", { rowNumber: row.rowNumber })} · {row.museumName}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {[row.city, row.state, row.country].filter(Boolean).join(", ") || t("csv.locationUnknown")}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={row.status === "failed" ? "destructive" : row.status === "completed" ? "default" : "secondary"}
+                      >
+                        {row.status === "running" && <Loader2Icon className="mr-1 size-3 animate-spin" />}
+                        {t(`csv.status.${row.status}`)}
+                      </Badge>
+                    </div>
+                    {(row.status === "completed" || row.status === "failed") && (
+                      <p className="text-muted-foreground mt-2 text-xs">
+                        {row.message ??
+                          t("csv.resultSummary", {
+                            museumAction: row.wasCreated ? t("csv.created") : t("csv.reused"),
+                            detailsStatus: row.detailsStatus ?? "-",
+                            images: row.imagesImportedCount ?? 0,
+                            exhibitions: row.exhibitionsCreatedCount ?? 0,
+                            parsed: row.exhibitionsParsedCount ?? 0,
+                          })}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <ImageOffIcon className="text-muted-foreground size-4" />
+                <p className="font-medium">{t("imageAudit.title")}</p>
+              </div>
+              <p className="text-muted-foreground text-sm">{t("imageAudit.description")}</p>
+              <p className="text-muted-foreground text-xs">{t("imageAudit.policyNote")}</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleCheckImageLinks()}
+              disabled={checkingImages || refreshingImagesForMuseumId !== null}
+            >
+              {checkingImages ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <RefreshCwIcon className="size-4" />
+              )}
+              {checkingImages ? t("imageAudit.scanning") : t("imageAudit.scan")}
+            </Button>
+          </div>
+
+          {imageHealthRows !== null && (
+            imageHealthRows.length === 0 ? (
+              <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm text-green-700 dark:text-green-400">
+                <CheckCircle2Icon className="size-4" />
+                {t("imageAudit.clean")}
+              </div>
+            ) : (
+              <div className="max-h-80 space-y-2 overflow-auto pr-1">
+                {imageHealthRows.map((row) => (
+                  <div key={row.museumId} className="rounded-lg border bg-background p-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <AlertTriangleIcon className="size-4 text-amber-500" />
+                          <p className="font-medium">{row.museumName}</p>
+                          <Badge variant="secondary">
+                            {t("imageAudit.brokenBadge", { count: row.brokenCount })}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          {[row.city, row.state].filter(Boolean).join(", ") || t("csv.locationUnknown")}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void handleRefreshBrokenImages(row)}
+                        disabled={checkingImages || refreshingImagesForMuseumId !== null}
+                      >
+                        {refreshingImagesForMuseumId === row.museumId && (
+                          <Loader2Icon className="size-4 animate-spin" />
+                        )}
+                        {refreshingImagesForMuseumId === row.museumId
+                          ? t("imageAudit.refreshing")
+                          : t("imageAudit.refreshImages")}
+                      </Button>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {row.issues.slice(0, 3).map((issue) => (
+                        <div key={`${issue.imageId ?? "primary"}-${issue.imageUrl}`} className="rounded-md bg-muted px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <Badge variant={issue.isPrimary ? "default" : "secondary"}>
+                              {issue.isPrimary ? t("imageAudit.primary") : t("imageAudit.gallery")}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                              {issue.status
+                                ? t("imageAudit.status", { status: issue.status })
+                                : issue.error ?? t("imageAudit.unknownError")}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-1 truncate font-mono text-xs">{issue.imageUrl}</p>
+                        </div>
+                      ))}
+                      {row.issues.length > 3 && (
+                        <p className="text-muted-foreground text-xs">
+                          {t("imageAudit.moreIssues", { count: row.issues.length - 3 })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
         <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="grid gap-1">
@@ -296,21 +968,28 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
             <p className="text-muted-foreground text-sm">
               {t("showing", { count: filteredMuseums.length, total: museumList.length })}
             </p>
-            {hasActiveFilters && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("")
-                  setCategoryFilter("all")
-                  setStateFilter("all")
-                  setCityFilter("all")
-                }}
-              >
-                {t("clearFilters")}
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {filteredMuseums.length > 0 && (
+                <span className="text-muted-foreground text-sm">
+                  {t("pageSummary", { page: safeCurrentPage, totalPages })}
+                </span>
+              )}
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("")
+                    setCategoryFilter("all")
+                    setStateFilter("all")
+                    setCityFilter("all")
+                  }}
+                >
+                  {t("clearFilters")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -320,7 +999,37 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
           <p className="text-muted-foreground text-sm">{t("noMuseumsMatch")}</p>
         ) : (
           <div className="space-y-3">
-            {filteredMuseums.map((museum) => (
+            <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={safeCurrentPage <= 1}
+              >
+                <ChevronLeftIcon className="size-4" />
+                {t("previousPage")}
+              </Button>
+              <span className="text-muted-foreground text-sm">
+                {t("pageRange", {
+                  start: (safeCurrentPage - 1) * adminMuseumPageSize + 1,
+                  end: Math.min(safeCurrentPage * adminMuseumPageSize, filteredMuseums.length),
+                  total: filteredMuseums.length,
+                })}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={safeCurrentPage >= totalPages}
+              >
+                {t("nextPage")}
+                <ChevronRightIcon className="size-4" />
+              </Button>
+            </div>
+            <div className="max-h-[640px] space-y-3 overflow-auto rounded-xl border bg-background p-3">
+            {pagedMuseums.map((museum) => (
               <div key={museum._id} className="space-y-3 rounded-xl border bg-muted/30 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-1">
@@ -338,7 +1047,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                     )}
                     <div className="flex flex-wrap gap-1">
                       <Badge variant="secondary">{museum.category}</Badge>
-                      {activeMuseumContextId === museum._id && <Badge variant="default">{t("currentContext")}</Badge>}
+                      {currentMuseumContextId === museum._id && <Badge variant="default">{t("currentContext")}</Badge>}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-start gap-1">
@@ -353,7 +1062,10 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
                       size="sm"
                       variant="outline"
                       onClick={() => handleEditContext(museum)}
-                      disabled={deletingId === museum._id}
+                      disabled={
+                        deletingId === museum._id ||
+                        (!onEditMuseumContext && !dashboardMuseumActions)
+                      }
                     >
                       {t("edit")}
                     </Button>
@@ -370,6 +1082,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
 
               </div>
             ))}
+            </div>
           </div>
         )}
         </CardContent>

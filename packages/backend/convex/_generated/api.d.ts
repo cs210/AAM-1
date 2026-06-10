@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountDeletion from "../accountDeletion.js";
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
@@ -20,15 +21,19 @@ import type * as fakeData from "../fakeData.js";
 import type * as focusGroup from "../focusGroup.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
+import type * as museumAdditionRequests from "../museumAdditionRequests.js";
 import type * as museums from "../museums.js";
 import type * as museumsAutoFill from "../museumsAutoFill.js";
 import type * as organizationRequests from "../organizationRequests.js";
 import type * as permissions from "../permissions.js";
+import type * as profileViews from "../profileViews.js";
 import type * as pushNotifications from "../pushNotifications.js";
 import type * as recsys from "../recsys.js";
 import type * as socialNotifications from "../socialNotifications.js";
+import type * as softwareFair from "../softwareFair.js";
 import type * as userInterests from "../userInterests.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as usernameValidation from "../usernameValidation.js";
 import type * as visualSearch from "../visualSearch.js";
 import type * as wrapped from "../wrapped.js";
 
@@ -39,6 +44,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountDeletion: typeof accountDeletion;
   admin: typeof admin;
   auth: typeof auth;
   bookmarks: typeof bookmarks;
@@ -51,15 +57,19 @@ declare const fullApi: ApiFromModules<{
   focusGroup: typeof focusGroup;
   follows: typeof follows;
   http: typeof http;
+  museumAdditionRequests: typeof museumAdditionRequests;
   museums: typeof museums;
   museumsAutoFill: typeof museumsAutoFill;
   organizationRequests: typeof organizationRequests;
   permissions: typeof permissions;
+  profileViews: typeof profileViews;
   pushNotifications: typeof pushNotifications;
   recsys: typeof recsys;
   socialNotifications: typeof socialNotifications;
+  softwareFair: typeof softwareFair;
   userInterests: typeof userInterests;
   userProfiles: typeof userProfiles;
+  usernameValidation: typeof usernameValidation;
   visualSearch: typeof visualSearch;
   wrapped: typeof wrapped;
 }>;

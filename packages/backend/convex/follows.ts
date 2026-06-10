@@ -140,6 +140,7 @@ export const getPeopleYouMayKnow = query({
         return {
           userId,
           name: profile?.name ?? null,
+          username: profile?.username ?? null,
           email: profile?.email ?? null,
           imageUrl: profile?.imageUrl ?? null,
         };

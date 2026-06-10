@@ -3,8 +3,13 @@ import { redirect } from "next/navigation"
 import { AdminInvitations } from "@/components/dashboard/admin-invitations"
 import { AdminOrgRequests } from "@/components/dashboard/admin-org-requests"
 import { AdminUsers } from "@/components/dashboard/admin-users"
-import { dashboardPathToTabId, dashboardTabMessageKeys } from "@/components/dashboard/constants"
+import {
+  dashboardPathToTabId,
+  dashboardTabMessageKeys,
+  workspaceDashboardPathToTabId,
+} from "@/components/dashboard/constants"
 import { DashboardAnalytics } from "@/components/dashboard/dashboard-analytics"
+import { DashboardAccountSettings } from "@/components/dashboard/dashboard-account-settings"
 import { DashboardExhibitions } from "@/components/dashboard/dashboard-exhibitions"
 import { DashboardInteractions } from "@/components/dashboard/dashboard-interactions"
 import { DashboardOrganizations } from "@/components/dashboard/dashboard-organizations"
@@ -27,7 +32,7 @@ export default async function DashboardSectionPage({
     redirect(`/${locale}/dashboard/admin/org-requests`)
   }
 
-  const tabId = dashboardPathToTabId[section]
+  const tabId = dashboardPathToTabId[section] ?? workspaceDashboardPathToTabId[section]
   if (!tabId) {
     redirect(`/${locale}/dashboard/details`)
   }
@@ -37,6 +42,9 @@ export default async function DashboardSectionPage({
   }
   if (tabId === "organizations") {
     return <DashboardOrganizations />
+  }
+  if (tabId === "account") {
+    return <DashboardAccountSettings />
   }
   if (tabId === "exhibitions") {
     return <DashboardExhibitions />

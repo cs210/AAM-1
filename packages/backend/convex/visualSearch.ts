@@ -454,6 +454,7 @@ function normalizeSearchResponse(value: unknown, fallback: ValidatedSearchArgs):
 export const getVisualSearchConfig = query({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const config = await getVisualSearchConfigRow(ctx);
     if (!config) return null;
 
@@ -523,6 +524,7 @@ export const generateVisualSearchImageUploadUrl = mutation({
 export const listVisualSearchMuseumAssignments = query({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const assignments = await ctx.db.query("visualSearchMuseumAssignments").collect();
     const rows = await Promise.all(
       assignments.map((assignment) => joinAssignmentWithMuseum(ctx, assignment))

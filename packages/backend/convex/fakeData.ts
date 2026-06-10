@@ -1,7 +1,7 @@
 import { GeospatialIndex } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 const geospatial = new GeospatialIndex(components.geospatial);
 
@@ -33,7 +33,7 @@ const MUSEUM_SEED_POINTS: Record<string, { latitude: number; longitude: number }
 };
 
 // Populate fake museums into Convex database
-export const populateFakeMuseums = mutation({
+export const populateFakeMuseums = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = [
@@ -248,8 +248,67 @@ export const populateFakeMuseums = mutation({
   },
 });
 
-// Populate fake events for museums
-export const populateFakeEvents = mutation({
+const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DEMO_PREFIX = "[demo]";
+
+const EVENT_TEMPLATES = [
+  { title: "Gallery Talk: Curator's Picks", category: "lecture" },
+  { title: "Family Day: Hands-On Studio", category: "family" },
+  { title: "Evening Concert in the Atrium", category: "performance" },
+  { title: "Highlights Tour", category: "tour" },
+  { title: "Members Preview Night", category: "workshop" },
+  { title: "Artist Talk & Q&A", category: "lecture" },
+  { title: "Sketching in the Galleries", category: "workshop" },
+  { title: "Opening Celebration", category: "exhibition" },
+] as const;
+
+const EXHIBITION_NAMES = [
+  "Visions in Color",
+  "Artifacts & Empires",
+  "Modern Perspectives",
+  "Stories in Clay",
+  "Light & Form",
+  "Crossroads of Culture",
+  "Renaissance to Today",
+  "Wildlife in Focus",
+] as const;
+
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pickRandom<T>(items: readonly T[]): T {
+  return items[randomInt(0, items.length - 1)]!;
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = randomInt(0, i);
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+  }
+  return copy;
+}
+
+/** Upcoming event window: may have started, always ends after now. */
+function randomUpcomingRange(now: number) {
+  const startDate = now + randomInt(-2, 12) * DAY_MS + randomInt(9, 20) * HOUR_MS;
+  let endDate = startDate + randomInt(1, 10) * DAY_MS;
+  if (endDate <= now) endDate = now + DAY_MS;
+  return { startDate, endDate };
+}
+
+/** Long-running exhibition that includes the current week. */
+function randomExhibitionRange(now: number) {
+  const startDate = now - randomInt(14, 45) * DAY_MS;
+  let endDate = now + randomInt(21, 75) * DAY_MS;
+  if (endDate <= now) endDate = now + 30 * DAY_MS;
+  return { startDate, endDate };
+}
+
+// Populate fake events for museums (nearby / upcoming feeds)
+export const populateFakeEvents = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = await ctx.db.query("museums").collect();
@@ -257,50 +316,115 @@ export const populateFakeEvents = mutation({
       return { error: "No museums found. Run populateFakeMuseums first." };
     }
 
-    const eventTemplates = [
-      { title: "New Exhibition Opening", category: "exhibition", daysFromNow: 7 },
-      { title: "Guided Tour: Highlights", category: "tour", daysFromNow: 3 },
-    ];
-
     const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
     let insertedCount = 0;
+    let skippedCount = 0;
 
-    for (const museum of museums.slice(0, eventTemplates.length)) {
-      // Add events to museums (one per template)
-      for (const template of eventTemplates) {
-        const startDate = now + template.daysFromNow * DAY_MS;
-        // Check for existing event with same museum, title, and startDate
-        const existing = await ctx.db
+    for (const museum of shuffle(museums)) {
+      if (randomInt(1, 100) > 72) continue;
+
+      const template = pickRandom(EVENT_TEMPLATES);
+      const title = `${DEMO_PREFIX} ${template.title}`;
+      const existing = await ctx.db
+        .query("events")
+        .withIndex("by_museum", (q) => q.eq("museumId", museum._id))
+        .filter((q) => q.eq(q.field("title"), title))
+        .first();
+      if (existing) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const { startDate, endDate } = randomUpcomingRange(now);
+      await ctx.db.insert("events", {
+        title,
+        description: `${template.category} at ${museum.name}. Demo seed for the home feed.`,
+        category: template.category,
+        museumId: museum._id,
+        startDate,
+        endDate,
+      });
+      insertedCount += 1;
+
+      if (randomInt(1, 100) <= 35) {
+        const second = pickRandom(EVENT_TEMPLATES);
+        const secondTitle = `${DEMO_PREFIX} ${second.title}`;
+        const secondExisting = await ctx.db
           .query("events")
           .withIndex("by_museum", (q) => q.eq("museumId", museum._id))
-          .filter((q) =>
-            q.and(
-              q.eq(q.field("title"), `${template.title} at ${museum.name}`),
-              q.eq(q.field("startDate"), startDate)
-            )
-          )
+          .filter((q) => q.eq(q.field("title"), secondTitle))
           .first();
-        if (!existing) {
+        if (!secondExisting) {
+          const secondRange = randomUpcomingRange(now);
           await ctx.db.insert("events", {
-            title: `${template.title} at ${museum.name}`,
-            description: `Join us for this special ${template.category} event.`,
-            category: template.category,
+            title: secondTitle,
+            description: `${second.category} at ${museum.name}. Demo seed for the home feed.`,
+            category: second.category,
             museumId: museum._id,
-            startDate,
-            endDate: now + (template.daysFromNow + 1) * DAY_MS,
+            startDate: secondRange.startDate,
+            endDate: secondRange.endDate,
           });
-          insertedCount++;
+          insertedCount += 1;
         }
       }
     }
 
-    return { inserted: insertedCount };
+    return { inserted: insertedCount, skipped: skippedCount };
+  },
+});
+
+// Populate fake exhibitions for museums (nearby / upcoming feeds)
+export const populateFakeExhibitions = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const museums = await ctx.db.query("museums").collect();
+    if (museums.length === 0) {
+      return { error: "No museums found. Run populateFakeMuseums first." };
+    }
+
+    const now = Date.now();
+    let insertedCount = 0;
+    let skippedCount = 0;
+
+    for (const museum of shuffle(museums)) {
+      if (randomInt(1, 100) > 68) continue;
+
+      const name = `${DEMO_PREFIX} ${pickRandom(EXHIBITION_NAMES)}`;
+      const existing = await ctx.db
+        .query("exhibitions")
+        .withIndex("by_museum", (q) => q.eq("museumId", museum._id))
+        .filter((q) => q.eq(q.field("name"), name))
+        .first();
+      if (existing) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const existingAtMuseum = await ctx.db
+        .query("exhibitions")
+        .withIndex("by_museum", (q) => q.eq("museumId", museum._id))
+        .collect();
+      const sortOrder =
+        existingAtMuseum.reduce((max, row) => Math.max(max, row.sortOrder), -1) + 1;
+
+      const { startDate, endDate } = randomExhibitionRange(now);
+      await ctx.db.insert("exhibitions", {
+        museumId: museum._id,
+        name,
+        description: `Temporary exhibition at ${museum.name}. Demo seed for the home feed.`,
+        startDate,
+        endDate,
+        sortOrder,
+      });
+      insertedCount += 1;
+    }
+
+    return { inserted: insertedCount, skipped: skippedCount };
   },
 });
 
 // Populate fake ratings for museums
-export const populateFakeRatings = mutation({
+export const populateFakeRatings = internalMutation({
   args: {},
   handler: async (ctx) => {
     const museums = await ctx.db.query("museums").collect();

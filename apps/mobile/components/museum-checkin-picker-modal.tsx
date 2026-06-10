@@ -1,0 +1,379 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Modal,
+  Pressable,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useQuery } from 'convex/react';
+import { router } from 'expo-router';
+import * as Location from 'expo-location';
+import { XIcon } from 'lucide-react-native';
+import { api } from '@packages/backend/convex/_generated/api';
+import { Id } from '@packages/backend/convex/_generated/dataModel';
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
+import { SearchFieldRow } from '@/components/search-field-row';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
+import {
+  MuseumRequestSheet,
+  normalizeMuseumRequestName,
+} from '@/components/museum-request-modal';
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+};
+
+type MuseumWithStats = {
+  _id: Id<'museums'>;
+  name: string;
+  location?: { city?: string; state?: string; country?: string };
+  distanceMeters?: number;
+  softwareFairBooth?: {
+    boothNumber: number;
+    projectName: string;
+    genres: string[];
+    teamMembers: string[];
+    description?: string | null;
+  };
+};
+
+async function fetchViewerCoordinates(): Promise<{ latitude: number; longitude: number }> {
+  const lastKnown = await Location.getLastKnownPositionAsync({
+    maxAge: 1000 * 60 * 60 * 24,
+    requiredAccuracy: 100_000,
+  });
+  if (lastKnown?.coords) {
+    return { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude };
+  }
+
+  try {
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  } catch {
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message = 'LOCATION_TIMEOUT'): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      }
+    );
+  });
+}
+
+function locationSubtitle(museum: {
+  location?: { city?: string; state?: string; country?: string };
+}): string | null {
+  const { city, state, country } = museum.location ?? {};
+  const parts = [city, state].filter(Boolean);
+  if (parts.length > 0) return parts.join(', ');
+  if (country) return country;
+  return null;
+}
+
+function formatDistance(distanceMeters: number | undefined): string | null {
+  if (typeof distanceMeters !== 'number' || !Number.isFinite(distanceMeters)) return null;
+  const miles = distanceMeters / 1609.344;
+  return `${miles.toFixed(1)} mi`;
+}
+
+export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
+  const [search, setSearch] = useState('');
+  const [requestModalVisible, setRequestModalVisible] = useState(false);
+  const [requestedMuseumNames, setRequestedMuseumNames] = useState<Set<string>>(() => new Set());
+
+  type LocState =
+    | { status: 'pending' }
+    | { status: 'ok'; viewer: { latitude: number; longitude: number } }
+    | { status: 'unavailable' };
+  const [locState, setLocState] = useState<LocState>({ status: 'pending' });
+
+  const resolveLocation = useCallback(async () => {
+    try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        setLocState({ status: 'unavailable' });
+        return;
+      }
+
+      let perm = await Location.getForegroundPermissionsAsync();
+      if (perm.status !== 'granted') {
+        perm = await Location.requestForegroundPermissionsAsync();
+      }
+      if (perm.status !== 'granted') {
+        setLocState({ status: 'unavailable' });
+        return;
+      }
+
+      const viewer = await withTimeout(fetchViewerCoordinates(), 25_000);
+      setLocState({ status: 'ok', viewer });
+    } catch {
+      setLocState({ status: 'unavailable' });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (visible) {
+      setSearch('');
+      setRequestModalVisible(false);
+      void resolveLocation();
+    }
+  }, [visible, resolveLocation]);
+
+  const museums = useQuery(
+    api.museums.listMuseumsWithStats,
+    !isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
+  );
+  const softwareFairMuseums = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
+  );
+  const activeMuseums = (isSoftwareFairMode ? softwareFairMuseums : museums) as
+    | MuseumWithStats[]
+    | undefined;
+
+  const filtered = useMemo(() => {
+    if (!activeMuseums) return [];
+    const q = search.trim().toLowerCase();
+    let list: MuseumWithStats[] = !q
+      ? [...activeMuseums]
+      : activeMuseums.filter((m) => {
+          const loc = locationSubtitle(m);
+          const booth = m.softwareFairBooth;
+          const haystack = [
+            m.name,
+            loc,
+            booth?.projectName,
+            booth?.boothNumber != null ? String(booth.boothNumber) : undefined,
+            booth?.genres.join(' '),
+            booth?.teamMembers.join(' '),
+            booth?.description ?? undefined,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(q);
+        });
+
+    // Sort by distance if available, otherwise alphabetically
+    list.sort((a, b) => {
+      const aDist = a.distanceMeters;
+      const bDist = b.distanceMeters;
+      if (typeof aDist === 'number' && typeof bDist === 'number') {
+        return aDist - bDist;
+      }
+      if (typeof aDist === 'number') return -1;
+      if (typeof bDist === 'number') return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return list;
+  }, [activeMuseums, search]);
+
+  const sortedByDistance = useMemo(() => {
+    return filtered.length > 0 && typeof filtered[0].distanceMeters === 'number';
+  }, [filtered]);
+
+  const onPickMuseum = (museumId: Id<'museums'>) => {
+    onClose();
+    router.push({
+      pathname: '/(museums)/[museumId]/checkin',
+      params: { museumId },
+    });
+  };
+
+  const trimmedSearch = search.trim();
+  const canRequestMuseum = trimmedSearch.length >= 2;
+  const currentMuseumRequestKey = useMemo(() => normalizeMuseumRequestName(search), [search]);
+  const existingMuseumRequest = useQuery(
+    api.museumAdditionRequests.getMyRequestForMuseum,
+    currentMuseumRequestKey.length >= 2 ? { museumName: trimmedSearch } : 'skip'
+  );
+  const museumRequestSubmitted =
+    canRequestMuseum &&
+    (requestedMuseumNames.has(currentMuseumRequestKey) || Boolean(existingMuseumRequest));
+
+  const handleMuseumRequestSubmitted = useCallback((museumName: string) => {
+    const requestKey = normalizeMuseumRequestName(museumName);
+    if (!requestKey) return;
+    setRequestedMuseumNames((previous) => {
+      const next = new Set(previous);
+      next.add(requestKey);
+      return next;
+    });
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 justify-end">
+        <Pressable
+          className="absolute inset-0 bg-black/40"
+          onPress={onClose}
+          accessibilityLabel="Dismiss museum picker"
+        />
+        <View className="z-10 max-h-[88%] rounded-t-2xl bg-background shadow-lg">
+          <View className="border-b border-border px-5 pb-3 pt-3">
+            <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="flex-1 text-xl font-bold text-foreground">
+                {isSoftwareFairMode ? 'Check in at a booth' : 'Check in'}
+              </Text>
+              <Button
+                variant="ghost"
+                size="icon"
+                accessibilityLabel="Close"
+                onPress={onClose}
+                className="shrink-0">
+                <Icon as={XIcon} className="text-muted-foreground" size={22} />
+              </Button>
+            </View>
+            <Text className="mt-1 text-sm text-muted-foreground">
+              {sortedByDistance
+                ? `Nearest ${isSoftwareFairMode ? 'booths' : 'museums'} first`
+                : isSoftwareFairMode
+                  ? 'Choose a booth to log your visit.'
+                  : 'Choose a museum to log your visit.'}
+            </Text>
+          </View>
+
+          <View className="px-5 pt-3">
+            <SearchFieldRow
+              value={search}
+              onChangeText={setSearch}
+              placeholder={isSoftwareFairMode ? 'Search booths, teams...' : 'Search museums...'}
+              className="mx-0 mb-3 mt-0"
+            />
+          </View>
+
+          {activeMuseums === undefined ? (
+            <View className="flex-1 items-center justify-center py-16">
+              <BrandActivityIndicator size="large" />
+              <Text variant="muted" className="mt-3 text-base">
+                Loading {isSoftwareFairMode ? 'booths' : 'museums'}...
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filtered}
+              keyExtractor={(item) => item._id}
+              keyboardShouldPersistTaps="handled"
+              contentContainerClassName="grow px-5 pb-7"
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View className="items-center px-4 py-8">
+                  <Text className="text-foreground text-center text-base font-semibold">
+                    {isSoftwareFairMode
+                      ? 'No booths match your search.'
+                      : museumRequestSubmitted
+                        ? 'Request sent'
+                        : 'No museums match your search.'}
+                  </Text>
+                  {!isSoftwareFairMode ? (
+                    <>
+                      <Text className="text-muted-foreground mt-2 text-center text-sm leading-5">
+                        {canRequestMuseum
+                          ? museumRequestSubmitted
+                            ? `Thanks for telling us about "${trimmedSearch}". Our team can review it for Museum&.`
+                            : `Want us to add "${trimmedSearch}"? Send the details to our team for review.`
+                          : 'Search for a museum name, then request it if it is missing.'}
+                      </Text>
+                      {canRequestMuseum && !museumRequestSubmitted ? (
+                        <Button
+                          className="mt-4 rounded-xl px-6"
+                          onPress={() => setRequestModalVisible(true)}>
+                          <Text className="text-primary-foreground text-base font-semibold">
+                            Request this museum
+                          </Text>
+                        </Button>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+              }
+              renderItem={({ item }) => {
+                const sub = locationSubtitle(item);
+                const dist = formatDistance(item.distanceMeters);
+                const booth = item.softwareFairBooth;
+                const title = booth?.projectName ?? item.name;
+                const subtitle = booth
+                  ? [
+                      `Booth ${booth.boothNumber}`,
+                      booth.teamMembers.length > 0 ? booth.teamMembers.join(', ') : item.name,
+                    ].join(' · ')
+                  : sub;
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Check in at ${isSoftwareFairMode ? 'booth ' : ''}${title}${dist ? `, ${dist} away` : ''}`}
+                    onPress={() => onPickMuseum(item._id)}
+                    className="mb-2 active:opacity-90">
+                    <Card className="gap-0 border py-0 shadow-sm">
+                      <CardContent className="gap-1 px-4 py-3.5">
+                        <View className="flex-row items-start justify-between gap-3">
+                          <View className="min-w-0 flex-1">
+                            <CardTitle className="text-base font-semibold leading-snug">
+                              {title}
+                            </CardTitle>
+                            {subtitle ? (
+                              <CardDescription numberOfLines={2}>{subtitle}</CardDescription>
+                            ) : null}
+                          </View>
+                          {dist ? (
+                            <Text className="shrink-0 text-xs font-medium text-primary">
+                              {dist}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </CardContent>
+                    </Card>
+                  </Pressable>
+                );
+              }}
+            />
+          )}
+        </View>
+
+        {requestModalVisible ? (
+          <View className="absolute inset-0">
+            <MuseumRequestSheet
+              initialMuseumName={trimmedSearch}
+              onClose={() => setRequestModalVisible(false)}
+              onSubmitted={handleMuseumRequestSubmitted}
+            />
+          </View>
+        ) : null}
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}

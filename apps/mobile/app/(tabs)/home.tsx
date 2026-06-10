@@ -1,42 +1,138 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, ScrollView, Pressable, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { Id } from '@packages/backend/convex/_generated/dataModel';
 import { router } from 'expo-router';
-import { BellIcon } from 'lucide-react-native';
+import { BellIcon, InfoIcon, PlusIcon } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
-import { FeedEmptyState } from '@/components/feed-empty-state';
+import { Button } from '@/components/ui/button';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
-import { EventCard, EventCardData } from '../../components/event-card';
-import { CheckinPost, CheckinPostData } from '../../components/checkin-post';
-import { EditCheckinModal } from '../../components/edit-checkin-modal';
-import { useCheckInActions } from '../../hooks/useCheckInActions';
-import { useUniwind } from 'uniwind';
-import { RN_API_PRIMARY_DARK, RN_API_PRIMARY_LIGHT } from '@/constants/rn-api-colors';
+import { EventCard, EventCardData } from '@/components/event-card';
+import { MuseumCard, MuseumCardData } from '@/components/museum-card';
+import { CheckinPost, CheckinPostData } from '@/components/checkin-post';
+import { EditCheckinModal } from '@/components/edit-checkin-modal';
+import { MuseumCheckinPickerModal } from '@/components/museum-checkin-picker-modal';
+import { HomeFeedSection } from '@/components/home-feed-section';
+import { HomeCheckinCta } from '@/components/home-checkin-cta';
+import { SoftwareFairHomeSection } from '@/components/software-fair-home-section';
+import { FriendCheckinPhotosSection } from '@/components/friend-checkin-photos-section';
+import { useCheckInActions } from '@/hooks/useCheckInActions';
+import { useViewerLocation } from '@/hooks/useViewerLocation';
+import { useBrandPrimaryHex, useMutedForegroundHex } from '@/hooks/use-brand-primary';
+import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
+
+function FriendsEmptyState() {
+  return (
+    <View className="items-center py-2">
+      <Text className="text-center text-sm text-muted-foreground">
+        Follow people to see their museum check-ins here.
+      </Text>
+      <Button className="mt-4 self-center" size="sm" onPress={() => router.push('/(tabs)/explore')}>
+        <Text>Find people</Text>
+      </Button>
+    </View>
+  );
+}
+
+function NearbyEmptyState({ message }: { message: string }) {
+  return (
+    <View className="py-2">
+      <Text className="text-center text-sm text-muted-foreground">{message}</Text>
+    </View>
+  );
+}
+
+function promptEnableLocation(message: string, onRetry: () => void) {
+  Alert.alert('Turn on location', message, [
+    { text: 'Not now', style: 'cancel' },
+    { text: 'Try again', onPress: onRetry },
+    { text: 'Settings', onPress: () => Linking.openSettings() },
+  ]);
+}
 
 export default function HomeScreen() {
-  const { theme } = useUniwind();
-  const primaryHex = theme === 'dark' ? RN_API_PRIMARY_DARK : RN_API_PRIMARY_LIGHT;
+  const brandPrimary = useBrandPrimaryHex();
+  const mutedForeground = useMutedForegroundHex();
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
-  const events = useQuery(api.events.getUnifiedFeed);
   const followingCheckins = useQuery(api.checkIns.getFollowingCheckins);
   const unreadNotifications = useQuery(api.socialNotifications.unreadCount);
+  const { locState, retry } = useViewerLocation();
+  const nearbyFeed = useQuery(
+    api.events.getNearbyFeed,
+    !isSoftwareFairMode && locState.status === 'ok'
+      ? { viewer: locState.viewer, itemLimit: 24 }
+      : 'skip'
+  );
+  const availableFeed = useQuery(
+    api.events.getAvailableFeed,
+    !isSoftwareFairMode && locState.status === 'unavailable' ? { itemLimit: 24 } : 'skip'
+  );
+  const softwareFairBooths = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
+  );
+
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
+  const [museumCheckinPickerOpen, setMuseumCheckinPickerOpen] = useState(false);
+  const [showCheckInHint, setShowCheckInHint] = useState(false);
   const { saveCheckIn, deleteCheckIn } = useCheckInActions(() => setEditingCheckin(null));
 
-  if (
-    events === undefined ||
-    followingCheckins === undefined ||
+  React.useEffect(() => {
+    if (!currentUserId) return;
+    let isActive = true;
+
+    const run = async () => {
+      try {
+        const shouldShow = await shouldShowFeatureHint(currentUserId, 'home_checkin');
+        if (!isActive) return;
+        setShowCheckInHint(shouldShow);
+      } catch {
+        if (!isActive) return;
+        setShowCheckInHint(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUserId]);
+
+  const dismissCheckInHint = useCallback(async () => {
+    if (!currentUserId) return;
+    setShowCheckInHint(false);
+    try {
+      await dismissFeatureHint(currentUserId, 'home_checkin');
+    } catch {
+      // Non-blocking persistence failure.
+    }
+  }, [currentUserId]);
+
+  const promptLocation = useCallback(() => {
+    if (locState.status !== 'unavailable') return;
+    promptEnableLocation(locState.message, retry);
+  }, [locState, retry]);
+
+  const coreLoading =
     currentUser === undefined ||
-    currentUserProfile === undefined
-  ) {
+    currentUserProfile === undefined ||
+    followingCheckins === undefined;
+
+  if (coreLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center gap-3" style={{ flex: 1 }}>
@@ -52,14 +148,15 @@ export default function HomeScreen() {
   const firstName = currentUser?.name?.split(' ')[0] || 'there';
   const initial = firstName.charAt(0).toUpperCase();
 
-  const feedItems = [
-    ...events.map((e) => ({ type: 'event' as const, data: e })),
-    ...followingCheckins.map((c) => ({ type: 'checkin' as const, data: c })),
-  ].sort((a, b) => {
-    const dateA = a.type === 'event' ? a.data._creationTime : a.data.createdAt;
-    const dateB = b.type === 'event' ? b.data._creationTime : b.data.createdAt;
-    return dateB - dateA;
-  });
+  const aroundYouFeed =
+    locState.status === 'ok' ? (nearbyFeed ?? []) : locState.status === 'unavailable' ? (availableFeed ?? []) : [];
+
+  const aroundYouLoading =
+    !isSoftwareFairMode &&
+    (locState.status === 'pending' ||
+      (locState.status === 'ok' && nearbyFeed === undefined) ||
+      (locState.status === 'unavailable' && availableFeed === undefined));
+  const softwareFairBoothsLoading = isSoftwareFairMode && softwareFairBooths === undefined;
 
   return (
     <SafeAreaView
@@ -68,26 +165,29 @@ export default function HomeScreen() {
       edges={['top', 'left', 'right']}>
       <DecorativeGradientShapes />
 
-      <ScrollView
-        className="z-10 flex-1"
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}>
-        <View className="pb-3">
+      <ScrollView className="z-10 flex-1" style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        <View className="pb-8">
           <View className="flex-row items-start justify-between px-5 pb-2 pt-4">
             <View className="min-w-0 flex-1">
               <Text className="mb-0.5 text-sm font-normal text-muted-foreground">Welcome</Text>
               <Text className="mb-2 text-5xl font-semibold leading-none tracking-tight text-foreground">
                 {firstName}
               </Text>
-              <Separator className="mt-2 max-w-3/5 self-start bg-border" />
             </View>
             <View className="ml-4 mt-1 flex-row items-center gap-3">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Check in at a museum"
+                onPress={() => setMuseumCheckinPickerOpen(true)}
+                className="p-2 active:opacity-80">
+                <PlusIcon size={24} color={brandPrimary} />
+              </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Notifications"
                 onPress={() => router.push('/notifications')}
                 className="relative p-2 active:opacity-80">
-                <BellIcon size={24} color={primaryHex} />
+                <BellIcon size={24} color={brandPrimary} />
                 {unreadNotifications != null && unreadNotifications > 0 ? (
                   <View className="absolute right-1 top-1 min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-destructive px-1">
                     <Text className="text-[10px] font-bold text-white">
@@ -113,47 +213,117 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Text className="mb-4 px-5 text-sm font-normal text-muted-foreground">
-            see what your friends are up to
-          </Text>
+          <SoftwareFairHomeSection />
 
-        <View className="px-5 pb-2">
-          {feedItems.length === 0 ? (
-            <FeedEmptyState />
-          ) : (
-            <View>
-              {feedItems.map((item, index) =>
-                item.type === 'event' ? (
-                  <EventCard
-                    key={`event-${item.data._id}`}
-                    event={item.data as EventCardData}
-                    cardIndex={index}
-                  />
-                ) : (
-                  <CheckinPost
-                    key={`checkin-${item.data._id}`}
-                    checkin={item.data as CheckinPostData}
-                    cardIndex={index}
-                    isOwnCheckin={
-                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                    }
-                    onEditPress={
-                      currentUserId != null && (item.data as CheckinPostData).userId === currentUserId
-                        ? () => setEditingCheckin(item.data as CheckinPostData)
-                        : undefined
-                    }
-                  />
-                )
+          <HomeFeedSection
+            title="From Your Friends"
+            data={followingCheckins}
+            keyExtractor={(item) => item._id}
+            onSeeAll={
+              followingCheckins.length > 0
+                ? () => router.push('/home-feed/checkins')
+                : undefined
+            }
+            seeAllAccessibilityLabel="See all friend check-ins"
+            renderItem={({ item, index }) => (
+              <CheckinPost
+                checkin={item as CheckinPostData}
+                cardIndex={index}
+                layout="carousel"
+                isOwnCheckin={currentUserId != null && item.userId === currentUserId}
+                onEditPress={
+                  currentUserId != null && item.userId === currentUserId
+                    ? () => setEditingCheckin(item as CheckinPostData)
+                    : undefined
+                }
+              />
+            )}
+            emptyComponent={<FriendsEmptyState />}
+          />
+
+          <FriendCheckinPhotosSection checkins={followingCheckins as CheckinPostData[]} />
+
+          {isSoftwareFairMode ? (
+            <HomeFeedSection
+              title="Software Fair Booths"
+              data={(softwareFairBooths ?? []) as MuseumCardData[]}
+              keyExtractor={(item) => item._id}
+              loading={softwareFairBoothsLoading}
+              onSeeAll={
+                softwareFairBooths && softwareFairBooths.length > 0
+                  ? () => router.push('/(tabs)/explore?tab=museums')
+                  : undefined
+              }
+              seeAllAccessibilityLabel="See all Software Fair booths"
+              renderItem={({ item }) => (
+                <MuseumCard museum={item as MuseumCardData} layout="carousel" />
               )}
-            </View>
+              emptyComponent={
+                !softwareFairBoothsLoading ? (
+                  <NearbyEmptyState message="No active Software Fair booths yet." />
+                ) : null
+              }
+            />
+          ) : (
+            <HomeFeedSection
+              title="See what's around you"
+              titleAccessory={
+                locState.status === 'unavailable' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="About location for nearby picks"
+                    onPress={promptLocation}
+                    hitSlop={8}
+                    className="active:opacity-80">
+                    <InfoIcon size={14} color={mutedForeground} />
+                  </Pressable>
+                ) : null
+              }
+              data={aroundYouFeed}
+              keyExtractor={(item) => `${item.kind ?? 'event'}-${item._id}`}
+              loading={aroundYouLoading}
+              onSeeAll={
+                aroundYouFeed.length > 0 ? () => router.push('/home-feed/nearby') : undefined
+              }
+              seeAllAccessibilityLabel="See all nearby events"
+              renderItem={({ item, index }) => (
+                <EventCard event={item as EventCardData} cardIndex={index} layout="carousel" />
+              )}
+              emptyComponent={
+                !aroundYouLoading && aroundYouFeed.length === 0 ? (
+                  <NearbyEmptyState
+                    message={
+                      locState.status === 'ok'
+                        ? 'No upcoming events or exhibitions found near you right now.'
+                        : 'No upcoming events or exhibitions right now.'
+                    }
+                  />
+                ) : null
+              }
+            />
           )}
-        </View>
+
+          <HomeCheckinCta
+            onPress={() => setMuseumCheckinPickerOpen(true)}
+            showHint={showCheckInHint}
+            onDismissHint={dismissCheckInHint}
+          />
         </View>
       </ScrollView>
+
+      <MuseumCheckinPickerModal
+        visible={museumCheckinPickerOpen}
+        onClose={() => setMuseumCheckinPickerOpen(false)}
+      />
 
       <EditCheckinModal
         visible={editingCheckin != null}
         checkInId={editingCheckin?._id as Id<'checkIns'> | null}
+        museumId={
+          editingCheckin?.contentType === 'museum'
+            ? (editingCheckin.contentId as Id<'museums'>)
+            : undefined
+        }
         initialRating={editingCheckin?.rating ?? null}
         initialReview={editingCheckin?.review}
         initialImageUrls={editingCheckin?.imageUrls}
@@ -161,6 +331,7 @@ export default function HomeScreen() {
         initialFriendUserIds={editingCheckin?.friendUserIds}
         initialDurationHours={editingCheckin?.durationHours}
         initialVisitDate={editingCheckin?.visitDate}
+        initialAttendedEventIds={editingCheckin?.attendedEventIds}
         onSave={saveCheckIn}
         onDelete={() =>
           editingCheckin && deleteCheckIn(editingCheckin._id as Id<'checkIns'>)

@@ -3,11 +3,11 @@ import { makeFunctionReference } from "convex/server";
 import { components } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
-import { action, mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { createAuth } from "./auth";
 
 const PASSWORD = "12345678";
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 const populateProfilesRef = makeFunctionReference<
   "mutation",
@@ -35,6 +35,15 @@ const populateProfilesRef = makeFunctionReference<
     }>;
   }
 >("focusGroup:populateProfiles");
+
+/** Anchor focus-group activity to May 26–27, 2026 so feeds and profiles look current. */
+const SEED_MAY_27_MS = Date.UTC(2026, 4, 27, 16, 0, 0);
+const SEED_MAY_26_MS = Date.UTC(2026, 4, 26, 14, 0, 0);
+
+function seedCheckInTime(index: number) {
+  const dayBase = index % 2 === 0 ? SEED_MAY_27_MS : SEED_MAY_26_MS;
+  return dayBase - Math.floor(index / 2) * 3 * HOUR_MS;
+}
 
 const PROFILES = [
   {
@@ -230,7 +239,7 @@ async function upsertUserProfile(
       totalMuseums: 0,
       checkIns: {},
     },
-    updatedAt: Date.now(),
+    updatedAt: SEED_MAY_27_MS,
   };
 
   if (existing) {
@@ -244,7 +253,7 @@ async function upsertUserProfile(
   });
 }
 
-export const ensureAccounts = action({
+export const ensureAccounts = internalAction({
   args: {},
   handler: async (ctx): Promise<{
     accounts: Array<{
@@ -293,7 +302,7 @@ export const ensureAccounts = action({
   },
 });
 
-export const populateProfiles = mutation({
+export const populateProfiles = internalMutation({
   args: {
     accounts: v.array(v.object({
       key: v.string(),
@@ -312,7 +321,7 @@ export const populateProfiles = mutation({
 
     const seededProfiles = [];
     const focusUserIds = args.accounts.map((account) => account.userId);
-    const now = Date.now();
+    const seedNow = SEED_MAY_27_MS;
 
     for (const account of args.accounts) {
       const profile = profileByEmail(account.email);
@@ -323,7 +332,7 @@ export const populateProfiles = mutation({
         await ctx.db.insert("userFollows", {
           userId: account.userId,
           museumId: museum._id,
-          followedAt: now,
+          followedAt: seedNow,
         });
       }
 
@@ -332,7 +341,7 @@ export const populateProfiles = mutation({
         await ctx.db.insert("userUserFollows", {
           followerId: account.userId,
           followingId,
-          followedAt: now,
+          followedAt: seedNow,
         });
       }
 
@@ -349,8 +358,8 @@ export const populateProfiles = mutation({
           imageIds: [],
           friendUserIds: otherUsers.slice(0, index % 2),
           durationHours: getDuration(index),
-          visitDate: now - (index + 1) * DAY_MS,
-          createdAt: now - index * DAY_MS,
+          visitDate: seedCheckInTime(index),
+          createdAt: seedCheckInTime(index),
         });
 
         const key = museum._id;
@@ -368,7 +377,7 @@ export const populateProfiles = mutation({
           totalMuseums,
           checkIns: checkInIdsByMuseum,
         },
-        updatedAt: now,
+        updatedAt: seedNow,
       });
 
       seededProfiles.push({
@@ -383,7 +392,7 @@ export const populateProfiles = mutation({
   },
 });
 
-export const seedProfiles = action({
+export const seedProfiles = internalAction({
   args: {},
   handler: async (ctx) => {
     const auth = createAuth(ctx);
@@ -432,7 +441,7 @@ export const seedProfiles = action({
   },
 });
 
-export const listProfiles = query({
+export const listProfiles = internalQuery({
   args: {},
   handler: async (ctx) => {
     const profiles = [];
@@ -445,7 +454,6 @@ export const listProfiles = query({
         key: profile.key,
         name: profile.name,
         email: profile.email,
-        password: PASSWORD,
         description: profile.description,
         userId: userProfile?.userId ?? null,
       });
@@ -454,7 +462,7 @@ export const listProfiles = query({
   },
 });
 
-export const saveSessionSnapshot = mutation({
+export const saveSessionSnapshot = internalMutation({
   args: {
     label: v.optional(v.string()),
   },
@@ -530,7 +538,7 @@ export const saveSessionSnapshot = mutation({
   },
 });
 
-export const listSnapshots = query({
+export const listSnapshots = internalQuery({
   args: {},
   handler: async (ctx) => {
     const snapshots = await ctx.db
@@ -552,7 +560,7 @@ export const listSnapshots = query({
   },
 });
 
-export const debugProfileState = query({
+export const debugProfileState = internalQuery({
   args: {},
   handler: async (ctx) => {
     const results = [];
@@ -589,7 +597,7 @@ export const debugProfileState = query({
   },
 });
 
-export const restoreSnapshot = mutation({
+export const restoreSnapshot = internalMutation({
   args: {
     snapshotId: v.id("focusGroupSnapshots"),
   },

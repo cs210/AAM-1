@@ -39,6 +39,12 @@ export default defineSchema({
     imageUrl: v.optional(v.string()),
     website: v.optional(v.string()),
     phone: v.optional(v.string()),
+    googleReviewsEnabled: v.optional(v.boolean()),
+    googlePlaceId: v.optional(v.string()),
+    googleMapsUri: v.optional(v.string()),
+    googleRating: v.optional(v.number()),
+    googleUserRatingCount: v.optional(v.number()),
+    googleReviewsLastFetchedAt: v.optional(v.number()),
     operatingHours: v.optional(v.array(v.object({
       day: v.string(),
       isOpen: v.boolean(),
@@ -47,6 +53,7 @@ export default defineSchema({
     }))),
     accessibilityFeatures: v.optional(v.array(v.string())),
     accessibilityNotes: v.optional(v.string()),
+    isSoftwareFairOnly: v.optional(v.boolean()),
   })
     .index("by_category", ["category"]),
 
@@ -66,6 +73,36 @@ export default defineSchema({
     .index("by_museum", ["museumId"])
     .index("by_museum_sortOrder", ["museumId", "sortOrder"])
     .index("by_museum_primary", ["museumId", "isPrimary"]),
+
+  // Cached Google Maps reviews. Display is controlled by
+  // museums.googleReviewsEnabled, and these ratings are never folded into the
+  // app's check-in rating calculations.
+  museumGoogleReviews: defineTable({
+    museumId: v.id("museums"),
+    googleReviewName: v.string(),
+    authorName: v.optional(v.string()),
+    authorUri: v.optional(v.string()),
+    authorPhotoUri: v.optional(v.string()),
+    rating: v.number(),
+    text: v.optional(v.string()),
+    originalText: v.optional(v.string()),
+    languageCode: v.optional(v.string()),
+    relativePublishTimeDescription: v.optional(v.string()),
+    publishTime: v.optional(v.string()),
+    googleMapsUri: v.optional(v.string()),
+    visitDate: v.optional(v.object({
+      year: v.optional(v.number()),
+      month: v.optional(v.number()),
+      day: v.optional(v.number()),
+    })),
+    sortOrder: v.number(),
+    fetchedAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_museum", ["museumId"])
+    .index("by_museum_sortOrder", ["museumId", "sortOrder"])
+    .index("by_museum_review", ["museumId", "googleReviewName"]),
 
   // Special Events
   events: defineTable({
@@ -118,6 +155,31 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_betterAuthOrgId", ["betterAuthOrgId"]),
 
+  // User-submitted requests for museums missing from the consumer app.
+  museumAdditionRequests: defineTable({
+    requesterUserId: v.string(),
+    museumName: v.string(),
+    normalizedMuseumName: v.string(),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    website: v.optional(v.string()),
+    note: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("duplicate"),
+    ),
+    duplicateMuseumId: v.optional(v.id("museums")),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+  })
+    .index("by_requester", ["requesterUserId"])
+    .index("by_status", ["status"])
+    .index("by_status_createdAt", ["status", "createdAt"])
+    .index("by_requester_and_normalizedName", ["requesterUserId", "normalizedMuseumName"]),
+
   // One-to-one assignment between Better Auth organizations and museums.
   organizationMuseumLinks: defineTable({
     betterAuthOrgId: v.string(),
@@ -148,6 +210,38 @@ export default defineSchema({
     .index("by_slug", ["museumSlug"])
     .index("by_active", ["isActive"]),
 
+  softwareFairFeatureConfigs: defineTable({
+    key: v.string(),
+    enabled: v.boolean(),
+    announcementEnabled: v.boolean(),
+    announcementTitle: v.optional(v.string()),
+    announcementBody: v.optional(v.string()),
+    announcementCtaLabel: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_key", ["key"]),
+
+  softwareFairBooths: defineTable({
+    featureKey: v.string(),
+    museumId: v.optional(v.id("museums")),
+    boothNumber: v.number(),
+    projectName: v.string(),
+    genres: v.array(v.string()),
+    teamMembers: v.array(v.string()),
+    description: v.optional(v.string()),
+    guideUrl: v.optional(v.string()),
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.string()),
+    updatedBy: v.optional(v.string()),
+  })
+    .index("by_feature", ["featureKey"])
+    .index("by_feature_active_sortOrder", ["featureKey", "isActive", "sortOrder"])
+    .index("by_feature_boothNumber", ["featureKey", "boothNumber"]),
+
   // User Following (tracks which museums a user follows)
   userFollows: defineTable({
     userId: v.string(), // Better Auth user ID
@@ -172,6 +266,7 @@ export default defineSchema({
   userProfiles: defineTable({
     userId: v.string(), // Better Auth user ID
     name: v.optional(v.string()),
+    username: v.optional(v.string()), // stored lowercase; required for mobile via app logic
     email: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     bannerUrl: v.optional(v.string()),
@@ -186,7 +281,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_name", ["name"]),
+    .index("by_name", ["name"])
+    .index("by_username", ["username"]),
 
   // Exhibitions and halls (dashboard-managed, per museum)
   exhibitions: defineTable({
@@ -197,6 +293,20 @@ export default defineSchema({
     endDate: v.optional(v.number()),
     imageUrl: v.optional(v.string()),
     sortOrder: v.number(),
+    // Legacy field present on some rows; kept optional for schema validation
+    resources: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          kind: v.string(),
+          sortOrder: v.number(),
+          sourceType: v.string(),
+          storageId: v.id("_storage"),
+          title: v.string(),
+          url: v.string(),
+        })
+      )
+    ),
   })
     .index("by_museum", ["museumId"])
     .index("by_museum_sortOrder", ["museumId", "sortOrder"]),
@@ -266,6 +376,7 @@ export default defineSchema({
     friendUserIds: v.array(v.string()),
     durationHours: v.optional(v.number()), // broad visit-length bucket in hours
     visitDate: v.optional(v.number()), // timestamp of visit (optional for events)
+    attendedEventIds: v.optional(v.array(v.union(v.id("events"), v.id("exhibitions")))), // events/exhibitions attended during museum visit
     createdAt: v.number(), // timestamp of check-in creation
     editedAt: v.optional(v.number()), // set when user edits rating/review
   })

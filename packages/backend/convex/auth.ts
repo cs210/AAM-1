@@ -1,6 +1,6 @@
-
 import { components } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
+import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { createClient, GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
@@ -13,21 +13,11 @@ import authSchema from "./betterAuth/schema";
 import { expo } from "@better-auth/expo";
 import { sendEmail } from "./email";
 
-// List all users (for search/following) from userProfiles
-export const listUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    // Return all userProfiles (public info only)
-    const profiles = await ctx.db.query("userProfiles").collect();
-    return profiles.map((profile) => ({
-      userId: profile.userId,
-      name: profile.name ?? null,
-      email: profile.email ?? null,
-      imageUrl: profile.imageUrl ?? null,
-      bannerUrl: profile.bannerUrl ?? null,
-    }));
-  },
-});
+const cleanupDeletedUserDataRef = makeFunctionReference<
+  "mutation",
+  { userId: string },
+  { deleted: number; patched: number }
+>("accountDeletion:cleanupDeletedUserData");
 
 function normalizeUrl(value: string) {
   return value.startsWith("http") ? value : `https://${value}`;
@@ -71,8 +61,13 @@ export const authComponent = createClient<DataModel, typeof authSchema>(
 export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
   const siteUrl = resolveSiteUrl() ?? "";
   const aliasUrls = getAliasUrls();
-  const trustedOrigins = [siteUrl, ...aliasUrls, "http://localhost:8081", "yami://", "exp://"]
-    .filter((origin): origin is string => Boolean(origin));
+  const trustedOrigins = [
+    siteUrl,
+    ...aliasUrls,
+    "http://localhost:8081",
+    "yami://",
+    "exp://",
+  ].filter((origin): origin is string => Boolean(origin));
 
   return {
     baseURL: siteUrl,
@@ -85,8 +80,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         await sendEmail({
           to: user.email,
           subject: "Reset your password",
-          html:
-            `Click the link to reset your password: <a href="${url}">${url}</a>`,
+          html: `Click the link to reset your password: <a href="${url}">${url}</a>`,
           text: `Click the link to reset your password: ${url}`,
         });
       },
@@ -96,10 +90,18 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         await sendEmail({
           to: user.email,
           subject: "Verify your email address",
-          html:
-            `Click the link to verify your email: <a href="${url}">${url}</a>`,
+          html: `Click the link to verify your email: <a href="${url}">${url}</a>`,
           text: `Click the link to verify your email: ${url}`,
         });
+      },
+    },
+    user: {
+      deleteUser: {
+        enabled: true,
+        afterDelete: async (user) => {
+          if (!("runMutation" in ctx)) return;
+          await ctx.runMutation(cleanupDeletedUserDataRef, { userId: user.id });
+        },
       },
     },
     plugins: [
@@ -113,10 +115,11 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
             organizationId: data.organization?.id,
           });
           const siteUrl = requireSiteUrl();
-          const inviteLink =
-            `${siteUrl}/accept-invitation?invitationId=${data.id}`;
-          const inviterName = data.inviter?.user?.name ??
-            data.inviter?.user?.email ?? "A team member";
+          const inviteLink = `${siteUrl}/accept-invitation?invitationId=${data.id}`;
+          const inviterName =
+            data.inviter?.user?.name ??
+            data.inviter?.user?.email ??
+            "A team member";
           const orgName = data.organization?.name ?? "the organization";
           await sendEmail({
             to: data.email,
@@ -126,15 +129,15 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
               <p><a href="${inviteLink}">Accept invitation</a></p>
               <p>Or copy this link: ${inviteLink}</p>
             `,
-            text:
-              `${inviterName} has invited you to join ${orgName}. Accept here: ${inviteLink}`,
+            text: `${inviterName} has invited you to join ${orgName}. Accept here: ${inviteLink}`,
           });
         },
       }),
       admin({
-        adminUserIds: process.env.ADMIN_USER_IDS?.split(",").map((id) =>
-          id.trim()
-        ).filter(Boolean) ?? [],
+        adminUserIds:
+          process.env.ADMIN_USER_IDS?.split(",")
+            .map((id) => id.trim())
+            .filter(Boolean) ?? [],
       }),
       expo(),
     ],

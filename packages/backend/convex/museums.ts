@@ -37,7 +37,7 @@ async function hasLinkedMuseumAccess(
   return orgIds.has(link.betterAuthOrgId);
 }
 
-async function assertDashboardMuseumAccess(
+export async function assertDashboardMuseumAccess(
   ctx: QueryCtx | MutationCtx,
   user: { _id: string; role?: string | null },
   museumId: Id<"museums">
@@ -100,6 +100,13 @@ async function listMuseumImagesBySort(ctx: QueryCtx | MutationCtx, museumId: Id<
     .collect();
 }
 
+async function listGoogleReviewsBySort(ctx: QueryCtx | MutationCtx, museumId: Id<"museums">) {
+  return await ctx.db
+    .query("museumGoogleReviews")
+    .withIndex("by_museum_sortOrder", (q) => q.eq("museumId", museumId))
+    .collect();
+}
+
 const museumLocationValidator = v.object({
   address: v.optional(v.string()),
   city: v.optional(v.string()),
@@ -115,6 +122,33 @@ const operatingHourValidator = v.object({
   closeTime: v.string(),
 });
 
+const googleReviewVisitDateValidator = v.object({
+  year: v.optional(v.number()),
+  month: v.optional(v.number()),
+  day: v.optional(v.number()),
+});
+
+const googleReviewCacheInputValidator = v.object({
+  googleReviewName: v.string(),
+  authorName: v.optional(v.string()),
+  authorUri: v.optional(v.string()),
+  authorPhotoUri: v.optional(v.string()),
+  rating: v.number(),
+  text: v.optional(v.string()),
+  originalText: v.optional(v.string()),
+  languageCode: v.optional(v.string()),
+  relativePublishTimeDescription: v.optional(v.string()),
+  publishTime: v.optional(v.string()),
+  googleMapsUri: v.optional(v.string()),
+  visitDate: v.optional(googleReviewVisitDateValidator),
+});
+
+const analyticsBucketValidator = v.union(v.literal("day"), v.literal("week"));
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+const MAX_ANALYTICS_BUCKETS = 60;
+
 const museumSnapshotValidator = v.object({
   name: v.string(),
   description: v.optional(v.string()),
@@ -127,6 +161,7 @@ const museumSnapshotValidator = v.object({
   imageUrl: v.optional(v.string()),
   website: v.optional(v.string()),
   phone: v.optional(v.string()),
+  googleReviewsEnabled: v.optional(v.boolean()),
   operatingHours: v.optional(v.array(operatingHourValidator)),
   accessibilityFeatures: v.optional(v.array(v.string())),
   accessibilityNotes: v.optional(v.string()),
@@ -168,6 +203,104 @@ function stringArrayEqual(left?: string[], right?: string[]) {
   return left.every((value, index) => value === right[index]);
 }
 
+function formatMonthDay(timestamp: number) {
+  const date = new Date(timestamp);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function getCheckInTimestamp(checkIn: { visitDate?: number; createdAt: number }) {
+  return checkIn.visitDate ?? checkIn.createdAt;
+}
+
+function getAllTimeStart(
+  checkIns: { visitDate?: number; createdAt: number }[],
+  follows: { followedAt: number }[],
+  fallbackTo: number
+) {
+  const timestamps = [
+    ...checkIns.map(getCheckInTimestamp),
+    ...follows.map((follow) => follow.followedAt),
+  ].filter((timestamp) => Number.isFinite(timestamp));
+
+  if (timestamps.length === 0) {
+    return fallbackTo - 12 * WEEK_MS;
+  }
+  return Math.min(...timestamps);
+}
+
+function buildCheckInSeries(
+  checkIns: { visitDate?: number; createdAt: number }[],
+  from: number,
+  to: number,
+  bucketMs: number,
+  bucketCount: number
+) {
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const bucketStart = from + index * bucketMs;
+    return {
+      bucketStart,
+      label: formatMonthDay(bucketStart),
+      checkins: 0,
+    };
+  });
+
+  for (const checkIn of checkIns) {
+    const timestamp = getCheckInTimestamp(checkIn);
+    if (timestamp < from || timestamp >= to) continue;
+    const index = Math.floor((timestamp - from) / bucketMs);
+    if (index >= 0 && index < buckets.length) {
+      buckets[index]!.checkins += 1;
+    }
+  }
+
+  return buckets;
+}
+
+function getCheckInsInRange<T extends { visitDate?: number; createdAt: number }>(
+  checkIns: T[],
+  from: number,
+  to: number
+) {
+  return checkIns.filter((checkIn) => {
+    const timestamp = getCheckInTimestamp(checkIn);
+    return timestamp >= from && timestamp < to;
+  });
+}
+
+function getRatingsDistribution(
+  checkIns: { visitDate?: number; createdAt: number; rating?: number }[],
+  from: number,
+  to: number
+) {
+  const periodCheckIns = getCheckInsInRange(checkIns, from, to);
+  return [1, 2, 3, 4, 5].map((stars) => ({
+    stars: String(stars),
+    count: periodCheckIns.filter((checkIn) => checkIn.rating === stars).length,
+  }));
+}
+
+function getPeriodStats(
+  checkIns: { visitDate?: number; createdAt: number; rating?: number }[],
+  follows: { followedAt: number }[],
+  from: number,
+  to: number
+) {
+  const periodCheckIns = getCheckInsInRange(checkIns, from, to);
+  const ratedCheckIns = periodCheckIns.filter((checkIn) => checkIn.rating !== undefined);
+  const averageRating =
+    ratedCheckIns.length > 0
+      ? ratedCheckIns.reduce((sum, checkIn) => sum + (checkIn.rating ?? 0), 0) / ratedCheckIns.length
+      : null;
+  const newFollowers = follows.filter((follow) => follow.followedAt >= from && follow.followedAt < to).length;
+
+  return {
+    totalCheckIns: periodCheckIns.length,
+    totalRatings: ratedCheckIns.length,
+    averageRating: averageRating === null ? null : Math.round(averageRating * 10) / 10,
+    newFollowers,
+  };
+}
+
 function museumMatchesSnapshot(
   museum: {
     name: string;
@@ -181,6 +314,7 @@ function museumMatchesSnapshot(
     imageUrl?: string;
     website?: string;
     phone?: string;
+    googleReviewsEnabled?: boolean;
     operatingHours?: { day: string; isOpen: boolean; openTime: string; closeTime: string }[];
     accessibilityFeatures?: string[];
     accessibilityNotes?: string;
@@ -198,6 +332,7 @@ function museumMatchesSnapshot(
     imageUrl?: string;
     website?: string;
     phone?: string;
+    googleReviewsEnabled?: boolean;
     operatingHours?: { day: string; isOpen: boolean; openTime: string; closeTime: string }[];
     accessibilityFeatures?: string[];
     accessibilityNotes?: string;
@@ -220,6 +355,7 @@ function museumMatchesSnapshot(
     valuesEqual(museum.imageUrl, snapshot.imageUrl) &&
     valuesEqual(museum.website, snapshot.website) &&
     valuesEqual(museum.phone, snapshot.phone) &&
+    (museum.googleReviewsEnabled ?? false) === (snapshot.googleReviewsEnabled ?? false) &&
     operatingHoursEqual(museum.operatingHours, snapshot.operatingHours) &&
     stringArrayEqual(museum.accessibilityFeatures, snapshot.accessibilityFeatures) &&
     valuesEqual(museum.accessibilityNotes, snapshot.accessibilityNotes) &&
@@ -264,11 +400,13 @@ export const addMuseum = mutation({
   },
 });
 
-// List all museums
+// List non-experimental museums for normal public and admin museum surfaces.
 export const listMuseums = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("museums").collect();
+    return (await ctx.db.query("museums").collect()).filter(
+      (museum) => !museum.isSoftwareFairOnly
+    );
   },
 });
 
@@ -284,7 +422,9 @@ export const listMuseumsWithStats = query({
     ),
   },
   handler: async (ctx, args) => {
-    const museums = await ctx.db.query("museums").collect();
+    const museums = (await ctx.db.query("museums").collect()).filter(
+      (museum) => !museum.isSoftwareFairOnly
+    );
 
     // Get stats for each museum
     const museumsWithStats = await Promise.all(
@@ -375,11 +515,90 @@ export const getMuseumDetailsForDashboard = query({
         imageUrl: museum.imageUrl,
         website: museum.website,
         phone: museum.phone,
+        googleReviewsEnabled: museum.googleReviewsEnabled ?? false,
         operatingHours: museum.operatingHours,
         accessibilityFeatures: museum.accessibilityFeatures,
         accessibilityNotes: museum.accessibilityNotes,
         point: point ?? undefined,
       },
+    };
+  },
+});
+
+export const getMuseumAnalyticsForDashboard = query({
+  args: {
+    museumId: v.id("museums"),
+    range: v.object({
+      from: v.number(),
+      to: v.number(),
+      bucket: analyticsBucketValidator,
+      allTime: v.optional(v.boolean()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) return null;
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+
+    const checkIns = await ctx.db
+      .query("checkIns")
+      .withIndex("by_content", (q) =>
+        q.eq("contentType", "museum").eq("contentId", args.museumId)
+      )
+      .collect();
+    const follows = await ctx.db
+      .query("userFollows")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+
+    const requestedTo = Math.floor(args.range.to);
+    const requestedFrom = Math.floor(args.range.from);
+    const to = requestedTo;
+    const from = args.range.allTime ? getAllTimeStart(checkIns, follows, to) : requestedFrom;
+    const requestedBucketMs = args.range.bucket === "week" ? WEEK_MS : DAY_MS;
+    const durationMs = to - from;
+    if (!Number.isFinite(from) || !Number.isFinite(to) || durationMs <= 0) {
+      throw new Error("Invalid analytics date range");
+    }
+
+    const bucketMs = args.range.allTime
+      ? Math.max(DAY_MS, Math.ceil(durationMs / MAX_ANALYTICS_BUCKETS))
+      : requestedBucketMs;
+    const bucketCount = Math.min(
+      MAX_ANALYTICS_BUCKETS,
+      Math.max(1, Math.ceil(durationMs / bucketMs))
+    );
+    const previousFrom = args.range.allTime ? from : from - bucketCount * bucketMs;
+    const previousTo = args.range.allTime ? from : from;
+
+    const currentStats = getPeriodStats(checkIns, follows, from, to);
+    const previousStats = getPeriodStats(checkIns, follows, previousFrom, previousTo);
+
+    return {
+      totals: {
+        totalCheckIns: currentStats.totalCheckIns,
+        totalRatings: currentStats.totalRatings,
+        averageRating: currentStats.averageRating,
+        museumFollowers: currentStats.newFollowers,
+      },
+      currentPeriod: {
+        from,
+        to,
+        series: buildCheckInSeries(checkIns, from, to, bucketMs, bucketCount),
+        stats: currentStats,
+      },
+      previousPeriod: {
+        from: previousFrom,
+        to: previousTo,
+        series: buildCheckInSeries(checkIns, previousFrom, previousTo, bucketMs, bucketCount),
+        stats: previousStats,
+      },
+      ratingsDistribution: getRatingsDistribution(checkIns, from, to),
     };
   },
 });
@@ -401,6 +620,7 @@ export const updateMuseumDetailsForDashboard = mutation({
       imageUrl: v.optional(v.string()),
       website: v.optional(v.string()),
       phone: v.optional(v.string()),
+      googleReviewsEnabled: v.optional(v.boolean()),
       operatingHours: v.optional(v.array(operatingHourValidator)),
       accessibilityFeatures: v.optional(v.array(v.string())),
       accessibilityNotes: v.optional(v.string()),
@@ -442,6 +662,7 @@ export const updateMuseumDetailsForDashboard = mutation({
       imageUrl: args.next.imageUrl,
       website: args.next.website,
       phone: args.next.phone,
+      googleReviewsEnabled: args.next.googleReviewsEnabled ?? false,
       operatingHours: args.next.operatingHours,
       accessibilityFeatures: args.next.accessibilityFeatures,
       accessibilityNotes: args.next.accessibilityNotes,
@@ -480,6 +701,125 @@ export const listMuseumImagesForDashboard = query({
     );
 
     return await listMuseumImagesBySort(ctx, args.museumId);
+  },
+});
+
+export const listMuseumImagesForMuseum = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) return [];
+    const images = await listMuseumImagesBySort(ctx, args.museumId);
+    return images.map((image) => ({
+      _id: image._id,
+      imageUrl: image.imageUrl,
+      alt: image.alt,
+      sortOrder: image.sortOrder,
+      isPrimary: image.isPrimary,
+    }));
+  },
+});
+
+export const listGoogleReviewsForDashboard = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) return null;
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+
+    const reviews = await listGoogleReviewsBySort(ctx, args.museumId);
+    return {
+      googleReviewsEnabled: museum.googleReviewsEnabled ?? false,
+      googlePlaceId: museum.googlePlaceId,
+      googleMapsUri: museum.googleMapsUri,
+      googleRating: museum.googleRating,
+      googleUserRatingCount: museum.googleUserRatingCount,
+      googleReviewsLastFetchedAt: museum.googleReviewsLastFetchedAt,
+      reviews,
+    };
+  },
+});
+
+export const listGoogleReviewsForMuseum = query({
+  args: { museumId: v.id("museums") },
+  handler: async (ctx, args) => {
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum?.googleReviewsEnabled) return [];
+    return await listGoogleReviewsBySort(ctx, args.museumId);
+  },
+});
+
+export const replaceGoogleReviewsForDashboard = mutation({
+  args: {
+    museumId: v.id("museums"),
+    googleReviewsEnabled: v.optional(v.boolean()),
+    googlePlaceId: v.optional(v.string()),
+    googleMapsUri: v.optional(v.string()),
+    googleRating: v.optional(v.number()),
+    googleUserRatingCount: v.optional(v.number()),
+    reviews: v.array(googleReviewCacheInputValidator),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) throw new Error("Museum not found");
+    await assertDashboardMuseumAccess(
+      ctx,
+      user as { _id: string; role?: string | null },
+      args.museumId
+    );
+
+    const existingReviews = await ctx.db
+      .query("museumGoogleReviews")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const review of existingReviews) {
+      await ctx.db.delete(review._id);
+    }
+
+    const now = Date.now();
+    for (const [index, review] of args.reviews.entries()) {
+      await ctx.db.insert("museumGoogleReviews", {
+        museumId: args.museumId,
+        googleReviewName: review.googleReviewName,
+        authorName: review.authorName,
+        authorUri: review.authorUri,
+        authorPhotoUri: review.authorPhotoUri,
+        rating: review.rating,
+        text: review.text,
+        originalText: review.originalText,
+        languageCode: review.languageCode,
+        relativePublishTimeDescription: review.relativePublishTimeDescription,
+        publishTime: review.publishTime,
+        googleMapsUri: review.googleMapsUri,
+        visitDate: review.visitDate,
+        sortOrder: index,
+        fetchedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await ctx.db.patch(args.museumId, {
+      googleReviewsEnabled: args.googleReviewsEnabled ?? true,
+      googlePlaceId: args.googlePlaceId,
+      googleMapsUri: args.googleMapsUri,
+      googleRating: args.googleRating,
+      googleUserRatingCount: args.googleUserRatingCount,
+      googleReviewsLastFetchedAt: now,
+    });
+
+    return {
+      reviewCount: args.reviews.length,
+      googleRating: args.googleRating,
+      googleUserRatingCount: args.googleUserRatingCount,
+      googleReviewsLastFetchedAt: now,
+    };
   },
 });
 
@@ -670,5 +1010,42 @@ export const reorderMuseumImagesForDashboard = mutation({
         await ctx.db.patch(imageId, { sortOrder: index, updatedAt: now });
       }
     }
+  },
+});
+
+// Migration/utility function to populate museum latitude/longitude from geospatial index
+export const populateMuseumCoordinatesFromGeospatial = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    
+    const museums = await ctx.db.query("museums").collect();
+    let updated = 0;
+    let skipped = 0;
+
+    for (const museum of museums) {
+      // Skip if already has valid coordinates
+      if (
+        typeof museum.latitude === "number" &&
+        typeof museum.longitude === "number" &&
+        Number.isFinite(museum.latitude) &&
+        Number.isFinite(museum.longitude)
+      ) {
+        skipped++;
+        continue;
+      }
+
+      // Get coordinates from geospatial index
+      const point = await getMuseumPoint(ctx, museum._id);
+      if (point) {
+        await ctx.db.patch(museum._id, {
+          latitude: point.latitude,
+          longitude: point.longitude,
+        });
+        updated++;
+      }
+    }
+
+    return { updated, skipped, total: museums.length };
   },
 });

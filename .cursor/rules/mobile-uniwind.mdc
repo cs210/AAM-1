@@ -8,10 +8,13 @@ alwaysApply: false
 
 When editing `apps/mobile`:
 
-- **Do not** introduce `StyleSheet.create` or large `styles` objects for screens and feature components. Prefer **Uniwind `className`** on `View`, `Text`, `Pressable`, `Image`, etc., with `cn()` for conditional classes.
-- **Use** primitives from `@/components/ui` (`Text`, `Button`, `BrandActivityIndicator`, …) instead of raw `react-native` `Text` / `ActivityIndicator` where they exist, so typography and theme stay consistent.
-- **Hex colors for APIs only:** Lucide and other libraries need string colors. Import matching tokens from `@/constants/rn-api-colors` (e.g. `RN_API_PRIMARY_LIGHT`) instead of scattering one-off hex literals when a token exists.
+- **Do not** use `StyleSheet.create` or large `styles` objects for screens and feature components. Prefer **Uniwind `className`** on `View`, `Text`, `Pressable`, `Image`, etc., with `cn()` for conditional classes. Refactor legacy StyleSheet when you touch a file.
+- **Do not** use `TouchableOpacity` — use `Pressable` with `active:opacity-*` Tailwind classes.
+- **Use** primitives from `@/components/ui` (`Text`, `Button`, `Input`, `Card`, `BrandActivityIndicator`, `ScreenTitleBar`, …) instead of raw `react-native` `Text` / `ActivityIndicator` / ad-hoc styled inputs, so typography and theme stay consistent.
+- **Hex colors for APIs only:** Lucide and other libraries need string colors. Use `useBrandPrimaryHex()` / `useMutedForegroundHex()` from `@/hooks/use-brand-primary`, or `@/constants/rn-api-colors` when hooks are not available. Prefer `@/components/ui/icon` (`<Icon as={…} className="text-muted-foreground" />`) over raw Lucide + `color` when styling icons with tokens.
+- **Reuse feature components:** Prefer existing pieces under `@/components/` (e.g. `ScreenTitleBar`, `FeedEmptyState`, `HomeFeedSection`, `Card`) instead of one-off layouts. Import with `@/` paths, not deep relative `../../`.
 - **ScrollView / FlatList:** Prefer `contentContainerStyle` with a small inline object when padding or `flexGrow` must be reliable; `contentContainerClassName` is not always equivalent on native.
+- **`SafeAreaView` / `ScrollView` flex:** Keep `style={{ flex: 1 }}` alongside `className="flex-1"` — Uniwind does not always apply flex to these wrappers; without it the screen can render blank (only background/decoration visible).
 - **Exceptions:** Inline `style` is fine for values Uniwind cannot express cleanly (e.g. `Animated` interpolated styles, `Dimensions`-based layout, third-party props that only accept `style`).
 
 Refactoring legacy StyleSheet blocks should move styles into `className` and delete the `StyleSheet` block once nothing references it.

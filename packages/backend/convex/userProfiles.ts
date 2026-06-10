@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { requireAuthenticatedUser } from "./permissions";
+import { toProfileView, type ProfileView } from "./profileViews";
+import { validateUsername } from "./usernameValidation";
+
+const MAX_PROFILES_BY_USER_IDS = 100;
 
 // Generate a short-lived upload URL for Convex file storage
 export const generateUploadUrl = mutation({
@@ -94,27 +99,58 @@ export const getOrCreateUserProfile = mutation({
       return { _id: profileId, _creationTime: Date.now(), ...profileData };
     }
 
+    const updates: { name?: string; email?: string; updatedAt?: number } = {};
+    if (profile.name !== user.name) updates.name = user.name;
+    if (profile.email !== user.email) updates.email = user.email;
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = Date.now();
+      await ctx.db.patch(profile._id, updates);
+      return { ...profile, ...updates };
+    }
+
     return profile;
   },
 });
 
-// Get user profile by ID
+// Get user profile by ID (public view; email only for the profile owner)
 export const getUserProfile = query({
   args: { userId: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ProfileView | null> => {
+    const viewer = await requireAuthenticatedUser(ctx);
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
-    return profile ?? null;
+    return profile ? toProfileView(profile, viewer._id) : null;
+  },
+});
+
+export const getProfilesByUserIds = query({
+  args: { userIds: v.array(v.string()) },
+  handler: async (ctx, args): Promise<ProfileView[]> => {
+    const viewer = await requireAuthenticatedUser(ctx);
+    const uniqueIds = [...new Set(args.userIds)].slice(0, MAX_PROFILES_BY_USER_IDS);
+    const profiles: ProfileView[] = [];
+
+    for (const userId of uniqueIds) {
+      const profile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (profile) {
+        profiles.push(toProfileView(profile, viewer._id));
+      }
+    }
+
+    return profiles;
   },
 });
 
 // Get current user's profile
 export const getCurrentUserProfile = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<ProfileView | null> => {
     const user = await authComponent.safeGetAuthUser(ctx);
     if (!user) return null;
 
@@ -123,16 +159,7 @@ export const getCurrentUserProfile = query({
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .first();
 
-    return profile ?? null;
-  },
-});
-
-// List all user profiles (for friend selection, etc.)
-export const listAllProfiles = query({
-  args: {},
-  handler: async (ctx) => {
-    const profiles = await ctx.db.query("userProfiles").collect();
-    return profiles;
+    return profile ? toProfileView(profile, user._id) : null;
   },
 });
 
@@ -176,5 +203,167 @@ export const updateUserProfile = mutation({
     await ctx.db.patch(profile._id, updateData);
 
     return { ...profile, ...updateData };
+  },
+});
+
+export const isUsernameAvailable = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const validation = validateUsername(args.username);
+    if (!validation.ok) {
+      return { available: false, reason: validation.error };
+    }
+
+    const user = await authComponent.safeGetAuthUser(ctx);
+    const existing = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", validation.normalized))
+      .first();
+
+    if (existing) {
+      if (user && existing.userId === user._id) {
+        return { available: true };
+      }
+      return { available: false, reason: "Username is taken" };
+    }
+
+    return { available: true };
+  },
+});
+
+export const setUsername = mutation({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const validation = validateUsername(args.username);
+    if (!validation.ok) throw new Error(validation.error);
+
+    const existing = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", validation.normalized))
+      .first();
+
+    if (existing && existing.userId !== user._id) {
+      throw new Error("Username is taken");
+    }
+
+    let profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .first();
+
+    if (profile?.username === validation.normalized) {
+      return profile;
+    }
+
+    if (!profile) {
+      const profileId = await ctx.db.insert("userProfiles", {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        username: validation.normalized,
+        updatedAt: Date.now(),
+      });
+      const created = await ctx.db.get(profileId);
+      if (!created) throw new Error("Failed to create profile");
+      return created;
+    }
+
+    await ctx.db.patch(profile._id, {
+      username: validation.normalized,
+      updatedAt: Date.now(),
+    });
+
+    return { ...profile, username: validation.normalized, updatedAt: Date.now() };
+  },
+});
+
+export const getUserProfileByUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, args): Promise<ProfileView | null> => {
+    const viewer = await requireAuthenticatedUser(ctx);
+    const validation = validateUsername(args.username);
+    if (!validation.ok) return null;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_username", (q) => q.eq("username", validation.normalized))
+      .first();
+
+    return profile ? toProfileView(profile, viewer._id) : null;
+  },
+});
+
+type SearchUserResult = {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  imageUrl: string | null;
+};
+
+function toSearchUserResult(profile: {
+  userId: string;
+  name?: string;
+  username?: string;
+  imageUrl?: string;
+}): SearchUserResult {
+  return {
+    userId: profile.userId,
+    name: profile.name ?? null,
+    username: profile.username ?? null,
+    imageUrl: profile.imageUrl ?? null,
+  };
+}
+
+export const searchUsers = query({
+  args: {
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<SearchUserResult[]> => {
+    const currentUser = await requireAuthenticatedUser(ctx);
+    const raw = args.query.trim();
+    if (raw.length < 2) return [];
+
+    const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
+    const excludeUserId = currentUser._id;
+
+    let usernamePrefix = raw.toLowerCase();
+    if (usernamePrefix.startsWith("@")) {
+      usernamePrefix = usernamePrefix.slice(1);
+    }
+
+    const results: SearchUserResult[] = [];
+    const seen = new Set<string>();
+
+    const addProfile = (profile: {
+      userId: string;
+      name?: string;
+      username?: string;
+      imageUrl?: string;
+    }) => {
+      if (excludeUserId && profile.userId === excludeUserId) return;
+      if (seen.has(profile.userId)) return;
+      if (results.length >= limit) return;
+      seen.add(profile.userId);
+      results.push(toSearchUserResult(profile));
+    };
+
+    if (/^[a-z0-9_]+$/.test(usernamePrefix)) {
+      const usernameMatches = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_username", (q) =>
+          q.gte("username", usernamePrefix).lt("username", usernamePrefix + "\uffff")
+        )
+        .take(limit);
+
+      for (const profile of usernameMatches) {
+        if (profile.username) addProfile(profile);
+      }
+    }
+
+    return results;
   },
 });

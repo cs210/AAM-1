@@ -2,6 +2,7 @@ import '@/global.css';
 
 import { SocialMentionOsNotifications } from '@/components/social-mention-os-notifications';
 import { SentryUserSync } from '@/components/sentry-user-sync';
+import { SoftwareFairModeProvider } from '@/lib/software-fair-mode';
 import { navigationIntegration } from '@/lib/sentry';
 import { NAV_THEME } from '@/constants/rn-api-colors';
 import ConvexClientProvider from '@/providers/ConvexClientProvider';
@@ -13,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useUniwind } from 'uniwind';
-import { PostHogProvider } from 'posthog-react-native'
+import { PostHogProvider } from 'posthog-react-native';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -31,29 +32,31 @@ function RootLayout() {
     }
   }, [navigationRef]);
 
-  const posthogProjectKey = process.env.EXPO_PUBLIC_POSTHOG_PROJECT_KEY
+  const posthogProjectKey = process.env.EXPO_PUBLIC_POSTHOG_PROJECT_KEY;
 
   if (!posthogProjectKey) {
-    throw new Error("Missing EXPO_PUBLIC_POSTHOG_PROJECT_KEY");
+    throw new Error('Missing EXPO_PUBLIC_POSTHOG_PROJECT_KEY');
   }
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <ConvexClientProvider>
-        <SocialMentionOsNotifications />
-        <PostHogProvider
+        <SoftwareFairModeProvider>
+          <SocialMentionOsNotifications />
+          <PostHogProvider
             apiKey={posthogProjectKey}
             options={{
-                host: "https://us.i.posthog.com",
+              host: 'https://us.i.posthog.com',
             }}
-        >
-        <SentryUserSync />
-        <ThemeProvider value={NAV_THEME[colorScheme]}>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-          <Stack screenOptions={{ headerShown: false }} />
-          <PortalHost />
-        </ThemeProvider>
-        </PostHogProvider>
+          >
+            <SentryUserSync />
+            <ThemeProvider value={NAV_THEME[colorScheme]}>
+              <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+              <Stack screenOptions={{ headerShown: false }} />
+              <PortalHost />
+            </ThemeProvider>
+          </PostHogProvider>
+        </SoftwareFairModeProvider>
       </ConvexClientProvider>
     </SafeAreaProvider>
   );

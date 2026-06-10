@@ -2,7 +2,7 @@
   "expo": {
     "name": "Museum&",
     "slug": "museumand",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "orientation": "portrait",
     "runtimeVersion": {
       "policy": "fingerprint"
@@ -18,9 +18,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "sh.edm.museum",
@@ -29,7 +27,8 @@
         "aps-environment": "development"
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance."
       }
     },
     "android": {
@@ -46,6 +45,7 @@
     },
     "plugins": [
       "expo-notifications",
+      "@react-native-async-storage/expo-with-async-storage",
       "expo-router",
       "expo-secure-store",
       "expo-font",
@@ -64,6 +64,16 @@
           "locationWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance.",
           "locationAlwaysAndWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show museums near you and sort by distance."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "$(PRODUCT_NAME) accesses your photos to let you share them with your friends and search for similar images.",
+          "cameraPermission": "$(PRODUCT_NAME) uses your camera to let you take photos for visual search."
+        }
+      ],
+      [
+        "expo-maps"
       ]
     ],
     "experiments": {

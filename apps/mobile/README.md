@@ -63,9 +63,9 @@ Before populating data, you must have Convex set up and running. From the `packa
 npx convex dev --once
 
 # Then populate fake data for testing
-npx convex run fakeData:populateFakeMuseums
-npx convex run fakeData:populateFakeEvents
-npx convex run fakeData:populateFakeRatings
+npx convex run internal/fakeData:populateFakeMuseums
+npx convex run internal/fakeData:populateFakeEvents
+npx convex run internal/fakeData:populateFakeRatings
 ```
 
 ## Run on your iPhone (USB, no App Store)

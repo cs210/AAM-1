@@ -8,6 +8,8 @@ import {
   MailIcon,
   LayersIcon,
   SearchIcon,
+  UserCircleIcon,
+  FlaskConicalIcon,
 } from "lucide-react"
 
 export const dashboardTabs = [
@@ -16,12 +18,6 @@ export const dashboardTabs = [
     path: "details",
     label: "Museum Details",
     icon: Building2Icon,
-  },
-  {
-    id: "organizations",
-    path: "organizations",
-    label: "Organizations",
-    icon: LayersIcon,
   },
   {
     id: "exhibitions",
@@ -44,51 +40,64 @@ export const dashboardTabs = [
 ] as const
 
 /** Path segment -> dashboard tab id for URL routing */
-export const dashboardPathToTabId: Record<string, DashboardTabId> = Object.fromEntries(
+export const dashboardPathToTabId: Partial<Record<string, DashboardTabId>> = Object.fromEntries(
   dashboardTabs.map((t) => [t.path, t.id])
-) as Record<string, DashboardTabId>
+) as Partial<Record<string, DashboardTabId>>
 
 export const workspaceDashboardTabs = [
+  { id: "account", path: "account", label: "Account", icon: UserCircleIcon },
   { id: "organizations", path: "organizations", label: "Organizations", icon: LayersIcon },
 ] as const
+
+/** Workspace/account path segment -> workspace tab id for URL routing */
+export const workspaceDashboardPathToTabId: Partial<Record<string, WorkspaceDashboardTabId>> =
+  Object.fromEntries(workspaceDashboardTabs.map((t) => [t.path, t.id])) as Partial<Record<
+    string,
+    WorkspaceDashboardTabId
+  >>
 
 export const adminDashboardTabs = [
   { id: "org-requests", path: "org-requests", label: "Org requests", icon: ShieldCheckIcon },
   { id: "admin-museums", path: "museums", label: "Museums", icon: Building2Icon },
+  { id: "experimental-features", path: "experimental-features", label: "Experimental Features", icon: FlaskConicalIcon },
   { id: "visual-search", path: "visual-search", label: "Visual Search", icon: SearchIcon },
   { id: "users", path: "users", label: "Users", icon: UsersIcon },
   { id: "invitations", path: "invitations", label: "Invitations", icon: MailIcon },
 ] as const
 
 /** Admin path segment -> admin tab id for URL routing (/dashboard/admin/...) */
-export const adminPathToTabId: Record<string, AdminDashboardTabId> = Object.fromEntries(
+export const adminPathToTabId: Partial<Record<string, AdminDashboardTabId>> = Object.fromEntries(
   adminDashboardTabs.map((t) => [t.path, t.id])
-) as Record<string, AdminDashboardTabId>
+) as Partial<Record<string, AdminDashboardTabId>>
 
 export type DashboardTabId = (typeof dashboardTabs)[number]["id"]
 export type WorkspaceDashboardTabId = (typeof workspaceDashboardTabs)[number]["id"]
 export type AdminDashboardTabId = (typeof adminDashboardTabs)[number]["id"]
-export type AllDashboardTabId = DashboardTabId | AdminDashboardTabId
+export type AllDashboardTabId = DashboardTabId | WorkspaceDashboardTabId | AdminDashboardTabId
 export type DashboardTabMessageKey =
   | "museumDetails"
+  | "account"
   | "organizations"
   | "exhibitions"
   | "interactions"
   | "analytics"
   | "orgRequests"
   | "adminMuseums"
+  | "experimentalFeatures"
   | "visualSearch"
   | "users"
   | "invitations"
 
 export const dashboardTabMessageKeys: Record<AllDashboardTabId, DashboardTabMessageKey> = {
   "museum-details": "museumDetails",
+  account: "account",
   organizations: "organizations",
   exhibitions: "exhibitions",
   interactions: "interactions",
   analytics: "analytics",
   "org-requests": "orgRequests",
   "admin-museums": "adminMuseums",
+  "experimental-features": "experimentalFeatures",
   "visual-search": "visualSearch",
   users: "users",
   invitations: "invitations",

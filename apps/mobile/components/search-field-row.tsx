@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { SearchIcon } from 'lucide-react-native';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 /** Muted icon — matches `text-muted-foreground` (Lucide needs a color string). */
 const MUTED_ICON = '#73706c';
@@ -10,11 +11,14 @@ type Props = {
   value: string;
   onChangeText: (v: string) => void;
   placeholder: string;
+  /** Merged with default row layout (e.g. `mx-0 mb-3` inside a modal). */
+  className?: string;
 };
 
-export function SearchFieldRow({ value, onChangeText, placeholder }: Props) {
+export function SearchFieldRow({ value, onChangeText, placeholder, className }: Props) {
   return (
-    <View className="mx-5 mb-4 mt-4 flex-row items-center rounded-xl bg-muted px-4 py-3">
+    <View
+      className={cn('mx-5 mb-4 mt-4 flex-row items-center rounded-xl bg-muted px-4 py-3', className)}>
       <View className="mr-3">
         <SearchIcon size={20} color={MUTED_ICON} />
       </View>
