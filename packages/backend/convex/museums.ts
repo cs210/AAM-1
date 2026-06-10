@@ -388,7 +388,9 @@ export const listMuseumsWithStats = query({
     ),
   },
   handler: async (ctx, args) => {
-    const museums = await ctx.db.query("museums").collect();
+    const museums = (await ctx.db.query("museums").collect()).filter(
+      (museum) => !museum.isSoftwareFairOnly
+    );
 
     // Get stats for each museum
     const museumsWithStats = await Promise.all(

@@ -12,6 +12,7 @@ import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { Button } from '@/components/ui/button';
 import { DecorativeGradientShapes } from '@/components/decorative-gradient-shapes';
 import { EventCard, EventCardData } from '@/components/event-card';
+import { MuseumCard, MuseumCardData } from '@/components/museum-card';
 import { CheckinPost, CheckinPostData } from '@/components/checkin-post';
 import { EditCheckinModal } from '@/components/edit-checkin-modal';
 import { MuseumCheckinPickerModal } from '@/components/museum-checkin-picker-modal';
@@ -23,6 +24,7 @@ import { useCheckInActions } from '@/hooks/useCheckInActions';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
 import { useBrandPrimaryHex, useMutedForegroundHex } from '@/hooks/use-brand-primary';
 import { dismissFeatureHint, shouldShowFeatureHint } from '@/lib/feature-hints';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 
 function FriendsEmptyState() {
   return (
@@ -56,6 +58,8 @@ function promptEnableLocation(message: string, onRetry: () => void) {
 export default function HomeScreen() {
   const brandPrimary = useBrandPrimaryHex();
   const mutedForeground = useMutedForegroundHex();
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
   const currentUser = useQuery(api.auth.getCurrentUser);
   const currentUserId = currentUser?._id ?? null;
   const currentUserProfile = useQuery(api.userProfiles.getCurrentUserProfile);
@@ -64,11 +68,21 @@ export default function HomeScreen() {
   const { locState, retry } = useViewerLocation();
   const nearbyFeed = useQuery(
     api.events.getNearbyFeed,
-    locState.status === 'ok' ? { viewer: locState.viewer, itemLimit: 24 } : 'skip'
+    !isSoftwareFairMode && locState.status === 'ok'
+      ? { viewer: locState.viewer, itemLimit: 24 }
+      : 'skip'
   );
   const availableFeed = useQuery(
     api.events.getAvailableFeed,
-    locState.status === 'unavailable' ? { itemLimit: 24 } : 'skip'
+    !isSoftwareFairMode && locState.status === 'unavailable' ? { itemLimit: 24 } : 'skip'
+  );
+  const softwareFairBooths = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
   );
 
   const [editingCheckin, setEditingCheckin] = useState<CheckinPostData | null>(null);
@@ -138,9 +152,11 @@ export default function HomeScreen() {
     locState.status === 'ok' ? (nearbyFeed ?? []) : locState.status === 'unavailable' ? (availableFeed ?? []) : [];
 
   const aroundYouLoading =
-    locState.status === 'pending' ||
-    (locState.status === 'ok' && nearbyFeed === undefined) ||
-    (locState.status === 'unavailable' && availableFeed === undefined);
+    !isSoftwareFairMode &&
+    (locState.status === 'pending' ||
+      (locState.status === 'ok' && nearbyFeed === undefined) ||
+      (locState.status === 'unavailable' && availableFeed === undefined));
+  const softwareFairBoothsLoading = isSoftwareFairMode && softwareFairBooths === undefined;
 
   return (
     <SafeAreaView
@@ -227,42 +243,65 @@ export default function HomeScreen() {
 
           <FriendCheckinPhotosSection checkins={followingCheckins as CheckinPostData[]} />
 
-          <HomeFeedSection
-            title="See what's around you"
-            titleAccessory={
-              locState.status === 'unavailable' ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="About location for nearby picks"
-                  onPress={promptLocation}
-                  hitSlop={8}
-                  className="active:opacity-80">
-                  <InfoIcon size={14} color={mutedForeground} />
-                </Pressable>
-              ) : null
-            }
-            data={aroundYouFeed}
-            keyExtractor={(item) => `${item.kind ?? 'event'}-${item._id}`}
-            loading={aroundYouLoading}
-            onSeeAll={
-              aroundYouFeed.length > 0 ? () => router.push('/home-feed/nearby') : undefined
-            }
-            seeAllAccessibilityLabel="See all nearby events"
-            renderItem={({ item, index }) => (
-              <EventCard event={item as EventCardData} cardIndex={index} layout="carousel" />
-            )}
-            emptyComponent={
-              !aroundYouLoading && aroundYouFeed.length === 0 ? (
-                <NearbyEmptyState
-                  message={
-                    locState.status === 'ok'
-                      ? 'No upcoming events or exhibitions found near you right now.'
-                      : 'No upcoming events or exhibitions right now.'
-                  }
-                />
-              ) : null
-            }
-          />
+          {isSoftwareFairMode ? (
+            <HomeFeedSection
+              title="Software Fair Booths"
+              data={(softwareFairBooths ?? []) as MuseumCardData[]}
+              keyExtractor={(item) => item._id}
+              loading={softwareFairBoothsLoading}
+              onSeeAll={
+                softwareFairBooths && softwareFairBooths.length > 0
+                  ? () => router.push('/(tabs)/explore?tab=museums')
+                  : undefined
+              }
+              seeAllAccessibilityLabel="See all Software Fair booths"
+              renderItem={({ item }) => (
+                <MuseumCard museum={item as MuseumCardData} layout="carousel" />
+              )}
+              emptyComponent={
+                !softwareFairBoothsLoading ? (
+                  <NearbyEmptyState message="No active Software Fair booths yet." />
+                ) : null
+              }
+            />
+          ) : (
+            <HomeFeedSection
+              title="See what's around you"
+              titleAccessory={
+                locState.status === 'unavailable' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="About location for nearby picks"
+                    onPress={promptLocation}
+                    hitSlop={8}
+                    className="active:opacity-80">
+                    <InfoIcon size={14} color={mutedForeground} />
+                  </Pressable>
+                ) : null
+              }
+              data={aroundYouFeed}
+              keyExtractor={(item) => `${item.kind ?? 'event'}-${item._id}`}
+              loading={aroundYouLoading}
+              onSeeAll={
+                aroundYouFeed.length > 0 ? () => router.push('/home-feed/nearby') : undefined
+              }
+              seeAllAccessibilityLabel="See all nearby events"
+              renderItem={({ item, index }) => (
+                <EventCard event={item as EventCardData} cardIndex={index} layout="carousel" />
+              )}
+              emptyComponent={
+                !aroundYouLoading && aroundYouFeed.length === 0 ? (
+                  <NearbyEmptyState
+                    message={
+                      locState.status === 'ok'
+                        ? 'No upcoming events or exhibitions found near you right now.'
+                        : 'No upcoming events or exhibitions right now.'
+                    }
+                  />
+                ) : null
+              }
+            />
+          )}
 
           <HomeCheckinCta
             onPress={() => setMuseumCheckinPickerOpen(true)}

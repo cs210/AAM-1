@@ -6,12 +6,27 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { CategoryTag } from '@/components/category-tag';
+import { HOME_CAROUSEL_CARD_HEIGHT, HOME_CAROUSEL_CARD_WIDTH } from '@/constants/home-feed';
+
+export type SoftwareFairBoothCardData = {
+  _id: string;
+  museumId?: string | null;
+  boothNumber: number;
+  projectName: string;
+  genres: string[];
+  teamMembers: string[];
+  description?: string | null;
+  guideUrl?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
 
 export type MuseumCardData = Doc<"museums"> & {
   averageRating?: number | null;
   ratingCount?: number;
   /** Present when the server computed distance from the viewer (meters). */
   distanceMeters?: number;
+  softwareFairBooth?: SoftwareFairBoothCardData;
 };
 
 type Props = {
@@ -19,14 +34,25 @@ type Props = {
   className?: string;
   /** When location is on but Convex has no geospatial pin for this museum, show an em dash. */
   expectDistance?: boolean;
+  layout?: 'list' | 'carousel';
 };
 
 function museumHref(museumId: string): Href {
   return `/(museums)/${museumId}` as Href;
 }
 
-export function MuseumCard({ museum, className, expectDistance = false }: Props) {
+export function MuseumCard({ museum, className, expectDistance = false, layout = 'list' }: Props) {
   const [imageFailed, setImageFailed] = React.useState(false);
+  const isCarousel = layout === 'carousel';
+  const booth = museum.softwareFairBooth;
+  const displayName = booth?.projectName ?? museum.name;
+  const primaryCategory = booth?.genres[0] ?? museum.category;
+  const locationLabel = booth
+    ? [
+        `Booth ${booth.boothNumber}`,
+        booth.teamMembers.length > 0 ? booth.teamMembers.join(', ') : museum.name,
+      ].join(' · ')
+    : `${museum.location?.city || 'Unknown'}, ${museum.location?.state || ''}`;
   const displayRating = museum.averageRating
     ? museum.averageRating.toFixed(1)
     : '—';
@@ -45,7 +71,8 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
 
   return (
     <Pressable
-      className={cn('mx-5 mb-3 active:opacity-90', className)}
+      className={cn(isCarousel ? 'active:opacity-90' : 'mx-5 mb-3 active:opacity-90', className)}
+      style={isCarousel ? { width: HOME_CAROUSEL_CARD_WIDTH } : undefined}
       onPress={() =>
         router.push({
           pathname: '/(museums)/[museumId]',
@@ -53,7 +80,9 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
         })
       }
     >
-      <Card className={cn('relative overflow-hidden border-border', hasPrimaryImage && 'bg-gray-900')}>
+      <Card
+        className={cn('relative overflow-hidden border-border', hasPrimaryImage && 'bg-gray-900')}
+        style={isCarousel ? { height: HOME_CAROUSEL_CARD_HEIGHT } : undefined}>
         {hasPrimaryImage && (
           <>
             <Image
@@ -70,7 +99,7 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
             <Text
               className={cn('flex-1 text-lg font-semibold leading-6', hasPrimaryImage ? 'text-white' : 'text-foreground')}
               numberOfLines={2}>
-              {museum.name}
+              {displayName}
             </Text>
             <View className="ml-3 items-end">
               {distanceMiles != null && (
@@ -94,7 +123,7 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
                 </Text>
               )}
               <CategoryTag
-                category={museum.category}
+                category={primaryCategory}
                 variant={hasPrimaryImage ? 'onImage' : 'default'}
               />
             </View>
@@ -102,8 +131,9 @@ export function MuseumCard({ museum, className, expectDistance = false }: Props)
         </CardHeader>
         <CardContent className="pt-0">
           <Text
-            className={cn('mb-3 text-sm', hasPrimaryImage ? 'text-white/90' : 'text-muted-foreground')}>
-            {museum.location?.city || 'Unknown'}, {museum.location?.state || ''}
+            className={cn('mb-3 text-sm', hasPrimaryImage ? 'text-white/90' : 'text-muted-foreground')}
+            numberOfLines={isCarousel ? 2 : 1}>
+            {locationLabel}
           </Text>
           <Text
             className={cn(

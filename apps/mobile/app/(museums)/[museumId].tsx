@@ -16,6 +16,7 @@ import {
   PencilIcon,
   StarIcon,
   BookmarkIcon,
+  ExternalLinkIcon,
 } from 'lucide-react-native';
 import { CategoryTag } from '../../components/category-tag';
 import { EventCard, EventCardData } from '../../components/event-card';
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { UserCheckInList, UserCheckIn } from '../../components/user-checkin-list';
 import { ScreenTitleBar } from '@/components/ui/screen-title-bar';
 import { userProfileHref } from '@/lib/user-profile-navigation';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 import {
   RN_API_BORDER_LIGHT,
   RN_API_FOREGROUND_LIGHT,
@@ -60,6 +62,7 @@ export default function MuseumDetailScreen() {
   const id = typeof museumIdParam === 'string' ? museumIdParam : Array.isArray(museumIdParam) ? museumIdParam[0] : undefined;
   const tabParam = typeof params.tab === 'string' ? params.tab : Array.isArray(params.tab) ? params.tab[0] : undefined;
   const highlightId = typeof params.highlight === 'string' ? params.highlight : Array.isArray(params.highlight) ? params.highlight[0] : undefined;
+  const softwareFair = useSoftwareFairMode();
 
   // If this route was hit with a tab segment (e.g. from redirect), go to home
   useEffect(() => {
@@ -84,6 +87,12 @@ export default function MuseumDetailScreen() {
   // Fetch museum from Convex (skip when param is a tab segment)
   const museum = useQuery(api.museums.getMuseum, 
     effectiveId ? { id: effectiveId as Id<"museums"> } : "skip"
+  );
+  const softwareFairBooth = useQuery(
+    api.softwareFair.getBoothByMuseum,
+    softwareFair.isJoined && effectiveId
+      ? { museumId: effectiveId as Id<'museums'> }
+      : 'skip'
   );
   
   // Fetch events for this museum
@@ -365,7 +374,10 @@ export default function MuseumDetailScreen() {
       <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        <ScreenTitleBar title="Museum Details" onBackPress={() => router.back()} />
+        <ScreenTitleBar
+          title={softwareFairBooth ? 'Booth Details' : 'Museum Details'}
+          onBackPress={() => router.back()}
+        />
 
         <View className="flex-row border-b border-border bg-muted/40 px-2">
           <Pressable
@@ -490,10 +502,57 @@ export default function MuseumDetailScreen() {
                 <Text
                   className="px-4 pb-3.5 text-2xl font-bold text-white"
                   numberOfLines={2}>
-                  {museum.name}
+                  {softwareFairBooth?.projectName ?? museum.name}
                 </Text>
               </View>
             )}
+
+            {softwareFairBooth ? (
+              <View className="mb-5 rounded-2xl border border-primary/25 bg-primary/5 p-5">
+                <View className="mb-3 flex-row items-start justify-between gap-3">
+                  <View className="min-w-0 flex-1">
+                    <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
+                      Booth {softwareFairBooth.boothNumber}
+                    </Text>
+                    <Text className="mt-1 text-xl font-semibold leading-6 text-foreground">
+                      {softwareFairBooth.projectName}
+                    </Text>
+                  </View>
+                  {softwareFairBooth.guideUrl ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Open Software Fair guide"
+                      hitSlop={8}
+                      onPress={() => void Linking.openURL(normalizeExternalUrl(softwareFairBooth.guideUrl!))}
+                      className="rounded-full p-1 active:opacity-75">
+                      <ExternalLinkIcon size={18} color={RN_API_PRIMARY_LIGHT} />
+                    </Pressable>
+                  ) : null}
+                </View>
+                {softwareFairBooth.description ? (
+                  <Text className="mb-3 text-sm leading-5 text-foreground">
+                    {softwareFairBooth.description}
+                  </Text>
+                ) : null}
+                {softwareFairBooth.genres.length > 0 ? (
+                  <View className="mb-3 flex-row flex-wrap gap-2">
+                    {softwareFairBooth.genres.map((genre) => (
+                      <View key={genre} className="rounded-full bg-primary/10 px-2.5 py-1">
+                        <Text className="text-xs font-semibold text-primary">{genre}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                {softwareFairBooth.teamMembers.length > 0 ? (
+                  <View>
+                    <Text className="mb-1 text-[13px] font-semibold text-foreground">Team</Text>
+                    <Text className="text-sm leading-5 text-muted-foreground">
+                      {softwareFairBooth.teamMembers.join(', ')}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             <View className="mb-5 rounded-2xl border border-border bg-card p-5">
               <Text className="mb-4 text-[15px] leading-[22px] text-muted-foreground">

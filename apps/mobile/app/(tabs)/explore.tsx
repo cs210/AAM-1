@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { getLastExploreTabIndex, setLastExploreTabIndex } from '@/lib/last-people-search';
 import { userProfileHref } from '@/lib/user-profile-navigation';
 import { useViewerLocation } from '@/hooks/useViewerLocation';
+import { useSoftwareFairMode } from '@/lib/software-fair-mode';
 import appsFlyer from 'react-native-appsflyer';
 
 const appsFlyerKey = process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY as string;
@@ -65,10 +66,11 @@ function MuseumsRoute({
   onRetryLocation,
   viewMode,
   onToggleViewMode,
+  isSoftwareFairMode,
 }: {
   museumSearch: string;
   setMuseumSearch: (v: string) => void;
-  museums: ReturnType<typeof useQuery<typeof api.museums.listMuseumsWithStats>>;
+  museums: MuseumCardData[] | undefined;
   pagedMuseums: MuseumCardData[];
   filteredMuseums: MuseumCardData[];
   museumPage: number;
@@ -81,7 +83,10 @@ function MuseumsRoute({
   onRetryLocation: () => void;
   viewMode: 'list' | 'map';
   onToggleViewMode: () => void;
+  isSoftwareFairMode: boolean;
 }) {
+  const noun = isSoftwareFairMode ? 'booths' : 'museums';
+
   return (
     <View className="flex-1" style={{ flex: 1 }}>
       <View className="flex-row items-center gap-2 px-5 py-3">
@@ -89,26 +94,28 @@ function MuseumsRoute({
           <SearchFieldRow
             value={museumSearch}
             onChangeText={setMuseumSearch}
-            placeholder="Search museums..."
+            placeholder={isSoftwareFairMode ? 'Search booths, teams...' : 'Search museums...'}
           />
         </View>
-        <Pressable
-          onPress={onToggleViewMode}
-          className="bg-primary rounded-lg p-2.5 active:opacity-80"
-          accessibilityLabel={`Switch to ${viewMode === 'list' ? 'map' : 'list'} view`}
-          accessibilityRole="button">
-          {viewMode === 'list' ? (
-            <MapPin size={20} color="white" />
-          ) : (
-            <List size={20} color="white" />
-          )}
-        </Pressable>
+        {!isSoftwareFairMode ? (
+          <Pressable
+            onPress={onToggleViewMode}
+            className="bg-primary rounded-lg p-2.5 active:opacity-80"
+            accessibilityLabel={`Switch to ${viewMode === 'list' ? 'map' : 'list'} view`}
+            accessibilityRole="button">
+            {viewMode === 'list' ? (
+              <MapPin size={20} color="white" />
+            ) : (
+              <List size={20} color="white" />
+            )}
+          </Pressable>
+        ) : null}
       </View>
       {sortedByDistance ? (
         <Text
           className="text-muted-foreground mx-5 mt-[-2px] mb-2 text-xs"
           accessibilityLiveRegion="polite">
-          Nearest first - distances in miles from you
+          Nearest {noun} first - distances in miles from you
         </Text>
       ) : locationNote ? (
         <View className="border-border bg-muted/30 mx-5 mt-[-2px] mb-3 rounded-xl border p-3">
@@ -134,7 +141,7 @@ function MuseumsRoute({
         <View className="flex-1 items-center justify-center" style={{ flex: 1 }}>
           <BrandActivityIndicator size="large" />
           <Text variant="muted" className="mt-3 text-base">
-            Loading museums...
+            Loading {noun}...
           </Text>
         </View>
       ) : (
@@ -165,7 +172,7 @@ function MuseumsRoute({
           ListEmptyComponent={
             <View className="items-center px-12 py-12">
               <Text className="text-muted-foreground text-center text-base">
-                No museums match your search
+                No {noun} match your search
               </Text>
             </View>
           }
@@ -382,13 +389,15 @@ function PeopleSearchRoute({
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ search?: string | string[]; tab?: string | string[] }>();
+  const softwareFair = useSoftwareFairMode();
+  const isSoftwareFairMode = softwareFair.isJoined;
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const tabs = React.useMemo(
     () => [
       { key: 'people', title: 'People' },
-      { key: 'museums', title: 'Museums' },
+      { key: 'museums', title: isSoftwareFairMode ? 'Booths' : 'Museums' },
     ],
-    []
+    [isSoftwareFairMode]
   );
 
   const [peopleSearch, setPeopleSearch] = useState('');
@@ -419,19 +428,46 @@ export default function SearchScreen() {
 
   const museums = useQuery(
     api.museums.listMuseumsWithStats,
-    locState.status === 'ok' ? { viewer: locState.viewer } : {}
+    !isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
   );
+  const softwareFairMuseums = useQuery(
+    api.softwareFair.listActiveBoothMuseums,
+    isSoftwareFairMode
+      ? locState.status === 'ok'
+        ? { viewer: locState.viewer }
+        : {}
+      : 'skip'
+  );
+  const activeMuseums = (isSoftwareFairMode ? softwareFairMuseums : museums) as
+    | MuseumCardData[]
+    | undefined;
   const filteredMuseums = useMemo(() => {
-    if (!museums) return [];
-    if (!museumSearch.trim()) return museums;
+    if (!activeMuseums) return [];
+    if (!museumSearch.trim()) return activeMuseums;
     const lowerSearch = museumSearch.toLowerCase();
-    return museums.filter(
-      (museum) =>
-        museum.name.toLowerCase().includes(lowerSearch) ||
-        museum.location?.city?.toLowerCase().includes(lowerSearch) ||
-        museum.location?.state?.toLowerCase().includes(lowerSearch)
-    );
-  }, [museums, museumSearch]);
+    return activeMuseums.filter((museum) => {
+      const booth = museum.softwareFairBooth;
+      const haystack = [
+        museum.name,
+        museum.category,
+        museum.location?.city,
+        museum.location?.state,
+        booth?.projectName,
+        booth?.boothNumber != null ? String(booth.boothNumber) : undefined,
+        booth?.genres.join(' '),
+        booth?.teamMembers.join(' '),
+        booth?.description ?? undefined,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(lowerSearch);
+    });
+  }, [activeMuseums, museumSearch]);
   const totalMuseumPages = useMemo(
     () => Math.max(1, Math.ceil(filteredMuseums.length / MUSEUMS_PER_PAGE)),
     [filteredMuseums.length]
@@ -443,7 +479,10 @@ export default function SearchScreen() {
   }, [filteredMuseums, currentMuseumPage]);
   useEffect(() => {
     setMuseumPage(1);
-  }, [museumSearch]);
+  }, [museumSearch, isSoftwareFairMode]);
+  useEffect(() => {
+    if (isSoftwareFairMode) setViewMode('list');
+  }, [isSoftwareFairMode]);
   useEffect(() => {
     if (museumPage > totalMuseumPages) {
       setMuseumPage(totalMuseumPages);
@@ -543,7 +582,7 @@ export default function SearchScreen() {
         <MuseumsRoute
           museumSearch={museumSearch}
           setMuseumSearch={setMuseumSearch}
-          museums={museums}
+          museums={activeMuseums}
           pagedMuseums={pagedMuseums}
           filteredMuseums={filteredMuseums}
           museumPage={currentMuseumPage}
@@ -552,10 +591,11 @@ export default function SearchScreen() {
           onNextPage={() => setMuseumPage((p) => Math.min(totalMuseumPages, p + 1))}
           sortedByDistance={locState.status === 'ok'}
           expectDistanceOnCards={locState.status === 'ok'}
-          locationNote={locState.status === 'unavailable' ? locState.message : null}
+          locationNote={!isSoftwareFairMode && locState.status === 'unavailable' ? locState.message : null}
           onRetryLocation={retry}
           viewMode={viewMode}
           onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
+          isSoftwareFairMode={isSoftwareFairMode}
         />
       )}
     </SafeAreaView>

@@ -47,6 +47,7 @@ export default defineSchema({
     }))),
     accessibilityFeatures: v.optional(v.array(v.string())),
     accessibilityNotes: v.optional(v.string()),
+    isSoftwareFairOnly: v.optional(v.boolean()),
   })
     .index("by_category", ["category"]),
 
@@ -162,6 +163,7 @@ export default defineSchema({
 
   softwareFairBooths: defineTable({
     featureKey: v.string(),
+    museumId: v.optional(v.id("museums")),
     boothNumber: v.number(),
     projectName: v.string(),
     genres: v.array(v.string()),
