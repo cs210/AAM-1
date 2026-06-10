@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { MapPin, List, XIcon } from 'lucide-react-native';
-import { useQuery } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { api } from '@packages/backend/convex/_generated/api';
 import { MuseumCard, type MuseumCardData } from '../../components/museum-card';
 import { MuseumMapView } from '../../components/museum-map-view';
@@ -79,13 +79,17 @@ function normalizeMuseumRequestName(value: string) {
 function MuseumRequestModal({
   visible,
   initialMuseumName,
+  isSubmitting,
+  errorMessage,
   onClose,
   onSubmit,
 }: {
   visible: boolean;
   initialMuseumName: string;
+  isSubmitting: boolean;
+  errorMessage: string | null;
   onClose: () => void;
-  onSubmit: (request: MuseumAdditionRequestDraft) => void;
+  onSubmit: (request: MuseumAdditionRequestDraft) => void | Promise<void>;
 }) {
   const [museumName, setMuseumName] = useState(initialMuseumName);
   const [city, setCity] = useState('');
@@ -105,7 +109,7 @@ function MuseumRequestModal({
   const canSubmit = museumName.trim().length >= 2;
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || isSubmitting) return;
     onSubmit({
       museumName: museumName.trim(),
       city: city.trim(),
@@ -212,15 +216,27 @@ function MuseumRequestModal({
                 />
               </View>
 
+              {errorMessage ? (
+                <View className="border-destructive/30 bg-destructive/10 rounded-2xl border px-3 py-2">
+                  <Text className="text-destructive text-sm leading-5">{errorMessage}</Text>
+                </View>
+              ) : null}
+
               <View className="mt-2 flex-row gap-3">
-                <Button variant="outline" className="flex-1 rounded-xl" onPress={onClose}>
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl"
+                  onPress={onClose}
+                  disabled={isSubmitting}>
                   <Text className="text-base font-semibold">Cancel</Text>
                 </Button>
                 <Button
                   className="flex-1 rounded-xl"
                   onPress={handleSubmit}
-                  disabled={!canSubmit}>
-                  <Text className="text-primary-foreground text-base font-semibold">Submit</Text>
+                  disabled={!canSubmit || isSubmitting}>
+                  <Text className="text-primary-foreground text-base font-semibold">
+                    {isSubmitting ? 'Sending...' : 'Submit'}
+                  </Text>
                 </Button>
               </View>
             </View>
@@ -618,9 +634,14 @@ export default function SearchScreen() {
 
   const [museumSearch, setMuseumSearch] = useState('');
   const [museumRequestModalVisible, setMuseumRequestModalVisible] = useState(false);
+  const [museumRequestSubmitting, setMuseumRequestSubmitting] = useState(false);
+  const [museumRequestError, setMuseumRequestError] = useState<string | null>(null);
   const [requestedMuseumNames, setRequestedMuseumNames] = useState<Set<string>>(() => new Set());
   const [museumPage, setMuseumPage] = useState(1);
   const { locState, retry } = useViewerLocation();
+  const submitMuseumAdditionRequest = useAction(
+    api.museumAdditionRequests.submitMuseumAdditionRequest
+  );
 
   const museums = useQuery(
     api.museums.listMuseumsWithStats,
@@ -658,19 +679,44 @@ export default function SearchScreen() {
     () => normalizeMuseumRequestName(museumSearch),
     [museumSearch]
   );
+  const existingMuseumRequest = useQuery(
+    api.museumAdditionRequests.getMyRequestForMuseum,
+    currentMuseumRequestKey.length >= 2 ? { museumName: museumSearch.trim() } : 'skip'
+  );
   const museumRequestSubmitted =
-    currentMuseumRequestKey.length > 0 && requestedMuseumNames.has(currentMuseumRequestKey);
-  const handleSubmitMuseumRequest = useCallback((request: MuseumAdditionRequestDraft) => {
-    const requestKey = normalizeMuseumRequestName(request.museumName);
-    if (!requestKey) return;
-    setRequestedMuseumNames((previous) => {
-      const next = new Set(previous);
-      next.add(requestKey);
-      return next;
-    });
-    setMuseumSearch(request.museumName);
-    setMuseumRequestModalVisible(false);
-  }, []);
+    currentMuseumRequestKey.length > 0 &&
+    (requestedMuseumNames.has(currentMuseumRequestKey) || Boolean(existingMuseumRequest));
+  const handleSubmitMuseumRequest = useCallback(
+    async (request: MuseumAdditionRequestDraft) => {
+      const requestKey = normalizeMuseumRequestName(request.museumName);
+      if (!requestKey) return;
+
+      setMuseumRequestSubmitting(true);
+      setMuseumRequestError(null);
+      try {
+        await submitMuseumAdditionRequest({
+          museumName: request.museumName,
+          city: request.city || undefined,
+          state: request.state || undefined,
+          website: request.website || undefined,
+          note: request.note || undefined,
+        });
+        setRequestedMuseumNames((previous) => {
+          const next = new Set(previous);
+          next.add(requestKey);
+          return next;
+        });
+        setMuseumSearch(request.museumName);
+        setMuseumRequestModalVisible(false);
+      } catch (error) {
+        console.error('Failed to submit museum request:', error);
+        setMuseumRequestError("We couldn't send this request. Please try again.");
+      } finally {
+        setMuseumRequestSubmitting(false);
+      }
+    },
+    [submitMuseumAdditionRequest]
+  );
 
   const [debouncedPeopleSearch, setDebouncedPeopleSearch] = useState('');
   useEffect(() => {
@@ -779,7 +825,10 @@ export default function SearchScreen() {
               onRetryLocation={retry}
               viewMode={viewMode}
               onToggleViewMode={() => setViewMode((mode) => (mode === 'list' ? 'map' : 'list'))}
-              onRequestMuseum={() => setMuseumRequestModalVisible(true)}
+              onRequestMuseum={() => {
+                setMuseumRequestError(null);
+                setMuseumRequestModalVisible(true);
+              }}
               museumRequestSubmitted={museumRequestSubmitted}
             />
           )}
@@ -788,6 +837,8 @@ export default function SearchScreen() {
       <MuseumRequestModal
         visible={museumRequestModalVisible}
         initialMuseumName={museumSearch.trim()}
+        isSubmitting={museumRequestSubmitting}
+        errorMessage={museumRequestError}
         onClose={() => setMuseumRequestModalVisible(false)}
         onSubmit={handleSubmitMuseumRequest}
       />

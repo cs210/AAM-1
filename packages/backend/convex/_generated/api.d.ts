@@ -21,6 +21,7 @@ import type * as fakeData from "../fakeData.js";
 import type * as focusGroup from "../focusGroup.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
+import type * as museumAdditionRequests from "../museumAdditionRequests.js";
 import type * as museums from "../museums.js";
 import type * as museumsAutoFill from "../museumsAutoFill.js";
 import type * as organizationRequests from "../organizationRequests.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   focusGroup: typeof focusGroup;
   follows: typeof follows;
   http: typeof http;
+  museumAdditionRequests: typeof museumAdditionRequests;
   museums: typeof museums;
   museumsAutoFill: typeof museumsAutoFill;
   organizationRequests: typeof organizationRequests;

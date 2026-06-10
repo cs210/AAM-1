@@ -118,6 +118,31 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_betterAuthOrgId", ["betterAuthOrgId"]),
 
+  // User-submitted requests for museums missing from the consumer app.
+  museumAdditionRequests: defineTable({
+    requesterUserId: v.string(),
+    museumName: v.string(),
+    normalizedMuseumName: v.string(),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    website: v.optional(v.string()),
+    note: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("duplicate"),
+    ),
+    duplicateMuseumId: v.optional(v.id("museums")),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+  })
+    .index("by_requester", ["requesterUserId"])
+    .index("by_status", ["status"])
+    .index("by_status_createdAt", ["status", "createdAt"])
+    .index("by_requester_and_normalizedName", ["requesterUserId", "normalizedMuseumName"]),
+
   // One-to-one assignment between Better Auth organizations and museums.
   organizationMuseumLinks: defineTable({
     betterAuthOrgId: v.string(),
