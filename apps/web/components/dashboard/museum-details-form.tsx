@@ -4,7 +4,7 @@ import * as React from "react"
 import { useAction, useMutation, useQuery } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
-import { ExternalLinkIcon, Loader2Icon, SparklesIcon } from "lucide-react"
+import { ExternalLinkIcon, Loader2Icon, RefreshCwIcon, SparklesIcon, StarIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import {
@@ -98,6 +98,7 @@ type MuseumSnapshot = {
   imageUrl?: string
   website?: string
   phone?: string
+  googleReviewsEnabled?: boolean
   operatingHours?: OperatingHour[]
   accessibilityFeatures?: string[]
   accessibilityNotes?: string
@@ -117,6 +118,12 @@ type MuseumDetailsRow = {
   imageUrl?: string
   website?: string
   phone?: string
+  googleReviewsEnabled?: boolean
+  googlePlaceId?: string
+  googleMapsUri?: string
+  googleRating?: number
+  googleUserRatingCount?: number
+  googleReviewsLastFetchedAt?: number
   operatingHours?: OperatingHour[]
   accessibilityFeatures?: string[]
   accessibilityNotes?: string
@@ -141,6 +148,32 @@ type FirecrawlPrefillResult = {
 type MuseumImageRow = {
   _id: Id<"museumImages">
   imageUrl: string
+}
+
+type GoogleReviewRow = {
+  _id: Id<"museumGoogleReviews">
+  authorName?: string
+  rating: number
+  text?: string
+  originalText?: string
+  relativePublishTimeDescription?: string
+  publishTime?: string
+  googleMapsUri?: string
+}
+
+type GoogleReviewsCache = {
+  googleReviewsEnabled: boolean
+  googlePlaceId?: string
+  googleMapsUri?: string
+  googleRating?: number
+  googleUserRatingCount?: number
+  googleReviewsLastFetchedAt?: number
+  reviews: GoogleReviewRow[]
+}
+
+type GoogleReviewsRefreshResult = {
+  googleReviewsLastFetchedAt: number
+  reviewCount: number
 }
 
 const timezoneItems = [
@@ -294,15 +327,21 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
   const updateMuseum = useMutation(api.museums.updateMuseumDetailsForDashboard)
   const addMuseumImage = useMutation(api.museums.addMuseumImageForDashboard)
   const prefillMuseumDetails = useAction(api.museumsAutoFill.prefillMuseumDetailsWithFirecrawl)
+  const refreshGoogleReviews = useAction(api.museumsAutoFill.refreshGoogleReviewsForDashboard)
   const galleryImages = useQuery(
     api.museums.listMuseumImagesForDashboard,
     museumId ? { museumId: museumId as Id<"museums"> } : "skip"
   ) as MuseumImageRow[] | undefined
+  const googleReviewsCache = useQuery(
+    api.museums.listGoogleReviewsForDashboard,
+    museumId ? { museumId: museumId as Id<"museums"> } : "skip"
+  ) as GoogleReviewsCache | null | undefined
 
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM)
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([])
   const [operatingHours, setOperatingHours] = React.useState<OperatingHour[]>(cloneDefaultOperatingHours)
   const [selectedAccessibility, setSelectedAccessibility] = React.useState<string[]>([])
+  const [googleReviewsEnabled, setGoogleReviewsEnabled] = React.useState(false)
   const [expectedSnapshot, setExpectedSnapshot] = React.useState<MuseumSnapshot | null>(null)
   const [loadedMuseumId, setLoadedMuseumId] = React.useState<string | null>(null)
   const [firecrawlConfirmOpen, setFirecrawlConfirmOpen] = React.useState(false)
@@ -310,6 +349,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
   const [websiteOverrideInput, setWebsiteOverrideInput] = React.useState("")
   const [saving, setSaving] = React.useState(false)
   const [prefilling, setPrefilling] = React.useState(false)
+  const [refreshingGoogleReviews, setRefreshingGoogleReviews] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState<string | null>(null)
 
@@ -329,6 +369,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     setSelectedCategories(splitCategories(details.category))
     setOperatingHours(details.operatingHours?.length ? details.operatingHours.map((entry) => ({ ...entry })) : cloneDefaultOperatingHours())
     setSelectedAccessibility(details.accessibilityFeatures ?? [])
+    setGoogleReviewsEnabled(details.googleReviewsEnabled ?? false)
     setExpectedSnapshot(details.snapshot)
     setLoadedMuseumId(museumId)
   }, [museumId, details, loadedMuseumId, expectedSnapshot])
@@ -468,6 +509,55 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
     await handleFirecrawlPrefill(website)
   }
 
+  const cachedGoogleReviews = googleReviewsCache?.reviews ?? []
+  const googleReviewsLastFetchedLabel = React.useMemo(() => {
+    if (!googleReviewsCache?.googleReviewsLastFetchedAt) return null
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(googleReviewsCache.googleReviewsLastFetchedAt))
+  }, [googleReviewsCache?.googleReviewsLastFetchedAt])
+  const googleRatingLabel =
+    typeof googleReviewsCache?.googleRating === "number"
+      ? googleReviewsCache.googleRating.toFixed(1)
+      : null
+
+  const refreshGoogleReviewsCache = React.useCallback(async (): Promise<GoogleReviewsRefreshResult> => {
+    if (!museumId) throw new Error(t("errors.saveFailed"))
+    const museumName = form.name.trim()
+    if (!museumName) throw new Error(t("errors.nameRequired"))
+
+    const result = (await refreshGoogleReviews({
+      museumId: museumId as Id<"museums">,
+      museumName,
+      city: optionalText(form.city),
+      state: optionalText(form.state),
+      country: optionalText(form.country),
+    })) as GoogleReviewsRefreshResult
+
+    setGoogleReviewsEnabled(true)
+    setExpectedSnapshot((prev) => (prev ? { ...prev, googleReviewsEnabled: true } : prev))
+    return result
+  }, [form.city, form.country, form.name, form.state, museumId, refreshGoogleReviews, t])
+
+  const handleRefreshGoogleReviews = async () => {
+    setRefreshingGoogleReviews(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const result = await refreshGoogleReviewsCache()
+      setSuccess(t("googleReviews.refreshSuccess", { count: result.reviewCount }))
+    } catch (refreshError) {
+      setError(
+        refreshError instanceof Error
+          ? refreshError.message
+          : t("googleReviews.refreshFailed")
+      )
+    } finally {
+      setRefreshingGoogleReviews(false)
+    }
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!museumId || !expectedSnapshot) return
@@ -505,6 +595,8 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
     setSaving(true)
     try {
+      const shouldRefreshGoogleReviews =
+        googleReviewsEnabled && !googleReviewsCache?.googleReviewsLastFetchedAt
       await updateMuseum({
         museumId: museumId as Id<"museums">,
         expected: expectedSnapshot,
@@ -527,6 +619,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
           imageUrl: optionalText(form.imageUrl),
           website: optionalText(form.website),
           phone: optionalText(form.phone),
+          googleReviewsEnabled,
           operatingHours,
           accessibilityFeatures: selectedAccessibility,
           accessibilityNotes: optionalText(form.accessibilityNotes),
@@ -550,12 +643,27 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
         imageUrl: optionalText(form.imageUrl),
         website: optionalText(form.website),
         phone: optionalText(form.phone),
+        googleReviewsEnabled,
         operatingHours,
         accessibilityFeatures: selectedAccessibility,
         accessibilityNotes: optionalText(form.accessibilityNotes),
         point: { latitude, longitude },
       })
-      setSuccess(t("saveSuccess"))
+      let saveSuccessMessage = t("saveSuccess")
+      if (shouldRefreshGoogleReviews) {
+        setRefreshingGoogleReviews(true)
+        try {
+          const result = await refreshGoogleReviewsCache()
+          saveSuccessMessage = `${saveSuccessMessage} ${t("googleReviews.refreshSuccess", { count: result.reviewCount })}`
+        } catch (refreshError) {
+          const message =
+            refreshError instanceof Error ? refreshError.message : t("googleReviews.refreshFailed")
+          setError(t("googleReviews.refreshFailedAfterSave", { message }))
+        } finally {
+          setRefreshingGoogleReviews(false)
+        }
+      }
+      setSuccess(saveSuccessMessage)
     } catch (saveError) {
       setError(
         saveError instanceof Error
@@ -826,6 +934,128 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
 
           <MuseumImageManager museumId={museumId} onPrimaryImageChange={handlePrimaryImageChange} />
 
+          <div className="rounded-xl border p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <label
+                htmlFor="museum-google-reviews-enabled"
+                className="flex items-start gap-3"
+              >
+                <input
+                  id="museum-google-reviews-enabled"
+                  type="checkbox"
+                  className="accent-primary mt-0.5 size-4"
+                  checked={googleReviewsEnabled}
+                  onChange={(event) => setGoogleReviewsEnabled(event.target.checked)}
+                />
+                <span className="grid gap-1">
+                  <span className="text-sm font-medium">{t("googleReviews.enableLabel")}</span>
+                  <span className="text-muted-foreground max-w-2xl text-sm">
+                    {t("googleReviews.enableDescription")}
+                  </span>
+                </span>
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                className="self-start rounded-xl"
+                onClick={() => void handleRefreshGoogleReviews()}
+                disabled={saving || prefilling || refreshingGoogleReviews}
+              >
+                {refreshingGoogleReviews ? (
+                  <Loader2Icon className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCwIcon className="size-4" />
+                )}
+                {refreshingGoogleReviews
+                  ? t("googleReviews.refreshing")
+                  : googleReviewsEnabled
+                    ? t("googleReviews.refresh")
+                    : t("googleReviews.enableAndFetch")}
+              </Button>
+            </div>
+
+            <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              {googleRatingLabel && typeof googleReviewsCache?.googleUserRatingCount === "number" ? (
+                <span>
+                  {t("googleReviews.ratingSummary", {
+                    rating: googleRatingLabel,
+                    count: googleReviewsCache.googleUserRatingCount,
+                  })}
+                </span>
+              ) : null}
+              <span>
+                {cachedGoogleReviews.length > 0
+                  ? t("googleReviews.cachedSummary", { count: cachedGoogleReviews.length })
+                  : t("googleReviews.notFetched")}
+              </span>
+              {googleReviewsLastFetchedLabel ? (
+                <span>{t("googleReviews.lastFetched", { date: googleReviewsLastFetchedLabel })}</span>
+              ) : null}
+              {googleReviewsCache?.googleMapsUri ? (
+                <a
+                  href={googleReviewsCache.googleMapsUri}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary inline-flex items-center gap-1 font-medium"
+                >
+                  <ExternalLinkIcon className="size-3.5" />
+                  {t("googleReviews.sourceLabel")}
+                </a>
+              ) : null}
+            </div>
+
+            {cachedGoogleReviews.length > 0 ? (
+              <div className="mt-4 overflow-hidden rounded-lg border">
+                <div className="divide-y">
+                  {cachedGoogleReviews.slice(0, 3).map((review) => {
+                    const reviewText = review.text ?? review.originalText
+                    const dateLabel =
+                      review.relativePublishTimeDescription ??
+                      (review.publishTime
+                        ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+                            new Date(review.publishTime)
+                          )
+                        : null)
+                    return (
+                      <div key={review._id} className="p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium">
+                                {review.authorName ?? t("googleReviews.anonymousAuthor")}
+                              </span>
+                              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                                {t("googleReviews.sourceLabel")}
+                              </span>
+                            </div>
+                            {dateLabel ? (
+                              <div className="text-muted-foreground mt-0.5 text-xs">{dateLabel}</div>
+                            ) : null}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-0.5 text-amber-500">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <StarIcon
+                                key={star}
+                                className="size-3.5"
+                                fill={star <= Math.round(review.rating) ? "currentColor" : "none"}
+                              />
+                            ))}
+                            <span className="ml-1 text-xs font-semibold">{review.rating.toFixed(1)}</span>
+                          </div>
+                        </div>
+                        {reviewText ? (
+                          <p className="text-muted-foreground mt-2 line-clamp-3 text-sm leading-5">
+                            {reviewText}
+                          </p>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           <div>
             <Label>{t("fields.operatingHours")}</Label>
             <div className="mt-1 rounded-xl border">
@@ -921,7 +1151,7 @@ export function MuseumDetailsForm({ museumId: museumIdProp }: MuseumDetailsFormP
         </form>
       </CardContent>
       <CardFooter className="justify-end">
-        <Button type="submit" form="museum-details-form" disabled={saving || prefilling}>
+        <Button type="submit" form="museum-details-form" disabled={saving || prefilling || refreshingGoogleReviews}>
           {saving ? tCommon("saving") : t("save")}
         </Button>
       </CardFooter>

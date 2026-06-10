@@ -5,8 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useConvexAuth } from 'convex/react';
 import { router } from 'expo-router';
 import * as React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { usePostHog } from 'posthog-react-native';
 
 const PENDING_USERNAME_KEY = 'pendingUsername';
@@ -90,12 +91,10 @@ export default function PostAuthScreen() {
   }, [setupComplete, currentProfile, userInterests, appliedPendingUsername]);
 
   return (
-    <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <View style={{ alignItems: 'center', gap: 12 }}>
-        <ActivityIndicator size="large" />
-        <Text className="text-muted-foreground text-base">
-          Getting things ready for you...
-        </Text>
+    <SafeAreaView className="flex-1 items-center justify-center bg-background" style={{ flex: 1 }}>
+      <View className="items-center gap-3">
+        <BrandActivityIndicator size="large" />
+        <Text variant="muted">Getting things ready for you...</Text>
       </View>
     </SafeAreaView>
   );

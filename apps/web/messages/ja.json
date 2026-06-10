@@ -357,6 +357,22 @@
         "websitePromptCta": "URLで実行",
         "imagesImported": "{count, plural, one {ギャラリーに#件の画像を取り込みました。} other {ギャラリーに#件の画像を取り込みました。}}"
       },
+      "googleReviews": {
+        "enableLabel": "モバイルアプリに Google Maps のレビューを表示",
+        "enableDescription": "レビューは Google Places からキャッシュされ、別ラベルで表示されます。Museum& の評価には影響しません。",
+        "refresh": "レビューを更新",
+        "enableAndFetch": "有効化して取得",
+        "refreshing": "レビューを取得中...",
+        "cachedSummary": "{count, plural, one {#件のレビューをキャッシュ済み} other {#件のレビューをキャッシュ済み}}",
+        "ratingSummary": "Google 評価 {rating}（{count, plural, one {#件の評価} other {#件の評価}}）",
+        "notFetched": "Google Maps のレビューはまだキャッシュされていません。",
+        "lastFetched": "最終取得: {date}",
+        "refreshSuccess": "{count, plural, one {Google Maps のレビューを#件キャッシュしました。} other {Google Maps のレビューを#件キャッシュしました。}}",
+        "refreshFailed": "Google Maps のレビューを更新できませんでした。",
+        "refreshFailedAfterSave": "ミュージアム詳細は保存されましたが、Google Maps のレビューを更新できませんでした: {message}",
+        "sourceLabel": "Google Maps",
+        "anonymousAuthor": "Google Maps ユーザー"
+      },
       "fields": {
         "name": "ミュージアム名",
         "tagline": "タグライン",

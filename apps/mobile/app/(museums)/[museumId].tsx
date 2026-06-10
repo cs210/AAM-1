@@ -29,6 +29,7 @@ import {
   StarIcon,
   BookmarkIcon,
   ImagesIcon,
+  ExternalLinkIcon,
 } from 'lucide-react-native';
 import { CategoryTag } from '../../components/category-tag';
 import { EventCard, EventCardData } from '../../components/event-card';
@@ -191,6 +192,119 @@ function OfficialPhotoCarousel({
   );
 }
 
+type GoogleMapsReview = {
+  _id: string;
+  authorName?: string;
+  rating: number;
+  text?: string;
+  originalText?: string;
+  relativePublishTimeDescription?: string;
+  publishTime?: string;
+  googleMapsUri?: string;
+};
+
+function getGoogleReviewDateLabel(review: GoogleMapsReview) {
+  if (review.relativePublishTimeDescription) return review.relativePublishTimeDescription;
+  if (!review.publishTime) return null;
+  const timestamp = Date.parse(review.publishTime);
+  if (!Number.isFinite(timestamp)) return null;
+  return new Date(timestamp).toLocaleDateString();
+}
+
+function GoogleMapsReviewsSection({
+  reviews,
+  googleRating,
+  googleUserRatingCount,
+  googleMapsUri,
+}: {
+  reviews: GoogleMapsReview[];
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  googleMapsUri?: string;
+}) {
+  const { theme } = useUniwind();
+  const sourceIconColor = theme === 'dark' ? RN_API_FOREGROUND_DARK : RN_API_FOREGROUND_LIGHT;
+  const sourceUrl = googleMapsUri ?? reviews.find((review) => review.googleMapsUri)?.googleMapsUri;
+  const ratingLabel = typeof googleRating === 'number' ? googleRating.toFixed(1) : null;
+  const ratingCountLabel =
+    typeof googleUserRatingCount === 'number' ? googleUserRatingCount.toLocaleString() : null;
+
+  const handleOpenGoogleMaps = async () => {
+    if (!sourceUrl) return;
+    try {
+      await Linking.openURL(sourceUrl);
+    } catch {
+      Alert.alert('Unable to open Google Maps', 'Please try again.');
+    }
+  };
+
+  return (
+    <View className="mb-5 rounded-2xl border border-border bg-card p-4">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <View className="mb-1 flex-row items-center gap-2">
+            <Text className="text-base font-semibold text-foreground">Google Maps reviews</Text>
+            <View className="rounded-full bg-muted px-2 py-0.5">
+              <Text className="text-[11px] font-semibold text-muted-foreground">Google Maps</Text>
+            </View>
+          </View>
+          {ratingLabel ? (
+            <Text className="text-sm text-muted-foreground">
+              {ratingLabel} rating
+              {ratingCountLabel ? ` from ${ratingCountLabel} ratings` : ''}
+            </Text>
+          ) : null}
+        </View>
+        {sourceUrl ? (
+          <Pressable
+            className="flex-row items-center gap-1 rounded-full bg-muted px-3 py-1.5 active:opacity-75"
+            onPress={handleOpenGoogleMaps}>
+            <ExternalLinkIcon size={13} color={sourceIconColor} />
+            <Text className="text-xs font-semibold text-foreground">Open</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View className="mt-3 gap-3">
+        {reviews.map((review, index) => {
+          const reviewText = review.text ?? review.originalText;
+          const dateLabel = getGoogleReviewDateLabel(review);
+          return (
+            <View
+              key={review._id}
+              className={cn(index === 0 ? '' : 'border-t border-border pt-3')}>
+              <View className="mb-1.5 flex-row items-start justify-between gap-3">
+                <View className="min-w-0 flex-1">
+                  <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+                    {review.authorName ?? 'Google Maps user'}
+                  </Text>
+                  {dateLabel ? (
+                    <Text className="mt-0.5 text-xs text-muted-foreground">{dateLabel}</Text>
+                  ) : null}
+                </View>
+                <View className="flex-row items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <StarIcon
+                      key={star}
+                      size={13}
+                      color={star <= Math.round(review.rating) ? RN_API_PRIMARY_LIGHT : RN_API_BORDER_LIGHT}
+                      fill={star <= Math.round(review.rating) ? RN_API_PRIMARY_LIGHT : 'none'}
+                    />
+                  ))}
+                  <Text className="ml-1 text-xs font-semibold text-primary">{review.rating.toFixed(1)}</Text>
+                </View>
+              </View>
+              {reviewText ? (
+                <Text className="text-sm leading-5 text-muted-foreground">{reviewText}</Text>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export default function MuseumDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -241,6 +355,10 @@ export default function MuseumDetailScreen() {
 
   // Reviews for this museum (with user info)
   const reviews = useQuery(api.checkIns.getMuseumCheckInsWithUsers,
+    effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
+  );
+  const googleReviews = useQuery(
+    api.museums.listGoogleReviewsForMuseum,
     effectiveId ? { museumId: effectiveId as Id<"museums"> } : "skip"
   );
   const reviewsListRef = useRef<FlatList>(null);
@@ -537,6 +655,8 @@ export default function MuseumDetailScreen() {
   const encodedDestination = encodeURIComponent(mapDestination);
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedDestination}`;
   const appleMapsUrl = `http://maps.apple.com/?daddr=${encodedDestination}&dirflg=d`;
+  const googleReviewItems = (googleReviews ?? []) as GoogleMapsReview[];
+  const hasGoogleMapsReviews = googleReviewItems.length > 0;
 
   const openMapUrl = async (url: string) => {
     try {
@@ -614,6 +734,28 @@ export default function MuseumDetailScreen() {
             data={reviews ?? []}
             keyExtractor={(item) => item._id}
             contentContainerStyle={{ padding: 16, paddingBottom: 32 + insets.bottom }}
+            ListHeaderComponent={
+              hasGoogleMapsReviews && (reviews?.length ?? 0) > 0 ? (
+                <Text className="mb-3 text-base font-semibold text-foreground">Community reviews</Text>
+              ) : null
+            }
+            ListFooterComponent={
+              googleReviews === undefined ? (
+                <View className="mt-2 items-center rounded-2xl border border-border bg-card p-4">
+                  <BrandActivityIndicator size="small" />
+                  <Text className="mt-2 text-sm text-muted-foreground">Loading Google Maps reviews...</Text>
+                </View>
+              ) : hasGoogleMapsReviews ? (
+                <View className={(reviews?.length ?? 0) > 0 ? 'mt-2' : ''}>
+                  <GoogleMapsReviewsSection
+                    reviews={googleReviewItems}
+                    googleRating={museum.googleRating}
+                    googleUserRatingCount={museum.googleUserRatingCount}
+                    googleMapsUri={museum.googleMapsUri}
+                  />
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               reviews === undefined ? (
                 <View className="flex-1 items-center justify-center gap-3 py-12">
@@ -622,7 +764,7 @@ export default function MuseumDetailScreen() {
                     Loading reviews...
                   </Text>
                 </View>
-              ) : (
+              ) : hasGoogleMapsReviews ? null : (
                 <View className="items-center p-8">
                   <Text className="text-center text-sm text-muted-foreground">
                     No reviews yet. Be the first to check in!

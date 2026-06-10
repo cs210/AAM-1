@@ -1424,6 +1424,14 @@ export const deleteMuseumForAdmin = mutation({
       await ctx.db.delete(image._id);
     }
 
+    const googleReviews = await ctx.db
+      .query("museumGoogleReviews")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const review of googleReviews) {
+      await ctx.db.delete(review._id);
+    }
+
     const events = await ctx.db
       .query("events")
       .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
