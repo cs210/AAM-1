@@ -1,16 +1,17 @@
 import { Link } from 'expo-router';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '@/components/ui/text';
 
 export default function ModalScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" style={{ flex: 1 }}>
       <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-2xl font-bold text-foreground mb-4">
+        <Text variant="h3" className="mb-4 text-center">
           This is a modal
         </Text>
         <Link href="/home" dismissTo asChild>
-          <Pressable className="mt-4 py-3">
+          <Pressable className="mt-4 py-3 active:opacity-70">
             <Text className="text-primary text-lg">Go to home screen</Text>
           </Pressable>
         </Link>

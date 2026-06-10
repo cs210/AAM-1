@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Dimensions,
-  TouchableOpacity,
   Animated,
   StatusBar,
   Share,
@@ -415,17 +414,15 @@ const ShareSlide = ({
         <Animated.View
           className="mt-8 flex-row justify-center gap-4"
           style={{ transform: [{ scale: buttonScale }] }}>
-          <TouchableOpacity
-            className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
-            onPress={onShare}
-            activeOpacity={0.85}>
+          <Pressable
+            className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10 active:opacity-85"
+            onPress={onShare}>
             <Share2 size={24} color={buttonIconColor} strokeWidth={1.5} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10"
-            activeOpacity={0.85}>
+          </Pressable>
+          <Pressable
+            className="size-14 items-center justify-center rounded-full bg-foreground shadow-sm shadow-black/10 active:opacity-85">
             <Download size={24} color={buttonIconColor} strokeWidth={1.5} />
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
         <Text className="mt-8 text-center text-xs tracking-wide text-muted-foreground">
           Museum Wrapped {DATA.year}
@@ -683,14 +680,13 @@ export default function WrappedScreen() {
           onPress={goToNext}
         />
         {/* Close button */}
-        <TouchableOpacity
-          className="absolute right-5 z-20 size-9 items-center justify-center rounded-full border border-border bg-card/90 shadow-sm shadow-black/10"
+        <Pressable
+          className="absolute right-5 z-20 size-9 items-center justify-center rounded-full border border-border bg-card/90 shadow-sm shadow-black/10 active:opacity-70"
           style={{ top: insets.top + 8 }}
           onPress={() => router.back()}
-          hitSlop={12}
-          activeOpacity={0.7}>
+          hitSlop={12}>
           <X size={20} color={RN_API_MUTED_FOREGROUND_LIGHT} strokeWidth={1.5} />
-        </TouchableOpacity>
+        </Pressable>
         <ProgressDots total={SLIDES.length} current={currentSlide} topInset={insets.top} />
       </SafeAreaView>
     </AuthGuard>
