@@ -4,12 +4,10 @@ import {
   FlatList,
   ScrollView,
   Dimensions,
-  TouchableOpacity,
   Image,
   Pressable,
   ImageBackground,
   Alert,
-  ActivityIndicator,
   Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -232,42 +230,42 @@ function MosaicGallery({
           rows.push(
             <View key={`row-${index}`} className="mb-1 flex-row" style={{ gap: GAP }}>
               {/* Large image on left */}
-              <TouchableOpacity
+              <Pressable
                 onPress={() => onImagePress(rowImages[0].visit)}
-                activeOpacity={0.8}
+                className="active:opacity-80"
                 style={{ width: largeSize, height: largeSize }}>
                 <Image
                   source={{ uri: rowImages[0].url }}
                   className="bg-muted size-full rounded-lg"
                   resizeMode="cover"
                 />
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Two small images stacked on right */}
               <View className="flex-1" style={{ gap: GAP }}>
                 {rowImages[1] && (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => onImagePress(rowImages[1].visit)}
-                    activeOpacity={0.8}
+                    className="active:opacity-80"
                     style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[1].url }}
                       className="bg-muted size-full rounded-lg"
                       resizeMode="cover"
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
                 {rowImages[2] && (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => onImagePress(rowImages[2].visit)}
-                    activeOpacity={0.8}
+                    className="active:opacity-80"
                     style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[2].url }}
                       className="bg-muted size-full rounded-lg"
                       resizeMode="cover"
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
             </View>
@@ -278,42 +276,42 @@ function MosaicGallery({
             <View key={`row-${index}`} className="mb-1 flex-row" style={{ gap: GAP }}>
               {/* Two small images stacked on left */}
               <View className="flex-1" style={{ gap: GAP }}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => onImagePress(rowImages[0].visit)}
-                  activeOpacity={0.8}
+                  className="active:opacity-80"
                   style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                   <Image
                     source={{ uri: rowImages[0].url }}
                     className="bg-muted size-full rounded-lg"
                     resizeMode="cover"
                   />
-                </TouchableOpacity>
+                </Pressable>
                 {rowImages[1] && (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => onImagePress(rowImages[1].visit)}
-                    activeOpacity={0.8}
+                    className="active:opacity-80"
                     style={{ width: smallSize, height: (largeSize - GAP) / 2 }}>
                     <Image
                       source={{ uri: rowImages[1].url }}
                       className="bg-muted size-full rounded-lg"
                       resizeMode="cover"
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
 
               {/* Large image on right */}
               {rowImages[2] && (
-                <TouchableOpacity
+                <Pressable
                   onPress={() => onImagePress(rowImages[2].visit)}
-                  activeOpacity={0.8}
+                  className="active:opacity-80"
                   style={{ width: largeSize, height: largeSize }}>
                   <Image
                     source={{ uri: rowImages[2].url }}
                     className="bg-muted size-full rounded-lg"
                     resizeMode="cover"
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           );
@@ -647,19 +645,19 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
         onPress={() => showSettingsDropdown && setShowSettingsDropdown(false)}>
         {isViewingOtherProfile && !isStackPresentation ? (
           <View className="bg-background flex-row items-center px-3 pt-3 pb-2">
-            <TouchableOpacity
+            <Pressable
               className="p-2"
               onPress={handleBack}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <ArrowLeftIcon size={24} color={fgHex} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : null}
         <View className="border-border bg-background border-b">
           {/* Banner Image */}
-          <TouchableOpacity
+          <Pressable
             onPress={!isViewingOtherProfile ? () => pickAndUploadImage('banner') : undefined}
-            activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+            className={cn(!isViewingOtherProfile && 'active:opacity-85')}
             disabled={!!isViewingOtherProfile}
             style={!isViewingOtherProfile ? { marginTop: -insets.top } : undefined}>
             <ImageBackground
@@ -676,27 +674,29 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
               {!isViewingOtherProfile && (
                 <View className="absolute right-2 bottom-2 rounded-xl bg-black/45 p-1.5">
                   {uploadingBanner ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <BrandActivityIndicator size="small" color="#fff" />
                   ) : (
                     <CameraIcon size={16} color="#fff" />
                   )}
                 </View>
               )}
             </ImageBackground>
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Profile Content */}
           <View className="px-5 pt-0 pb-3">
             <View className="-mt-10 mb-3 flex-row items-start justify-between">
               {/* Avatar */}
-              <TouchableOpacity
-                className="border-background rounded-full border-4"
+              <Pressable
                 onPress={!isViewingOtherProfile ? () => pickAndUploadImage('avatar') : undefined}
-                activeOpacity={!isViewingOtherProfile ? 0.85 : 1}
+                className={cn(
+                  'border-background rounded-full border-4',
+                  !isViewingOtherProfile && 'active:opacity-85'
+                )}
                 disabled={!!isViewingOtherProfile}>
                 {uploadingAvatar ? (
                   <View className="bg-primary size-20 items-center justify-center rounded-full opacity-70">
-                    <ActivityIndicator size="small" color="#fff" />
+                    <BrandActivityIndicator size="small" color="#fff" />
                   </View>
                 ) : profile?.imageUrl ? (
                   <Image
@@ -718,30 +718,30 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
                     <CameraIcon size={10} color="#fff" />
                   </View>
                 )}
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Settings Icon or Follow/Unfollow Button - Top Right */}
               {!isViewingOtherProfile ? (
                 <View>
-                  <TouchableOpacity
+                  <Pressable
                     className="border-border bg-background mt-12 size-9 items-center justify-center rounded-full border"
                     onPress={() => setShowSettingsDropdown(!showSettingsDropdown)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <SettingsIcon size={20} color={fgHex} />
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {showSettingsDropdown && (
                     <View className="border-border bg-card absolute top-22 right-0 z-1000 min-w-40 rounded-lg border shadow-md">
-                      <TouchableOpacity
+                      <Pressable
                         className="px-4 py-3"
                         onPress={() => {
                           setShowSettingsDropdown(false);
                           router.push('/profile-settings');
                         }}>
                         <Text className="text-foreground text-sm font-medium">Settings</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                       <View className="bg-border my-1 h-px" />
-                      <TouchableOpacity
+                      <Pressable
                         className="px-4 py-3"
                         onPress={async () => {
                           setShowSettingsDropdown(false);
@@ -750,7 +750,7 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
                           router.replace('/sign-in');
                         }}>
                         <Text className="text-destructive text-sm font-medium">Log out</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   )}
                 </View>
@@ -775,27 +775,25 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
                   {displayName}
                 </Text>
                 {tasteProfile?.profileName ? (
-                  <TouchableOpacity
+                  <Pressable
                     className="bg-primary/15 flex-row items-center gap-1 rounded-xl px-2.5 py-1 active:opacity-80"
-                    onPress={() => setShowTasteProfileModal(true)}
-                    activeOpacity={0.7}>
+                    onPress={() => setShowTasteProfileModal(true)}>
                     <Text className="text-primary text-sm font-semibold">
                       {tasteProfile.profileName}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ) : null}
                 {isWrappedEligible ? (
-                  <TouchableOpacity
+                  <Pressable
                     className="bg-primary flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5 active:opacity-90"
                     onPress={() => {
                       posthog?.capture('wrapped_click', {});
                       if (showWrappedHint) void dismissWrappedHint();
                       router.push('/wrapped');
-                    }}
-                    activeOpacity={0.8}>
+                    }}>
                     <Sparkles size={14} color="#FFFFFF" />
                     <Text className="text-primary-foreground text-sm font-bold">Wrapped</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ) : null}
               </View>
               {profile?.username ? (
@@ -864,34 +862,31 @@ export function ProfileScreen({ presentation = 'tab', stackUserId }: ProfileScre
 
         {viewedUserId && (
           <View className="border-border bg-background flex-row border-b px-5">
-            <TouchableOpacity
+            <Pressable
               className={cn(
-                'flex-1 items-center justify-center border-b-2 py-3.5',
+                'flex-1 items-center justify-center border-b-2 py-3.5 active:opacity-70',
                 activeTab === 'visits' ? 'border-primary' : 'border-transparent'
               )}
-              onPress={() => setActiveTab('visits')}
-              activeOpacity={0.7}>
+              onPress={() => setActiveTab('visits')}>
               <ListIcon size={22} color={activeTab === 'visits' ? primaryHex : mutedHex} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               className={cn(
-                'flex-1 items-center justify-center border-b-2 py-3.5',
+                'flex-1 items-center justify-center border-b-2 py-3.5 active:opacity-70',
                 activeTab === 'gallery' ? 'border-primary' : 'border-transparent'
               )}
-              onPress={() => setActiveTab('gallery')}
-              activeOpacity={0.7}>
+              onPress={() => setActiveTab('gallery')}>
               <Grid3x3Icon size={22} color={activeTab === 'gallery' ? primaryHex : mutedHex} />
-            </TouchableOpacity>
+            </Pressable>
             {viewedUserId === currentUserId && (
-              <TouchableOpacity
+              <Pressable
                 className={cn(
-                  'flex-1 items-center justify-center border-b-2 py-3.5',
+                  'flex-1 items-center justify-center border-b-2 py-3.5 active:opacity-70',
                   activeTab === 'bookmarks' ? 'border-primary' : 'border-transparent'
                 )}
-                onPress={() => setActiveTab('bookmarks')}
-                activeOpacity={0.7}>
+                onPress={() => setActiveTab('bookmarks')}>
                 <BookmarkIcon size={22} color={activeTab === 'bookmarks' ? primaryHex : mutedHex} />
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         )}

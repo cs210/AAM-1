@@ -20,6 +20,10 @@ import { Icon } from '@/components/ui/icon';
 import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 import { SearchFieldRow } from '@/components/search-field-row';
 import { useSoftwareFairMode } from '@/lib/software-fair-mode';
+import {
+  MuseumRequestSheet,
+  normalizeMuseumRequestName,
+} from '@/components/museum-request-modal';
 
 type Props = {
   visible: boolean;
@@ -94,6 +98,8 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
   const softwareFair = useSoftwareFairMode();
   const isSoftwareFairMode = softwareFair.isJoined;
   const [search, setSearch] = useState('');
+  const [requestModalVisible, setRequestModalVisible] = useState(false);
+  const [requestedMuseumNames, setRequestedMuseumNames] = useState<Set<string>>(() => new Set());
 
   type LocState =
     | { status: 'pending' }
@@ -128,6 +134,7 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
   useEffect(() => {
     if (visible) {
       setSearch('');
+      setRequestModalVisible(false);
       void resolveLocation();
     }
   }, [visible, resolveLocation]);
@@ -202,6 +209,27 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
     });
   };
 
+  const trimmedSearch = search.trim();
+  const canRequestMuseum = trimmedSearch.length >= 2;
+  const currentMuseumRequestKey = useMemo(() => normalizeMuseumRequestName(search), [search]);
+  const existingMuseumRequest = useQuery(
+    api.museumAdditionRequests.getMyRequestForMuseum,
+    currentMuseumRequestKey.length >= 2 ? { museumName: trimmedSearch } : 'skip'
+  );
+  const museumRequestSubmitted =
+    canRequestMuseum &&
+    (requestedMuseumNames.has(currentMuseumRequestKey) || Boolean(existingMuseumRequest));
+
+  const handleMuseumRequestSubmitted = useCallback((museumName: string) => {
+    const requestKey = normalizeMuseumRequestName(museumName);
+    if (!requestKey) return;
+    setRequestedMuseumNames((previous) => {
+      const next = new Set(previous);
+      next.add(requestKey);
+      return next;
+    });
+  }, []);
+
   if (!visible) return null;
 
   return (
@@ -263,9 +291,35 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
               contentContainerClassName="grow px-5 pb-7"
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                <Text className="py-8 text-center text-muted-foreground">
-                  No {isSoftwareFairMode ? 'booths' : 'museums'} match your search.
-                </Text>
+                <View className="items-center px-4 py-8">
+                  <Text className="text-foreground text-center text-base font-semibold">
+                    {isSoftwareFairMode
+                      ? 'No booths match your search.'
+                      : museumRequestSubmitted
+                        ? 'Request sent'
+                        : 'No museums match your search.'}
+                  </Text>
+                  {!isSoftwareFairMode ? (
+                    <>
+                      <Text className="text-muted-foreground mt-2 text-center text-sm leading-5">
+                        {canRequestMuseum
+                          ? museumRequestSubmitted
+                            ? `Thanks for telling us about "${trimmedSearch}". Our team can review it for Museum&.`
+                            : `Want us to add "${trimmedSearch}"? Send the details to our team for review.`
+                          : 'Search for a museum name, then request it if it is missing.'}
+                      </Text>
+                      {canRequestMuseum && !museumRequestSubmitted ? (
+                        <Button
+                          className="mt-4 rounded-xl px-6"
+                          onPress={() => setRequestModalVisible(true)}>
+                          <Text className="text-primary-foreground text-base font-semibold">
+                            Request this museum
+                          </Text>
+                        </Button>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
               }
               renderItem={({ item }) => {
                 const sub = locationSubtitle(item);
@@ -309,6 +363,16 @@ export function MuseumCheckinPickerModal({ visible, onClose }: Props) {
             />
           )}
         </View>
+
+        {requestModalVisible ? (
+          <View className="absolute inset-0">
+            <MuseumRequestSheet
+              initialMuseumName={trimmedSearch}
+              onClose={() => setRequestModalVisible(false)}
+              onSubmitted={handleMuseumRequestSubmitted}
+            />
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </Modal>
   );

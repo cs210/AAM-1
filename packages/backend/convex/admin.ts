@@ -595,6 +595,50 @@ type PendingInvitation = {
 type MuseumAdminRow = Doc<"museums"> & {
   point: { latitude: number; longitude: number } | null;
 };
+type MuseumImageAdminRow = Doc<"museumImages">;
+
+type MuseumImageHealthIssue = {
+  museumId: Id<"museums">;
+  museumName: string;
+  city?: string;
+  state?: string;
+  imageId?: Id<"museumImages">;
+  imageUrl: string;
+  source: "primary" | "gallery";
+  isPrimary: boolean;
+  status?: number;
+  error?: string;
+};
+
+type MuseumImageHealthRow = {
+  museumId: Id<"museums">;
+  museumName: string;
+  city?: string;
+  state?: string;
+  checkedCount: number;
+  brokenCount: number;
+  issues: MuseumImageHealthIssue[];
+};
+
+type ImageCheckResult = {
+  ok: boolean;
+  status?: number;
+  error?: string;
+};
+
+type ImageAuditCandidate = {
+  museumId: Id<"museums">;
+  museumName: string;
+  city?: string;
+  state?: string;
+  imageId?: Id<"museumImages">;
+  imageUrl: string;
+  source: "primary" | "gallery";
+  isPrimary: boolean;
+};
+
+const imageLinkCheckConcurrency = 8;
+const imageLinkCheckTimeoutMs = 8000;
 
 const museumPointValidator = v.object({
   latitude: v.number(),
@@ -762,6 +806,71 @@ function toErrorMessage(error: unknown) {
   return "Unknown error";
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>
+) {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await worker(items[currentIndex]!);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+function isHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function fetchImageProbe(url: string, method: "HEAD" | "GET") {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), imageLinkCheckTimeoutMs);
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: method === "GET" ? { Range: "bytes=0-0" } : undefined,
+      redirect: "follow",
+      signal: controller.signal,
+    });
+    if (method === "GET") {
+      await response.body?.cancel();
+    }
+    return response;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function checkImageUrl(url: string): Promise<ImageCheckResult> {
+  if (!isHttpUrl(url)) {
+    return { ok: false, error: "Invalid URL" };
+  }
+
+  try {
+    const head = await fetchImageProbe(url, "HEAD");
+    if (head.ok) return { ok: true, status: head.status };
+    if (head.status !== 405 && head.status !== 501 && head.status !== 403) {
+      return { ok: false, status: head.status };
+    }
+
+    const get = await fetchImageProbe(url, "GET");
+    return get.ok ? { ok: true, status: get.status } : { ok: false, status: get.status };
+  } catch (error) {
+    return { ok: false, error: toErrorMessage(error) };
+  }
+}
+
 /** Action: list pending invitations with org names (admin). */
 export const listPendingInvitationsForAdmin = action({
   args: {},
@@ -816,6 +925,107 @@ export const listMuseumsForAdmin = action({
       })
     );
     return rowsWithPoints.sort((a: MuseumAdminRow, b: MuseumAdminRow) => a.name.localeCompare(b.name));
+  },
+});
+
+export const listMuseumImagesForAdminAudit = query({
+  args: {},
+  handler: async (ctx): Promise<MuseumImageAdminRow[]> => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("museumImages").collect();
+  },
+});
+
+export const checkMuseumImageLinksForAdmin = action({
+  args: {},
+  handler: async (ctx): Promise<MuseumImageHealthRow[]> => {
+    await requireAdminAction(ctx);
+    const museums = (await ctx.runQuery(api.museums.listMuseums, {})) as Doc<"museums">[];
+    const images = (await ctx.runQuery((api as any).admin.listMuseumImagesForAdminAudit, {})) as MuseumImageAdminRow[];
+    const museumById = new Map(museums.map((museum) => [museum._id, museum]));
+    const galleryUrlsByMuseum = new Map<string, Set<string>>();
+
+    for (const image of images) {
+      const key = image.museumId as string;
+      const urls = galleryUrlsByMuseum.get(key) ?? new Set<string>();
+      urls.add(image.imageUrl);
+      galleryUrlsByMuseum.set(key, urls);
+    }
+
+    const candidates: ImageAuditCandidate[] = [];
+    for (const museum of museums) {
+      const imageUrl = museum.imageUrl?.trim();
+      if (imageUrl && !galleryUrlsByMuseum.get(museum._id as string)?.has(imageUrl)) {
+        candidates.push({
+          museumId: museum._id,
+          museumName: museum.name,
+          city: museum.location.city,
+          state: museum.location.state,
+          imageUrl,
+          source: "primary",
+          isPrimary: true,
+        });
+      }
+    }
+
+    for (const image of images) {
+      const museum = museumById.get(image.museumId);
+      if (!museum) continue;
+      candidates.push({
+        museumId: museum._id,
+        museumName: museum.name,
+        city: museum.location.city,
+        state: museum.location.state,
+        imageId: image._id,
+        imageUrl: image.imageUrl,
+        source: "gallery",
+        isPrimary: image.isPrimary || museum.imageUrl === image.imageUrl,
+      });
+    }
+
+    const uniqueUrls = Array.from(new Set(candidates.map((candidate) => candidate.imageUrl)));
+    const checks = await mapWithConcurrency(uniqueUrls, imageLinkCheckConcurrency, async (url) => ({
+      url,
+      result: await checkImageUrl(url),
+    }));
+    const checkByUrl = new Map(checks.map((entry) => [entry.url, entry.result]));
+    const rowsByMuseum = new Map<string, MuseumImageHealthRow>();
+
+    for (const candidate of candidates) {
+      const result = checkByUrl.get(candidate.imageUrl);
+      if (!result || result.ok) continue;
+
+      const key = candidate.museumId as string;
+      const row =
+        rowsByMuseum.get(key) ??
+        {
+          museumId: candidate.museumId,
+          museumName: candidate.museumName,
+          city: candidate.city,
+          state: candidate.state,
+          checkedCount: candidates.filter((entry) => entry.museumId === candidate.museumId).length,
+          brokenCount: 0,
+          issues: [],
+        };
+      row.brokenCount += 1;
+      row.issues.push({
+        museumId: candidate.museumId,
+        museumName: candidate.museumName,
+        city: candidate.city,
+        state: candidate.state,
+        imageId: candidate.imageId,
+        imageUrl: candidate.imageUrl,
+        source: candidate.source,
+        isPrimary: candidate.isPrimary,
+        status: result.status,
+        error: result.error,
+      });
+      rowsByMuseum.set(key, row);
+    }
+
+    return Array.from(rowsByMuseum.values()).sort((left, right) =>
+      left.museumName.localeCompare(right.museumName)
+    );
   },
 });
 
@@ -1056,6 +1266,113 @@ export const updateMuseumForAdmin = mutation({
   },
 });
 
+export const replaceBrokenMuseumImagesForAdmin = mutation({
+  args: {
+    museumId: v.id("museums"),
+    brokenImageIds: v.optional(v.array(v.id("museumImages"))),
+    brokenPrimaryImageUrl: v.optional(v.string()),
+    imageUrls: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAdmin(ctx);
+    const museum = await ctx.db.get(args.museumId);
+    if (!museum) throw new Error("Museum not found");
+
+    const freshImageUrls = Array.from(
+      new Set(
+        args.imageUrls
+          .map((url) => url.trim())
+          .filter((url) => url.length > 0 && isHttpUrl(url))
+      )
+    ).slice(0, 5);
+    if (freshImageUrls.length === 0) {
+      throw new Error("No fresh replacement images were returned.");
+    }
+
+    const brokenImageIds = new Set((args.brokenImageIds ?? []).map((id) => id as string));
+    const currentImages = await ctx.db
+      .query("museumImages")
+      .withIndex("by_museum_sortOrder", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    const deletedImages = currentImages.filter((image) => brokenImageIds.has(image._id as string));
+    const remainingImages = currentImages.filter((image) => !brokenImageIds.has(image._id as string));
+
+    for (const image of deletedImages) {
+      if (image.storageId) {
+        try {
+          await ctx.storage.delete(image.storageId);
+        } catch {
+          // Continue replacing metadata even if the storage object was already unavailable.
+        }
+      }
+      await ctx.db.delete(image._id);
+    }
+
+    const now = Date.now();
+    const existingUrls = new Set(remainingImages.map((image) => image.imageUrl));
+    let nextSortOrder =
+      remainingImages.length > 0
+        ? Math.max(...remainingImages.map((image) => image.sortOrder)) + 1
+        : 0;
+    const insertedImages: Array<{ imageId: Id<"museumImages">; imageUrl: string }> = [];
+
+    for (const imageUrl of freshImageUrls) {
+      if (existingUrls.has(imageUrl)) continue;
+      const imageId = await ctx.db.insert("museumImages", {
+        museumId: args.museumId,
+        imageUrl,
+        sortOrder: nextSortOrder,
+        isPrimary: false,
+        createdBy: user._id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertedImages.push({ imageId, imageUrl });
+      existingUrls.add(imageUrl);
+      nextSortOrder += 1;
+    }
+
+    const removedPrimary =
+      Boolean(args.brokenPrimaryImageUrl && museum.imageUrl === args.brokenPrimaryImageUrl) ||
+      deletedImages.some((image) => image.isPrimary || image.imageUrl === museum.imageUrl);
+    const shouldRepairPrimary = removedPrimary || !museum.imageUrl;
+
+    let nextPrimary: { imageId?: Id<"museumImages">; imageUrl: string } | null = null;
+    if (shouldRepairPrimary) {
+      const fallbackExistingPrimary =
+        remainingImages.find((image) => image.isPrimary) ?? remainingImages[0] ?? null;
+      nextPrimary =
+        insertedImages[0] ??
+        (fallbackExistingPrimary
+          ? { imageId: fallbackExistingPrimary._id, imageUrl: fallbackExistingPrimary.imageUrl }
+          : null);
+    }
+
+    if (nextPrimary) {
+      for (const image of remainingImages) {
+        const shouldBePrimary = image._id === nextPrimary.imageId;
+        if (image.isPrimary !== shouldBePrimary) {
+          await ctx.db.patch(image._id, { isPrimary: shouldBePrimary, updatedAt: now });
+        }
+      }
+      for (const image of insertedImages) {
+        if (image.imageId === nextPrimary.imageId) {
+          await ctx.db.patch(image.imageId, { isPrimary: true, updatedAt: now });
+        }
+      }
+      await ctx.db.patch(args.museumId, { imageUrl: nextPrimary.imageUrl });
+    } else if (deletedImages.length > 0 && remainingImages.length === 0 && insertedImages.length === 0) {
+      await ctx.db.patch(args.museumId, { imageUrl: undefined });
+    }
+
+    return {
+      deletedCount: deletedImages.length,
+      insertedCount: insertedImages.length,
+      primaryImageUrl: nextPrimary?.imageUrl ?? museum.imageUrl ?? null,
+    };
+  },
+});
+
 /** Mutation: delete a museum and related geospatial/dependent records (admin). */
 export const deleteMuseumForAdmin = mutation({
   args: { museumId: v.id("museums") },
@@ -1105,6 +1422,14 @@ export const deleteMuseumForAdmin = mutation({
         }
       }
       await ctx.db.delete(image._id);
+    }
+
+    const googleReviews = await ctx.db
+      .query("museumGoogleReviews")
+      .withIndex("by_museum", (q) => q.eq("museumId", args.museumId))
+      .collect();
+    for (const review of googleReviews) {
+      await ctx.db.delete(review._id);
     }
 
     const events = await ctx.db

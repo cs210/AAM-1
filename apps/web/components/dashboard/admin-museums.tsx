@@ -5,7 +5,17 @@ import { useTranslations } from "next-intl"
 import { useAction, useMutation } from "convex/react"
 import { api } from "@packages/backend/convex/_generated/api"
 import type { Id } from "@packages/backend/convex/_generated/dataModel"
-import { Loader2Icon, SquareIcon, UploadIcon } from "lucide-react"
+import {
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ImageOffIcon,
+  Loader2Icon,
+  RefreshCwIcon,
+  SquareIcon,
+  UploadIcon,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -85,6 +95,38 @@ type CsvImportActionResult = {
     parsedCount: number
   }
 }
+
+type MuseumImageHealthIssue = {
+  museumId: Id<"museums">
+  museumName: string
+  city?: string
+  state?: string
+  imageId?: Id<"museumImages">
+  imageUrl: string
+  source: "primary" | "gallery"
+  isPrimary: boolean
+  status?: number
+  error?: string
+}
+
+type MuseumImageHealthRow = {
+  museumId: Id<"museums">
+  museumName: string
+  city?: string
+  state?: string
+  checkedCount: number
+  brokenCount: number
+  issues: MuseumImageHealthIssue[]
+}
+
+type RefreshMuseumImagesResult = {
+  imageUrls: string[]
+  deletedCount: number
+  insertedCount: number
+  primaryImageUrl: string | null
+}
+
+const adminMuseumPageSize = 25
 
 function parseCsvRecords(input: string) {
   const records: string[][] = []
@@ -272,22 +314,28 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
   const dashboardMuseumContextId = useDashboardMuseumId()
   const dashboardMuseumActions = useDashboardMuseumContextActions()
   const listMuseums = useAction(api.admin.listMuseumsForAdmin)
+  const checkMuseumImageLinks = useAction(api.admin.checkMuseumImageLinksForAdmin)
   const importMuseumCsvRow = useAction(api.admin.importMuseumCsvRowForAdmin)
+  const refreshMuseumImages = useAction(api.museumsAutoFill.refreshMuseumImagesForAdmin)
   const createMuseum = useMutation(api.admin.createMuseumForAdmin)
   const deleteMuseum = useMutation(api.admin.deleteMuseumForAdmin)
 
   const [museums, setMuseums] = React.useState<MuseumRow[] | null | undefined>(undefined)
+  const [imageHealthRows, setImageHealthRows] = React.useState<MuseumImageHealthRow[] | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = React.useState(false)
   const [newMuseumName, setNewMuseumName] = React.useState("")
   const [creating, setCreating] = React.useState(false)
+  const [checkingImages, setCheckingImages] = React.useState(false)
+  const [refreshingImagesForMuseumId, setRefreshingImagesForMuseumId] = React.useState<Id<"museums"> | null>(null)
   const [deletingId, setDeletingId] = React.useState<Id<"museums"> | null>(null)
   const [pendingDeleteMuseum, setPendingDeleteMuseum] = React.useState<MuseumRow | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [categoryFilter, setCategoryFilter] = React.useState("all")
   const [stateFilter, setStateFilter] = React.useState("all")
   const [cityFilter, setCityFilter] = React.useState("all")
+  const [currentPage, setCurrentPage] = React.useState(1)
   const [csvImportState, setCsvImportState] = React.useState<CsvImportStoreState>(() => getCsvImportStoreSnapshot())
   const {
     csvFileName,
@@ -368,6 +416,58 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
     } finally {
       setDeletingId(null)
       setPendingDeleteMuseum(null)
+    }
+  }
+
+  const handleCheckImageLinks = async () => {
+    setCheckingImages(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const rows = (await checkMuseumImageLinks()) as MuseumImageHealthRow[]
+      setImageHealthRows(rows)
+      setSuccess(
+        rows.length > 0
+          ? t("imageAudit.scanFound", {
+              museums: rows.length,
+              images: rows.reduce((total, row) => total + row.brokenCount, 0),
+            })
+          : t("imageAudit.scanClean")
+      )
+    } catch (auditError) {
+      setError(auditError instanceof Error ? auditError.message : t("imageAudit.scanFailed"))
+    } finally {
+      setCheckingImages(false)
+    }
+  }
+
+  const handleRefreshBrokenImages = async (row: MuseumImageHealthRow) => {
+    setRefreshingImagesForMuseumId(row.museumId)
+    setError(null)
+    setSuccess(null)
+    try {
+      const brokenImageIds = row.issues
+        .map((issue) => issue.imageId)
+        .filter((imageId): imageId is Id<"museumImages"> => Boolean(imageId))
+      const brokenPrimaryImageUrl = row.issues.find((issue) => issue.source === "primary" || issue.isPrimary)?.imageUrl
+      const result = (await refreshMuseumImages({
+        museumId: row.museumId,
+        brokenImageIds,
+        ...(brokenPrimaryImageUrl ? { brokenPrimaryImageUrl } : {}),
+      })) as RefreshMuseumImagesResult
+
+      const refreshSuccess = t("imageAudit.refreshSuccess", {
+        name: row.museumName,
+        inserted: result.insertedCount,
+        deleted: result.deletedCount,
+      })
+      await loadMuseums()
+      await handleCheckImageLinks()
+      setSuccess(refreshSuccess)
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : t("imageAudit.refreshFailed"))
+    } finally {
+      setRefreshingImagesForMuseumId(null)
     }
   }
 
@@ -527,6 +627,20 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
       return searchableText.includes(query)
     })
   }, [museumList, categoryFilter, stateFilter, cityFilter, searchQuery])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, categoryFilter, stateFilter, cityFilter])
+  const totalPages = Math.max(1, Math.ceil(filteredMuseums.length / adminMuseumPageSize))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  React.useEffect(() => {
+    if (currentPage !== safeCurrentPage) {
+      setCurrentPage(safeCurrentPage)
+    }
+  }, [currentPage, safeCurrentPage])
+  const pagedMuseums = React.useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * adminMuseumPageSize
+    return filteredMuseums.slice(startIndex, startIndex + adminMuseumPageSize)
+  }, [filteredMuseums, safeCurrentPage])
   const hasActiveFilters =
     searchQuery.trim().length > 0 || categoryFilter !== "all" || stateFilter !== "all" || cityFilter !== "all"
   const csvCompletedCount = csvImportResults.filter((row) => row.status === "completed" || row.status === "failed").length
@@ -699,6 +813,97 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
           )}
         </div>
 
+        <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <ImageOffIcon className="text-muted-foreground size-4" />
+                <p className="font-medium">{t("imageAudit.title")}</p>
+              </div>
+              <p className="text-muted-foreground text-sm">{t("imageAudit.description")}</p>
+              <p className="text-muted-foreground text-xs">{t("imageAudit.policyNote")}</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleCheckImageLinks()}
+              disabled={checkingImages || refreshingImagesForMuseumId !== null}
+            >
+              {checkingImages ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <RefreshCwIcon className="size-4" />
+              )}
+              {checkingImages ? t("imageAudit.scanning") : t("imageAudit.scan")}
+            </Button>
+          </div>
+
+          {imageHealthRows !== null && (
+            imageHealthRows.length === 0 ? (
+              <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm text-green-700 dark:text-green-400">
+                <CheckCircle2Icon className="size-4" />
+                {t("imageAudit.clean")}
+              </div>
+            ) : (
+              <div className="max-h-80 space-y-2 overflow-auto pr-1">
+                {imageHealthRows.map((row) => (
+                  <div key={row.museumId} className="rounded-lg border bg-background p-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <AlertTriangleIcon className="size-4 text-amber-500" />
+                          <p className="font-medium">{row.museumName}</p>
+                          <Badge variant="secondary">
+                            {t("imageAudit.brokenBadge", { count: row.brokenCount })}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          {[row.city, row.state].filter(Boolean).join(", ") || t("csv.locationUnknown")}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void handleRefreshBrokenImages(row)}
+                        disabled={checkingImages || refreshingImagesForMuseumId !== null}
+                      >
+                        {refreshingImagesForMuseumId === row.museumId && (
+                          <Loader2Icon className="size-4 animate-spin" />
+                        )}
+                        {refreshingImagesForMuseumId === row.museumId
+                          ? t("imageAudit.refreshing")
+                          : t("imageAudit.refreshImages")}
+                      </Button>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {row.issues.slice(0, 3).map((issue) => (
+                        <div key={`${issue.imageId ?? "primary"}-${issue.imageUrl}`} className="rounded-md bg-muted px-3 py-2">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <Badge variant={issue.isPrimary ? "default" : "secondary"}>
+                              {issue.isPrimary ? t("imageAudit.primary") : t("imageAudit.gallery")}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                              {issue.status
+                                ? t("imageAudit.status", { status: issue.status })
+                                : issue.error ?? t("imageAudit.unknownError")}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-1 truncate font-mono text-xs">{issue.imageUrl}</p>
+                        </div>
+                      ))}
+                      {row.issues.length > 3 && (
+                        <p className="text-muted-foreground text-xs">
+                          {t("imageAudit.moreIssues", { count: row.issues.length - 3 })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
         <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="grid gap-1">
@@ -763,21 +968,28 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
             <p className="text-muted-foreground text-sm">
               {t("showing", { count: filteredMuseums.length, total: museumList.length })}
             </p>
-            {hasActiveFilters && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("")
-                  setCategoryFilter("all")
-                  setStateFilter("all")
-                  setCityFilter("all")
-                }}
-              >
-                {t("clearFilters")}
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {filteredMuseums.length > 0 && (
+                <span className="text-muted-foreground text-sm">
+                  {t("pageSummary", { page: safeCurrentPage, totalPages })}
+                </span>
+              )}
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("")
+                    setCategoryFilter("all")
+                    setStateFilter("all")
+                    setCityFilter("all")
+                  }}
+                >
+                  {t("clearFilters")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -787,7 +999,37 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
           <p className="text-muted-foreground text-sm">{t("noMuseumsMatch")}</p>
         ) : (
           <div className="space-y-3">
-            {filteredMuseums.map((museum) => (
+            <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={safeCurrentPage <= 1}
+              >
+                <ChevronLeftIcon className="size-4" />
+                {t("previousPage")}
+              </Button>
+              <span className="text-muted-foreground text-sm">
+                {t("pageRange", {
+                  start: (safeCurrentPage - 1) * adminMuseumPageSize + 1,
+                  end: Math.min(safeCurrentPage * adminMuseumPageSize, filteredMuseums.length),
+                  total: filteredMuseums.length,
+                })}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={safeCurrentPage >= totalPages}
+              >
+                {t("nextPage")}
+                <ChevronRightIcon className="size-4" />
+              </Button>
+            </div>
+            <div className="max-h-[640px] space-y-3 overflow-auto rounded-xl border bg-background p-3">
+            {pagedMuseums.map((museum) => (
               <div key={museum._id} className="space-y-3 rounded-xl border bg-muted/30 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-1">
@@ -840,6 +1082,7 @@ export function AdminMuseums({ activeMuseumContextId, onEditMuseumContext }: Adm
 
               </div>
             ))}
+            </div>
           </div>
         )}
         </CardContent>

@@ -1,9 +1,10 @@
 import { router, Stack } from 'expo-router';
 import * as React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { useConvexAuth } from 'convex/react';
 import { Text } from '@/components/ui/text';
+import { BrandActivityIndicator } from '@/components/ui/activity-indicator';
 
 const SCREEN_OPTIONS = {
   title: 'Museum&',
@@ -27,12 +28,10 @@ export default function Screen() {
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
       
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ alignItems: 'center', gap: 12 }}>
-          <ActivityIndicator size="large" />
-          <Text className="text-muted-foreground text-base">
-            Loading
-          </Text>
+      <SafeAreaView className="flex-1 items-center justify-center bg-background" style={{ flex: 1 }}>
+        <View className="items-center gap-3">
+          <BrandActivityIndicator size="large" />
+          <Text variant="muted">Loading</Text>
         </View>
       </SafeAreaView>
     </>
